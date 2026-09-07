@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 4 full-stack verification of the 3 new features (saved-library filters, Trakt device-code OAuth, trailer preview) plus regression. Backend: created /app/backend/tests/test_iter4_features.py (13 tests) — all pass; re-ran existing suites test_new_features.py + test_usage_freshness.py (16 tests) — all pass. Frontend: verified /saved filter bar (search, type, genre dedupe, model chips, sort, count, empty-filtered), trailer flow in RecModal on both /recommendations and /saved, Trakt device-code pending state on /connections, and regression on recs generate + model picker + usage meter + taste generate. No functional defects found; only 1 minor testability nit.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/recommendations/{id}/save", "issue": "No existence check — returns {ok:true} (200) for a non-existent rec id (update_one matches nothing). Trailer/reason endpoints correctly 404. Consider 404 for consistency."},
+      {"endpoint": "POST /api/recommendations/{id}/unsave", "issue": "Does not clear saved_at; a re-saved item keeps its old stamp only until save overwrites it (harmless today, but stale field remains on unsaved docs)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Connections Section", "issue": "Test button data-testid is derived from the title: `test-${title.toLowerCase().split(' ')[0]}-button` which yields `test-trakt.tv-button` (contains a dot) — brittle/unexpected for automation. Suggest passing an explicit testid prop.", "selector": "[data-testid=\"test-trakt.tv-button\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter4_features.py",
+    "/app/test_reports/pytest/iter4_results.xml"
+  ],
+  "action_items": [
+    "Optional: give Connections Section an explicit data-testid for the Test button instead of deriving it from the title (currently `test-trakt.tv-button`).",
+    "Optional: return 404 from POST /api/recommendations/{id}/save when the rec does not exist, and clear saved_at on unsave."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1005 lines — approaching the 700-line guideline; consider splitting Trakt/OAuth, recommendations and LLM streaming into routers.",
+    "trakt_device_poll returns 200 with a status string for all Trakt error codes; this is intentional for the polling UI but the endpoint does not rate-limit repeated client polls (Trakt 429 -> slow_down handled, OK).",
+    "Saved.jsx sort comparators use raw b.match_score - a.match_score / b.tmdb_rating - a.tmdb_rating; a rec missing those fields would produce NaN and unstable ordering. Add `?? 0` fallbacks.",
+    "Genre chip label uses the first-seen casing of a genre (e.g. 'Drama' vs 'thriller' come from different generations); visually fine because CSS uppercases the chips, but consider normalizing to Title Case."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter4_features.py"],
+  "success_rate": {"backend": "100% (29/29 pytest tests)", "frontend": "100% of tested flows"},
+  "seed_data_creation": "Saved 2 shows (Primal, The OA) via /recommendations UI for user test-user-fe-claude so /saved has 4 items across 2 types and 2 models. Temporary nonsense-title rec inserted+deleted via mongosh during the null-trailer test.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "user_id=test-user-fe-claude / session_token=test_session_fe_claude (browser cookie + Bearer); pytest fixture seeds test-user-claude-1 / test_session_claude_1. Both valid.",
+  "context_for_next_testing_agent": "Verified in detail this iteration: (1) Trakt device OAuth — /device/start returns 8-char user_code + https://auth.trakt.tv/activate, 401 unauth, /device/poll returns pending for a fresh code, invalid for bogus, 422 on empty body, 401 unauth; /trakt/disconnect -> ok and GET /connections shows trakt_connected=false, trakt_username=null, no _id leak; POST /connections/test/trakt returns ok=true 'Trakt responded 200 (not authorized — click Connect)'. Real authorization NOT completed (needs human approval on trakt.tv) — UI stops correctly at trakt-device-pending with 'Waiting for approval…' + copy button, and reverts to trakt-connect-button after reload. (2) Trailer — GET /api/recommendations/{id}/trailer returns YouTube key+name, 2nd call cached=true, 404 unknown id, 401 unauth, key=null for a nonsense title; UI shows trailer-loading -> trailer-player -> click play -> trailer-iframe src https://www.youtube-nocookie.com/embed/<key>?autoplay=1... on both /recommendations and /saved modals, streaming reasoning renders above it. (3) /saved filters — saved-filters visible, search narrows (1 of 4), no-match shows saved-empty-filtered, type all/movie/show = 4/2/2, genre chips deduped case-insensitively ['Any','Drama','Comedy','thriller','crime','animation','action','adventure','sci-fi','mystery'], saved-model-filter shows ['Any','Claude Haiku 4.5','Demo picks'], sort saved/match/rating all reorder correctly (match desc 92,85,85,84), saved-count 'X of Y saved' updates. (4) Regression — recs generate w/ recs-model-picker (9 -> 12 cards), usage-meter renders, /taste regenerate produced a full Cinematic DNA profile with Claude Sonnet 5. Run backend tests with `cd /app/backend && python -m pytest tests/ -n 0`. Note: repeated /trakt/device/poll calls should be spaced >=6s to avoid slow_down.",
+  "rca_of_the_issue": "N/A — no failures reproduced. The only console error seen in the browser ('Failed to load resource: net::ERR_CONNECTION_CLOSED') originates from the preview-proxy fetching a non-app asset and does not affect any tested flow."
+}

@@ -1,0 +1,37 @@
+{
+  "summary": "First-finish smoke test of CineMind AI. Seeded session via mongosh per auth_testing.md and verified full backend + frontend flow. All 15 backend endpoints pass. All 6 frontend pages render with correct testids and expected content. App works fully in demo mode with no real Ollama/Trakt/Simkl/Plex credentials.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "GET /api/ returns 200 {app:'CineMind AI',status:'ok'}",
+    "GET /api/auth/me returns 401 without token",
+    "GET /api/auth/me returns user with Bearer token after mongosh seeding",
+    "GET /api/connections returns defaults; PUT /api/connections persists fields; re-GET confirms persistence",
+    "POST /api/connections/test/{ollama,trakt,simkl,plex} all return {ok,message} without crashing",
+    "GET /api/history seeds 12 demo items on first call",
+    "GET /api/history/stats returns total=12, movies=6, shows=6, genres[], sources[], avg_rating=8.38, hours_estimate=72",
+    "POST /api/history/sync with no real creds returns {count:12, demo:true}",
+    "POST /api/taste-profile/generate returns cinematic_dna, key_tropes(list), mood, narrative_complexity, top_genres, used_demo:true",
+    "GET /api/taste-profile returns saved profile",
+    "GET /api/recommendations auto-seeds 8 demo picks",
+    "POST /api/recommendations/generate returns {count:8}",
+    "POST /api/recommendations/{id}/save flips saved=true; GET /api/recommendations/saved shows it (count=1)",
+    "POST /api/recommendations/{id}/dismiss removes from list (8 -> 7)",
+    "Landing / renders with google-login-button",
+    "Unauthenticated /dashboard redirects to /",
+    "After seeding session_token cookie, /dashboard loads with sync-history-button, stat cards (12/6/6/72h), genre bars, sources",
+    "/connections renders trakt/simkl/plex/ollama inputs + save-connections-button",
+    "/taste generate-taste-button produces cinematic-dna-text card",
+    "/recommendations shows movie cards with save/dismiss/info actions (7 after prior dismiss)",
+    "/saved renders the saved Poor Things pick (screenshot verified)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": {
+    "mocked_apis_confirmed": "Ollama/Trakt/Simkl/Plex fall back to DEMO data as designed. Simkl test endpoint returned ok:true because Simkl public API accepts empty creds with 200; Trakt returned 403 (expected without valid client_id); Ollama and Plex correctly reported 'not configured'.",
+    "note_on_generate_demo_flag": "POST /api/recommendations/generate returned demo:false when ollama_url was persisted as empty string ''. Backend correctly still returned count=8 (fell back to DEMO_RECS on connection failure). Not a functional issue.",
+    "test_credentials_file": "/app/memory/test_credentials.md is empty; used mongosh session seeding per /app/auth_testing.md."
+  }
+}

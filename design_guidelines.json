@@ -1,0 +1,93 @@
+{
+  "project_title": "CineMind AI - Liquid Glass & Neo-Brutalist Movie Discovery Engine",
+  "theme": {
+    "mode": "dark",
+    "primary_archetype": "Cinematic Dark + Liquid Glassmorphism + Neo-Brutalist Accents",
+    "background": "#08090E",
+    "surface": "#10121B",
+    "glass_background": "rgba(255, 255, 255, 0.03)",
+    "glass_border": "rgba(255, 255, 255, 0.08)",
+    "glass_blur": "backdrop-blur-2xl backdrop-saturate-150",
+    "accent_primary": "#E11D48",
+    "accent_primary_hover": "#F43F5E",
+    "accent_secondary": "#06B6D4",
+    "accent_tertiary": "#8B5CF6",
+    "accent_amber": "#F59E0B",
+    "accent_emerald": "#10B981",
+    "text_main": "#F8FAFC",
+    "text_muted": "#94A3B8",
+    "text_subtle": "#64748B"
+  },
+  "typography": {
+    "font_family_heading": "Outfit, Plus Jakarta Sans, sans-serif",
+    "font_family_body": "Inter, DM Sans, sans-serif",
+    "font_family_mono": "JetBrains Mono, monospace",
+    "h1": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none",
+    "h2": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight",
+    "h3": "text-xl sm:text-2xl font-semibold tracking-tight",
+    "h4": "text-lg sm:text-xl font-medium",
+    "body": "text-sm sm:text-base leading-relaxed text-slate-300",
+    "badge_mono": "font-mono text-xs uppercase tracking-widest font-bold"
+  },
+  "visual_enhancers": {
+    "glassmorphism_card": "relative rounded-2xl bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] hover:border-rose-500/40 hover:bg-white/[0.05] transition-all duration-300",
+    "neo_brutalist_badge": "px-3 py-1 rounded-md font-mono text-xs font-bold border border-rose-500/50 bg-rose-950/40 text-rose-300 uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(225,29,72,0.6)]",
+    "liquid_glow": "before:absolute before:-inset-px before:rounded-2xl before:bg-gradient-to-r before:from-rose-500/20 before:via-cyan-500/10 before:to-purple-500/20 before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500",
+    "poster_card_aspect": "aspect-[2/3] object-cover rounded-xl shadow-lg border border-white/10 group-hover:scale-105 transition-transform duration-500"
+  },
+  "image_urls": {
+    "cinema_hero": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHxfHxuZW9uJTIwZGFyayUyMGNpbmVtYXxlbnwwfHx8fDE3ODg1MjAxOTF8MA&ixlib=rb-4.1.0&q=85",
+    "cinema_seats": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjE2NzF8MHwxfHNlYXJjaHxffG1vdmllJTIwY2luZW1hfGVud3wwfHx8fDE3ODg1MjAxOTF8MA&ixlib=rb-4.1.0&q=85",
+    "vhs_grid": "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjE2NzF8MHwxfHNlYXJjaHwyfHxtb3ZpZSUyMGNpbmVtYXxlbnwwfHx8fDE3ODg1MjAxOTF8MA&ixlib=rb-4.1.0&q=85"
+  },
+  "component_structure": {
+    "auth_landing": "Hero banner with ambient neon glow, Google Login button with high-contrast glass styling, source highlights (Simkl + Trakt.tv + Plex + Ollama AI), feature teaser bento grid.",
+    "connections_page": "Liquid glass form cards for entering Simkl OAuth/token, Trakt.tv Client ID/Secret, Plex Server URL & Token, and Ollama Endpoint (URL + Model name, e.g. llama3/mistral). Real-time test connection badges.",
+    "dashboard_stats": "Letterboxd/Plex-inspired watch history dashboard with aggregate statistics: Total Hours Watched, Movies vs Shows pie chart, Favorite Genres radar/bar chart, Top Directors & Actors pills, Recent Watch Timeline scroll.",
+    "taste_profile": "AI-generated qualitative summary card ('Your Cinematic DNA') with key tropes, mood preference sliders, narrative complexity rating, and custom AI prompt tuner.",
+    "ai_recommendations_grid": "Poster-heavy poster grid view with liquid glass overlay on hover. Shows poster image, Title, Release Year, Match Score %, 'Why This Recommendation' AI summary modal/tooltip, Save to Library button, and Dismiss button.",
+    "saved_library": "Personal watchlist categorized by 'Must Watch', 'Saved AI Picks', and 'Completed'. Filters by genre, media type, and source.",
+    "recommendation_modal": "Full-screen or high-blur modal with backdrop poster banner, full synopsis, cast, TMDB metadata, trailer play preview, Ollama reasoning breakdown, and streaming availability tags."
+  },
+  "testing_requirements": {
+    "data_testid_rule": "ALL interactive components, buttons, tabs, modal controls, and stat cards MUST include a descriptive data-testid attribute in kebab-case format.",
+    "example_testids": [
+      "google-login-button",
+      "nav-connections-link",
+      "nav-dashboard-link",
+      "nav-taste-profile-link",
+      "nav-recommendations-link",
+      "nav-saved-link",
+      "simkl-token-input",
+      "trakt-client-id-input",
+      "plex-url-input",
+      "ollama-url-input",
+      "ollama-model-select",
+      "save-connections-button",
+      "test-ollama-connection-button",
+      "generate-recommendations-button",
+      "movie-card-{id}",
+      "save-recommendation-button-{id}",
+      "dismiss-recommendation-button-{id}",
+      "recommendation-detail-modal"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Use standard JavaScript/React components (.js or .jsx). Do not generate TypeScript errors.",
+    "Follow Liquid Glassmorphism for containers: use bg-white/[0.03], backdrop-blur-xl, border border-white/10, rounded-2xl.",
+    "Incorporate Neo-Brutalist touches: crisp 1px borders, subtle retro shadow offsets on active pills/badges (e.g., shadow-[2px_2px_0px_0px_#E11D48]), and JetBrains Mono fonts for data chips & AI model tags.",
+    "Ensure dark theme background #08090E is rich with radial ambient gradients (rose-500/10, cyan-500/10) to give cinematic depth.",
+    "Ensure all mock data for Simkl, Trakt, Plex, and Ollama recommendations are highly realistic, complete with posters, TMDb scores, genres, and rich 'Why AI Recommended' explanations.",
+    "Implement Sonner toasts for connection testing, saving recommendations, and generating AI taste profiles.",
+    "Ensure responsiveness on mobile viewports with smooth tabs/drawer navigation."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Dark colors look good when used independently without standard full-screen gradients. DO NOT use dark colors as high-contrast linear gradients.",
+    "Create depth through layered design elements with z-index hierarchy and multi-layered backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition (e.g. transition: all). Add targeted CSS transitions for interactive elements.",
+    "You MUST NOT center align the app container. Do not add .App { text-align: center; }.",
+    "Never use generic AI assistant emoji characters like 🤖🧠💭💡 for UI icons. Use Lucide icons (lucide-react) or Heroicons.",
+    "Use 2-3x more spacing than typical cramped layouts. Use p-6, p-8, gap-6, gap-8.",
+    "All interactive elements MUST include a data-testid attribute in kebab-case format."
+  ]
+}

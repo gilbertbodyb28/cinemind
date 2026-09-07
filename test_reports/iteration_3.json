@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 3 e2e testing of CineMind AI's 4 new features (TMDB enrichment, model toggle, SSE streaming reasoning, usage meter). Backend: created /app/backend/tests/test_new_features.py (15 tests) + test_usage_freshness.py (1 RCA test) — 15/15 and 1/1 pass; existing regression suite test_claude_fallback.py 12/12 still passes (28/28 total, 100%). Frontend: 3 Playwright runs on the public preview URL covering /recommendations (model picker, haiku generation toast, TMDB posters, streaming modal live+cached, usage meter), /taste (model picker + provider badge) and /connections (claude model buttons, persistence, global default flowing to recs picker). All target behaviours verified; no functional bugs found. Only issues are 1 console hydration warning from dev instrumentation and code-review notes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/recommendations/generate", "issue": "record_usage() counts each Claude attempt, so an unparseable-JSON retry bills 2 'calls' for one generation. Expected/by design, but the usage meter can look inflated — consider tagging retry rows."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/recommendations", "issues": ["React console error (hydration): '<span> cannot be a child of <option>' originating from ModelPicker.jsx line 19 — the dev instrumentation wraps the dynamic {m.label} expression inside <option> in a <span>. Harmless at runtime but pollutes console; precompute the option label into a single string variable to avoid the dynamic-expression wrapper.", "Subheading still says 'Ollama runs first if configured; otherwise Claude takes over' while a Claude model picker sits right next to it — accurate but slightly confusing copy now that model choice is explicit."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_usage_freshness.py",
+    "/app/backend/tests/test_claude_fallback.py",
+    "/app/test_reports/pytest/iter3_results.xml"
+  ],
+  "action_items": [
+    "Optional: remove the dynamic expression inside <option> in ModelPicker.jsx to clear the hydration console error",
+    "Optional: update /recommendations subheading copy now that the model is explicitly selectable"
+  ],
+  "critical_code_review_comments": [
+    "server.py is now 855 lines (>700 threshold) mixing auth, connections, history, TMDB, LLM helpers, streaming and usage — split into routers (auth.py, recs.py, llm.py) before it grows further",
+    "stream_reason() loads `rec` before returning the StreamingResponse; if the rec is deleted (a concurrent /recommendations/generate wipes non-saved recs) the stream still writes deep_why to a non-existent doc (update_one is a silent no-op). Acceptable, but a re-check inside gen() would be cleaner",
+    "enrich_with_tmdb() fires 8 concurrent TMDB searches with a 10s client timeout and no rate-limit handling — a 429 from TMDB silently leaves the Unsplash placeholder with no log distinguishing 'no result' from 'rate limited'",
+    "get_usage() filters created_at with an ISO string >= comparison; safe only because every writer uses datetime.now(timezone.utc).isoformat() with identical formatting — a stored native datetime would break the filter silently"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_usage_freshness.py"
+  ],
+  "success_rate": {"backend": "100% (28/28)", "frontend": "100% (all 11 requested checks)"},
+  "seed_data_creation": "Reused conftest mongosh seeding (user_id=test-user-claude-1, token=test_session_claude_1, auto-cleaned) and the existing UI session user_id=test-user-fe-claude / token=test_session_fe_claude. connections.llm_model reset to 'sonnet-5' for BOTH users at end of testing.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "/app/memory/test_credentials.md is still empty — sessions seeded via mongosh per /app/auth_testing.md. Browser cookie: session_token=test_session_fe_claude (domain smart-show-finder.preview.emergentagent.com, secure, sameSite=None). Bearer header works for curl/pytest.",
+  "context_for_next_testing_agent": "Run backend as `cd /app/backend/tests && python -m pytest -n 0 -v` (must be -n 0; classes share generated rec state). Verified this iteration: (1) recs generate with {model:'haiku-4.5'} -> provider=claude, model=haiku-4.5, count=8, demo=false, no retry needed; GET /api/recommendations returned 8/8 claude recs with 8 distinct https://image.tmdb.org posters and enriched tmdb_rating; (2) taste generate with {model:'sonnet-5'} and with no body both return provider=claude with correct model; invalid model key falls back to sonnet-5; (3) PUT/GET /api/connections persists llm_model='opus-5' and a no-body generate then used opus-5 (took <60s); (4) SSE stream returns text/event-stream, >3 token frames, final done frame with model, 2nd call one cached:true frame + done cached:true, 404 unknown rec, 401 unauthenticated; (5) GET /api/usage calls>0, est_tokens>0, by_model contains all three models, 401 unauthenticated. Frontend selectors confirmed working: recs-model-picker (3 options), generate-recommendations-button (toast 'Claude Haiku 4.5', loading label resets to 'New picks'), info-recommendation-button-{id} -> recommendation-detail-modal -> streaming-reasoning / reasoning-status ('… is thinking' -> model chip -> '· cached' on reopen) / reasoning-text (0 -> 1444 chars), taste-model-picker + profile-provider-badge='Claude Haiku 4.5', section-claude + claude-model-{key} highlight persisting across reload and propagating to the recs picker, usage-meter/usage-calls/usage-tokens incrementing. NOTE: usage-calls needs polling (~2-8s) after a generation — a single immediate read can be stale and gave a false FAIL on the first run.",
+  "rca_of_the_issue": "First Playwright run reported 'usage meter did not increase'. RCA: not a defect. Backend was verified fresh (test_usage_freshness.py: /api/usage returns calls+1 immediately after a Claude call, response headers 'no-store, no-cache, must-revalidate'). The UsageMeter refetches on the 'cinemind:usage' window event; the test simply sampled the DOM before the refetch resolved. Re-tested with polling on both /taste and /recommendations: 4->5 and 5->6. Same for the 'Generating…' button label — the earlier screenshot was captured mid-flight; polled re-test showed it returns to 'New picks'."
+}

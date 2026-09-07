@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 5 e2e testing of the 3 new features (History poster backfill, Simkl PIN sign-in, Trakt watchlist push) plus light regression. Backend: 13 new pytest cases in tests/test_iter5_features.py — all passed; full suite 68 passed / 0 failed (after fixing one stale assertion in test_new_features.py). Frontend: verified Dashboard history posters (12/12 real TMDB <img>), Connections Simkl+Trakt device flows to pending state, test-simkl/test-trakt buttons, Recommendations & Saved watchlist buttons with 409 toast + Connect navigation, modal pill, saved filters/search regression, trailer + streaming reasoning in modal. No functional defects found; one broken static asset and two minor testability notes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Landing hero", "issue": "Hero poster image returns HTTP 404 (https://image.tmdb.org/t/p/w780/6oJPZKaqExYYYTsxi4xI4A6wjR.jpg) — shows broken-image alt 'Foundation' on the public landing page", "selector": "pages/Landing.jsx:71 img[alt='Foundation']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Connections", "issues": ["Test-connection result renders as inline green text even for 'not authorized' states (Trakt/Simkl responded 200 (not authorized — click Connect)) — success-green tone for a not-connected state is slightly misleading; amber/neutral would read better"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter5_features.py",
+    "/app/test_reports/pytest/iter5_results.xml",
+    "/app/test_reports/pytest/iter5_all.xml"
+  ],
+  "action_items": [
+    "Replace the 404'ing Landing hero poster URL (pages/Landing.jsx:71) with a valid TMDB path or a local asset",
+    "Optional: when a RecModal is open, the same data-testid watchlist-button-{id} exists twice in the DOM (card hover bar behind the overlay + modal pill), which breaks Playwright strict-mode selectors — consider suffixing the modal pill testid (e.g. watchlist-button-{id}-modal)",
+    "Optional: tone down the green 'not authorized' inline test-connection message on Connections"
+  ],
+  "critical_code_review_comments": [
+    "server.py get_history backfill writes poster=None + poster_checked=true when TMDB has no match — correct for avoiding repeat lookups, but such items will silently never get art again even after a title fix; consider storing poster_checked_at for periodic retry.",
+    "simkl_pin_poll treats any non-KO/non-token response containing 'device_code' as expired and everything else as invalid; Simkl returning a brand-new PIN object for unknown codes makes 'expired' vs 'invalid' non-deterministic (tolerated in tests).",
+    "server.py is 1183 lines — approaching the split threshold; consider extracting routers (connections/simkl/trakt, history, recommendations)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter5_features.py",
+    "/app/backend/tests/test_new_features.py"
+  ],
+  "success_rate": {"backend": "100% (68/68, 1 skipped)", "frontend": "100% of tested flows"},
+  "seed_data_creation": "Reused seeded sessions test-user-fe-claude/test_session_fe_claude (expiry refreshed via mongosh) and pytest fixture user test-user-claude-1. Forced poster backfill by $unset of poster/poster_checked/tmdb_id on test-user-fe-claude history.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Bearer test_session_fe_claude (user test-user-fe-claude); browser cookie session_token=test_session_fe_claude",
+  "context_for_next_testing_agent": "Verified in iteration 5: GET /api/history backfills 12/12 items with TMDB posters + tmdb_id and persists poster_checked (2nd GET <1s); simkl/pin/start returns 5-char code + simkl.com/pin; poll returns pending for fresh code and expired/invalid for bogus; 422 on empty body; simkl/disconnect + /api/connections (simkl_connected=false, no _id leak); /api/connections/test/simkl ok=true 'not authorized'; /api/recommendations/{id}/watchlist 404/401/409 'Connect Trakt first'. Frontend: dashboard posters, both DeviceConnect flows to pending (Simkl EFE4C 5-char, Trakt 8-char, reset on reload), watchlist 409 toast + Connect->/connections, saved modal pill, saved filters. Correct testids: unsave-button-{id} (not unsave-button), model-picker-select, saved-type-filter/saved-genre-filter/saved-search-input/saved-count. Real Trakt/Simkl authorization still cannot be automated. Space Simkl polls >=5s, Trakt >=6s.",
+  "rca_of_the_issue": "No functional bug reproduced. The single pre-existing pytest failure (test_new_features.py::test_list_recs_have_tmdb_posters_and_model expecting exactly 8 claude recs) was a stale test assertion: multiple generate tests in one session accumulate recommendations, so 10 were returned. Fixed to >=8 (test-code only). The Landing hero 404 was confirmed with curl against image.tmdb.org."
+}

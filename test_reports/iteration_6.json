@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only redesign verification for CineMind AI Home + new shell. All requested testids resolve on /dashboard (home-page, category-tabs, new-trailer-panel, hero-panel, hero-title, continue-watching-panel, upcoming-panel, home-search-input, usage-bell-button, profile-pill, icon-rail). Category tabs (Movies / TV Series / genre) filter correctly and hero updates. Hero next/prev cycles picks. Top-bar search live-filters (verified: 'sic' -> Sicario; 'zzznomatch' -> empty). hero-watch-button opens RecModal with trailer-player, trailer-play-button and streaming-reasoning present. hero-save-button toggles save. Upcoming and trailer items open the detail modal. Continue Watching lists 8 history items with TMDB external links. trailer-sort-select accepts year and rating. Icon rail links (nav-dashboard/recommendations/saved/stats/taste-profile/connections) navigate correctly; top tabs (tab-home/ai-picks/library/taste/stats/sources) all present. /stats renders old Dashboard (stat-total + sync-history-button present). Usage bell popover shows usage-meter/usage-calls/usage-tokens. Profile pill opens profile-menu with logout-button. Regression pages OK: recommendations (generate-recommendations-button, recs-model-picker), saved (saved-search-input, saved-sort-select), taste (generate-taste-button), connections (section-trakt/simkl/plex/ollama + save-connections-button). Mobile 390x844 renders floating shell, bottom icon rail visible, poster rows not clipped.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mobile header (390px)", "issues": ["Profile pill shrinks to only the chevron (avatar/initials not visible in the crop) because header wraps and pill sits at ml-auto with hidden text on <sm; consider showing at least the avatar circle on mobile to make the profile entry point discoverable"]},
+      {"screen": "Home hero (desktop)", "issues": ["hero-save-button uses MoreHorizontal icon when not saved which is a bit ambiguous vs a bookmark/save affordance; consider always showing the Bookmark outline when unsaved"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Layout.jsx: outside-click close handler uses `popRef.current?.contains(e.target)` but popRef only wraps the pill/bell container; clicking inside the header row (e.g. tabs) also closes the popover which is fine, but clicking on the bell/profile itself relies on the toggle handlers running before the mousedown listener (currently works). Consider a dedicated ref per popover to avoid future coupling.",
+    "Home.jsx `upcoming` derives from `filtered.filter(r => r.id !== hero?.id).slice(0,8)` but the grid only renders first 4 (`upcoming.slice(0,4)`). The intermediate `slice(0,8)` is dead work; simplify to a single slice.",
+    "Home.jsx sets `document.documentElement.style.setProperty('--ambient-img', ...)` in a useEffect but never cleans it up on unmount, so leaving /dashboard leaves the last hero backdrop as the global ambient blur on other pages. Consider resetting to 'none' in the cleanup.",
+    "Layout.jsx mobile rail duplicates data-testid values by suffixing `-mobile` but the icon rail is fixed while the desktop rail is also rendered (hidden lg:flex). Both testids exist so the request's `nav-*-link` selectors resolve to the desktop rail — verify this stays true if the desktop rail is ever hidden at wider breakpoints."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "cookie session_token=test_session_fe_claude on smart-show-finder.preview.emergentagent.com",
+  "seed_data_creation": "None; used existing seeded recommendations + history for test-user-fe-claude.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All Home + shell testids from the review request are wired correctly and pass end-to-end. Backend was not tested this iteration (frontend-only redesign; iteration_5 covered backend). Only non-blocking design nits and code-quality comments remain — see design_issues + critical_code_review_comments."
+}
