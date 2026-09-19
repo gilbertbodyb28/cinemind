@@ -1,0 +1,61 @@
+/* Poster cards: the artwork sits ON a card instead of being the card.
+   A dark plate frames every poster in the app, the way a physical card holds
+   its print. Overlay file — the frozen Vision files stay untouched. */
+
+html .poster-frame {
+  padding: 9px;
+  background: linear-gradient(180deg, rgba(23, 19, 15, 0.92), rgba(11, 9, 7, 0.96));
+  border: 1px solid rgba(255, 240, 220, 0.12);
+  border-radius: 22px;
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 240, 220, 0.08);
+  /* Clip the hover lift at the plate's edge so the print never spills over it. */
+  overflow: hidden;
+}
+
+html[data-theme="apple"] .poster-frame {
+  background: linear-gradient(180deg, rgba(18, 18, 20, 0.92), rgba(0, 0, 0, 0.96));
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* The artwork itself, plus any placeholder that stands in for it. */
+html .poster-frame img,
+html .poster-frame > button > img,
+html .poster-frame [class*="aspect-[2/3]"] {
+  border-radius: 14px;
+  display: block;
+}
+
+/* The lift happens inside the plate, so it stays gentle. */
+html .poster-frame .poster-hover:hover {
+  transform: translateY(-3px) scale(1.01);
+}
+
+/* Only the wrapper that holds the artwork gets the artwork's rounding —
+   never the round select circle or the other controls layered on the poster. */
+html .poster-frame > button:has(> img),
+html .poster-frame > a:has(> img) {
+  display: block;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* The select circle stays a circle. */
+html .poster-frame .rounded-full {
+  border-radius: 9999px !important;
+}
+
+/* Chips and action buttons layered over the poster move in with the padding
+   so they never touch the plate's edge. */
+html .poster-frame > .absolute {
+  margin: 9px;
+}
+
+/* Selected state in the queue reads on the plate, not on the artwork. */
+html .poster-frame.is-selected {
+  border-color: rgba(216, 178, 106, 0.75);
+  box-shadow:
+    0 0 0 2px rgba(216, 178, 106, 0.45),
+    0 18px 45px rgba(0, 0, 0, 0.5);
+}

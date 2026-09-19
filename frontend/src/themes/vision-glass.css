@@ -1,0 +1,69 @@
+/* Vision Liquid Glass intensity. Frozen Vision files stay untouched. */
+
+html:not([data-theme="apple"]) .glass {
+  background: rgba(255, 246, 232, var(--lg-fill, 0.03)) !important;
+  backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  border: 1px solid rgba(255, 240, 220, var(--lg-stroke, 0.14)) !important;
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 240, 220, var(--lg-shine, 0.18)),
+    inset 0 -1px 0 rgba(255, 240, 220, 0.04) !important;
+}
+
+html:not([data-theme="apple"]) .glass-strong,
+html:not([data-theme="apple"]) .glass-shell {
+  background: rgba(255, 246, 232, var(--lg-fill, 0.03)) !important;
+  backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  border: 1px solid rgba(255, 240, 220, var(--lg-stroke, 0.14)) !important;
+  box-shadow:
+    0 14px 50px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 240, 220, var(--lg-shine, 0.18)),
+    inset 0 -1px 0 rgba(255, 240, 220, 0.04) !important;
+}
+
+html:not([data-theme="apple"]) .chip {
+  background: rgba(255, 246, 232, var(--lg-fill, 0.04)) !important;
+  border-color: rgba(255, 240, 220, var(--lg-stroke, 0.14)) !important;
+  backdrop-filter: blur(calc(var(--lg-blur, 60px) * 0.5)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(calc(var(--lg-blur, 60px) * 0.5)) saturate(var(--lg-sat, 200%)) !important;
+}
+
+html:not([data-theme="apple"]) .chip-rose {
+  border-color: rgba(216, 178, 106, 0.5) !important;
+  background: rgba(216, 178, 106, 0.14) !important;
+}
+
+html:not([data-theme="apple"]) .chip-cyan {
+  border-color: rgba(168, 190, 146, 0.45) !important;
+  background: rgba(168, 190, 146, 0.12) !important;
+}
+
+html:not([data-theme="apple"]) .chip-emerald {
+  border-color: rgba(140, 170, 120, 0.45) !important;
+  background: rgba(140, 170, 120, 0.12) !important;
+}
+
+html:not([data-theme="apple"]) .chip-amber {
+  border-color: rgba(224, 168, 90, 0.5) !important;
+  background: rgba(224, 168, 90, 0.13) !important;
+}
+
+html:not([data-theme="apple"]) .grain::before {
+  opacity: calc(0.3 * (1 - var(--lg-t, 0.78) * 0.72)) !important;
+}
+
+html:not([data-theme="apple"]) .\!bg-\[\#17130F\]\/75,
+html:not([data-theme="apple"]) .\!bg-\[\#17130F\]\/80,
+html:not([data-theme="apple"]) .bg-\[\#17130F\] {
+  background: rgba(255, 246, 232, var(--lg-fill, 0.03)) !important;
+}
+
+.ambient-scrim {
+  background: radial-gradient(
+    1400px 900px at 50% 45%,
+    rgba(11, 9, 7, calc(0.18 * (1 - var(--lg-t, 0.78)))),
+    rgba(11, 9, 7, calc(0.82 - var(--lg-t, 0.78) * 0.44)) 82%
+  );
+}

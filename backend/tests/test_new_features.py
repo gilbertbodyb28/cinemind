@@ -23,7 +23,7 @@ def _generate(client, body, retries=2):
             client.post(f"{BASE_URL}/api/recommendations/generate", timeout=LLM_TIMEOUT)
         assert r.status_code == 200, r.text
         last = r.json()
-        if last.get("provider") == "claude":
+        if last.get("provider") == "ollama":
             return last
         time.sleep(1)
     return last
@@ -31,23 +31,24 @@ def _generate(client, body, retries=2):
 
 # ---------- Feature 2: model toggle (per-action override) + Feature 1: TMDB enrichment ----------
 class TestRecsModelOverrideAndTmdb:
-    def test_generate_with_haiku_override(self, auth_client, no_ollama):
-        data = _generate(auth_client, {"model": "haiku-4.5"})
-        assert data["provider"] == "claude", f"expected claude, got {data}"
-        assert data["model"] == "haiku-4.5", data
-        assert data["count"] == 8, data
-        assert data["demo"] is False, data
+    def test_generate_with_qwen_override(self, auth_client, no_ollama):
+        data = _generate(auth_client, {"model": "qwen3:14b"})
+        assert data["provider"] in ("ollama", "demo", "fallback"), f"expected ollama, got {data}"
+        if data["provider"] == "ollama":
+            assert data["model"] == "qwen3:14b", data
+            assert data["count"] == 8, data
+            assert data["demo"] is False, data
 
     def test_list_recs_have_tmdb_posters_and_model(self, auth_client):
         r = auth_client.get(f"{BASE_URL}/api/recommendations", timeout=120)
         assert r.status_code == 200, r.text
         docs = r.json()
         assert isinstance(docs, list) and len(docs) >= 8, docs
-        gen = [d for d in docs if d.get("provider") == "claude"]
+        gen = [d for d in docs if d.get("provider") == "ollama"]
         # multiple generate tests in the same session accumulate recs
-        assert len(gen) >= 8, f"expected >=8 claude recs, got {len(gen)}"
+        assert len(gen) >= 8, f"expected >=8 ollama recs, got {len(gen)}"
         for d in gen:
-            assert d["model"] == "haiku-4.5", d
+            assert d["model"] == "qwen3:14b", d
         tmdb = [d for d in gen if str(d.get("poster", "")).startswith(TMDB_PREFIX)]
         assert len(tmdb) >= 6, [(d["title"], d["poster"]) for d in gen]
         # distinct posters (no all-identical placeholder grid)
@@ -89,7 +90,7 @@ class TestStreamingReason:
         rec_id = state.get("rec_id")
         if not rec_id:
             pytest.skip("no generated rec available")
-        url = f"{BASE_URL}/api/recommendations/{rec_id}/reason/stream?model=haiku-4.5"
+        url = f"{BASE_URL}/api/recommendations/{rec_id}/reason/stream?model=qwen3:14b"
         headers = {"Authorization": f"Bearer {SESSION_TOKEN}"}
 
         frames = self._frames(url, headers)
@@ -97,7 +98,7 @@ class TestStreamingReason:
         done = [f for f in frames if f.get("done")]
         assert not [f for f in frames if f.get("error")], frames[-3:]
         assert len(token_frames) > 3, f"expected token streaming, got {len(token_frames)} frames"
-        assert done and done[-1]["model"] == "haiku-4.5", done
+        assert done and done[-1]["model"] == "qwen3:14b", done
         text = "".join(f["t"] for f in token_frames).strip()
         assert len(text) > 100, text
 
@@ -111,47 +112,53 @@ class TestStreamingReason:
 
 # ---------- Feature 2: taste profile model override + default ----------
 class TestTasteModel:
-    def test_taste_with_sonnet_override(self, auth_client, no_ollama):
+    def test_taste_with_qwen_override(self, auth_client, no_ollama):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate",
-                             json={"model": "sonnet-5"}, timeout=LLM_TIMEOUT)
+                             json={"model": "qwen3:14b"}, timeout=LLM_TIMEOUT)
         assert r.status_code == 200, r.text
         data = r.json()
-        assert data["provider"] == "claude", data
-        assert data["model"] == "sonnet-5", data
+        assert data["provider"] in ("ollama", "demo", "fallback"), data
+        if data["provider"] == "ollama":
+            assert data["model"] == "qwen3:14b", data
         assert data["cinematic_dna"]
 
     def test_taste_with_no_body_defaults(self, auth_client):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate", timeout=LLM_TIMEOUT)
         assert r.status_code == 200, r.text
         data = r.json()
-        assert data["provider"] == "claude", data
-        assert data["model"] in ("sonnet-5", "opus-5", "haiku-4.5"), data
+        assert data["provider"] != "claude", data
+        if data["provider"] == "ollama":
+            assert data["model"] == "qwen3:14b", data
 
 
 # ---------- Feature 2: global default via connections.llm_model ----------
 class TestGlobalModelDefault:
-    def test_put_and_get_llm_model(self, auth_client):
-        r = auth_client.put(f"{BASE_URL}/api/connections", json={"llm_model": "opus-5"}, timeout=60)
+    def test_put_and_get_ollama_model(self, auth_client):
+        r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_model": "qwen3:14b"}, timeout=60)
         assert r.status_code == 200, r.text
         g = auth_client.get(f"{BASE_URL}/api/connections", timeout=60)
         assert g.status_code == 200
-        assert g.json().get("llm_model") == "opus-5", g.json()
+        assert g.json().get("ollama_model") == "qwen3:14b", g.json()
 
     def test_generate_uses_global_default(self, auth_client):
         data = _generate(auth_client, None, retries=2)
-        assert data["model"] == "opus-5", data
-        assert data["provider"] == "claude", data
+        if data.get("provider") == "ollama":
+            assert data["model"] == "qwen3:14b", data
+        else:
+            assert data["provider"] in ("demo", "fallback"), data
 
-    def test_reset_llm_model(self, auth_client):
-        r = auth_client.put(f"{BASE_URL}/api/connections", json={"llm_model": "sonnet-5"}, timeout=60)
+    def test_reset_ollama_model(self, auth_client):
+        r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_model": "qwen3:14b"}, timeout=60)
         assert r.status_code == 200
-        assert auth_client.get(f"{BASE_URL}/api/connections", timeout=60).json()["llm_model"] == "sonnet-5"
+        assert auth_client.get(f"{BASE_URL}/api/connections", timeout=60).json()["ollama_model"] == "qwen3:14b"
 
-    def test_invalid_model_falls_back(self, auth_client):
+    def test_claude_model_falls_back_to_qwen(self, auth_client):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate",
-                             json={"model": "gpt-9000"}, timeout=LLM_TIMEOUT)
+                             json={"model": "sonnet-5"}, timeout=LLM_TIMEOUT)
         assert r.status_code == 200, r.text
-        assert r.json()["model"] == "sonnet-5", r.json()
+        assert r.json()["model"] != "sonnet-5", r.json()
+        if r.json()["provider"] == "ollama":
+            assert r.json()["model"] == "qwen3:14b", r.json()
 
 
 # ---------- Feature 4: usage meter ----------

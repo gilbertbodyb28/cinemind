@@ -2,15 +2,22 @@ import os
 import subprocess
 import time
 
+from pathlib import Path
+
 import pytest
 import requests
 from dotenv import dotenv_values
 
-frontend_env = dotenv_values("/app/frontend/.env")
+# Resolved from the checkout, not the /app path the export was built for.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+frontend_env = dotenv_values(REPO_ROOT / "frontend" / ".env")
+backend_env = dotenv_values(REPO_ROOT / "backend" / ".env")
 base_url = os.environ.get("REACT_APP_BACKEND_URL") or frontend_env.get("REACT_APP_BACKEND_URL")
 if not base_url:
-    raise RuntimeError("REACT_APP_BACKEND_URL is missing from the process environment and /app/frontend/.env")
+    raise RuntimeError("REACT_APP_BACKEND_URL is missing from the process environment and frontend/.env")
 BASE_URL = base_url.rstrip("/")
+# The seed has to land in the database the running server actually reads.
+DB_NAME = os.environ.get("DB_NAME") or backend_env.get("DB_NAME") or "cinemind"
 
 SESSION_TOKEN = "test_session_claude_1"
 USER_ID = "test-user-claude-1"
@@ -19,7 +26,7 @@ USER_ID = "test-user-claude-1"
 def _seed_session():
     """Seed a user + session directly in mongo per /app/auth_testing.md."""
     script = f"""
-use('test_database');
+use('{DB_NAME}');
 db.users.deleteMany({{user_id: '{USER_ID}'}});
 db.user_sessions.deleteMany({{session_token: '{SESSION_TOKEN}'}});
 db.users.insertOne({{user_id: '{USER_ID}', email: 'test.user.claude1@example.com', name: 'Test User', picture: 'https://via.placeholder.com/150', created_at: new Date()}});
@@ -34,7 +41,7 @@ def seeded_session():
     _seed_session()
     yield
     cleanup = f"""
-use('test_database');
+use('{DB_NAME}');
 db.users.deleteMany({{user_id: '{USER_ID}'}});
 db.user_sessions.deleteMany({{session_token: '{SESSION_TOKEN}'}});
 db.history.deleteMany({{user_id: '{USER_ID}'}});
@@ -67,8 +74,8 @@ def auth_client(seeded_session, api_client):
 
 @pytest.fixture
 def no_ollama(auth_client):
-    """Ensure ollama_url is unset so Claude fallback path is exercised."""
-    r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_url": None, "ollama_model": "llama3.2"}, timeout=30)
+    """Keep Ollama URL empty in the document; server still falls back to localhost:11434."""
+    r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_url": None, "ollama_model": "qwen3:14b"}, timeout=30)
     assert r.status_code == 200, r.text
     time.sleep(0.2)
     return True

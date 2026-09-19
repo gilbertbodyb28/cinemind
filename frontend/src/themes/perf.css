@@ -1,0 +1,107 @@
+/* Scroll performance. Look stays the same; only the cost changes.
+   The frozen Vision files are untouched — this is an overlay, like the other
+   files in this folder, and it is imported last so it wins.
+
+   Two things were killing the frame rate on long lists: ~2800 elements each
+   running their own backdrop-filter, and 400+ poster cards being laid out and
+   painted even when far off screen. */
+
+/* 1. Blur stays on the big surfaces (shell, panels, dialog) and comes off the
+      small repeated bits, which read the same over a dark poster anyway. */
+html .chip:not(.cm-keep-blur),
+html [data-testid^="request-card-"] .glass,
+html [data-testid^="request-card-"] .glass-strong,
+html [data-testid^="approved-card-"] .glass,
+html [data-testid^="approved-card-"] .glass-strong,
+html [data-testid^="upcoming-card-"] .glass,
+html [data-testid^="upcoming-card-"] .glass-strong,
+html [data-testid^="rec-card-"] .glass,
+html [data-testid^="rec-card-"] .glass-strong,
+html [data-testid^="saved-card-"] .glass,
+html [data-testid^="saved-card-"] .glass-strong,
+html [data-testid^="trailer-item-"] .glass-strong {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Tailwind backdrop-blur utilities on the repeated card chrome. */
+html [data-testid^="request-card-"] .backdrop-blur-md,
+html [data-testid^="approved-card-"] .backdrop-blur-md,
+html [data-testid^="upcoming-card-"] .backdrop-blur-md,
+html [data-testid^="rec-card-"] .backdrop-blur-md {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Compensate for the missing blur so the chrome keeps its contrast. */
+html [data-testid^="request-card-"] .glass,
+html [data-testid^="request-card-"] .glass-strong,
+html [data-testid^="approved-card-"] .glass,
+html [data-testid^="approved-card-"] .glass-strong,
+html [data-testid^="upcoming-card-"] .glass,
+html [data-testid^="upcoming-card-"] .glass-strong,
+html [data-testid^="rec-card-"] .glass,
+html [data-testid^="rec-card-"] .glass-strong,
+html [data-testid^="saved-card-"] .glass,
+html [data-testid^="saved-card-"] .glass-strong,
+html [data-testid^="trailer-item-"] .glass-strong {
+  background: rgba(23, 19, 15, 0.66) !important;
+}
+
+html[data-theme="apple"] [data-testid^="request-card-"] .glass,
+html[data-theme="apple"] [data-testid^="request-card-"] .glass-strong,
+html[data-theme="apple"] [data-testid^="approved-card-"] .glass,
+html[data-theme="apple"] [data-testid^="approved-card-"] .glass-strong,
+html[data-theme="apple"] [data-testid^="upcoming-card-"] .glass,
+html[data-theme="apple"] [data-testid^="upcoming-card-"] .glass-strong,
+html[data-theme="apple"] [data-testid^="rec-card-"] .glass,
+html[data-theme="apple"] [data-testid^="rec-card-"] .glass-strong {
+  background: rgba(12, 12, 14, 0.66) !important;
+}
+
+html .chip:not(.cm-keep-blur) {
+  background: rgba(255, 246, 232, 0.07) !important;
+}
+html[data-theme="apple"] .chip:not(.cm-keep-blur) {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+/* Coloured chips keep their own fill. */
+html .chip-rose:not(.cm-keep-blur) { background: rgba(216, 178, 106, 0.16) !important; }
+html .chip-cyan:not(.cm-keep-blur) { background: rgba(168, 190, 146, 0.14) !important; }
+html .chip-emerald:not(.cm-keep-blur) { background: rgba(140, 170, 120, 0.14) !important; }
+html .chip-amber:not(.cm-keep-blur) { background: rgba(224, 168, 90, 0.15) !important; }
+
+/* 2. Off-screen cards skip layout and paint entirely. The intrinsic size keeps
+      the scrollbar honest so the page does not jump while scrolling. */
+html [data-testid^="request-card-"],
+html [data-testid^="approved-card-"],
+html [data-testid^="upcoming-card-"],
+html [data-testid^="rec-card-"],
+html [data-testid^="saved-card-"] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 560px;
+}
+
+html [data-testid^="trailer-item-"] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 112px;
+}
+
+/* 3. The blurred backdrop is a static texture: promote it once instead of
+      re-filtering a full-screen layer on every scroll frame. */
+.cm-ambient {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 4. Grain is a full-screen blended layer; keeping it off the compositor's
+      per-frame work matters more than the last few percent of texture. */
+.grain::before {
+  will-change: opacity;
+}
+
+/* 5. Hover lift only animates transform, and only when the pointer can hover. */
+@media (hover: none) {
+  .poster-hover:hover { transform: none; box-shadow: none; }
+}

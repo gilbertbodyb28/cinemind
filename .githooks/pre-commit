@@ -1,0 +1,6 @@
+#!/bin/sh
+# Reject commits that modify frozen Vision UI theme files.
+# Enable with: git config core.hooksPath .githooks
+
+root="$(git rev-parse --show-toplevel)"
+python3 "$root/scripts/check_vision_ui_lock.py"

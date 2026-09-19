@@ -1,5 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Cookie, Header
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Cookie, Header, Depends
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from dotenv import load_dotenv
 import asyncio
 from starlette.middleware.cors import CORSMiddleware
@@ -8,14 +8,44 @@ import os
 import logging
 import uuid
 import json
+import html
 import random
+import secrets
 import httpx
 import re
+import bcrypt
 from pathlib import Path
-from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
+from urllib.parse import urlparse
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime, timezone, timedelta
+from config import OLLAMA_BASE_URL, OLLAMA_MODEL, effective_ollama_model, resolve_model
+from llm import generate_with_llm
+from providers.ollama import stream_ollama
+from mediamanager_client import (
+    media_type_for_mediamanager,
+    mediamanager_add_title,
+    mediamanager_is_configured,
+    mediamanager_login,
+    normalize_mediamanager_url,
+    send_item_to_library,
+)
+from providers.google_auth import (
+    authorization_url as google_authorization_url,
+    exchange_code as google_exchange_code,
+    google_oauth_configured,
+)
+from jobs.engine import safe_provider_error
+from providers.anilist import (
+    auth_url as anilist_auth_url,
+    client_id as anilist_client_id,
+    credentials_configured as anilist_credentials_configured,
+    exchange_code as anilist_exchange_code,
+    fetch_media_list as anilist_fetch_media_list,
+    fetch_viewer as anilist_fetch_viewer,
+    parse_media_list_collection,
+    redirect_uri as anilist_redirect_uri,
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,6 +57,16 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI(title="CineMind AI")
 api = APIRouter(prefix="/api")
 
+
+def _env_flag(name: str, default: str = "false") -> bool:
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "yes", "on")
+
+
+COOKIE_SECURE = _env_flag("COOKIE_SECURE", "false")
+COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax").strip().lower() or "lax"
+SESSION_TTL_DAYS = int(os.environ.get("SESSION_TTL_DAYS", "7"))
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+
 EMERGENT_AUTH_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 TMDB_KEY = os.environ.get("TMDB_API_KEY")
 TRAKT_CLIENT_ID = os.environ.get("TRAKT_CLIENT_ID")
@@ -35,18 +75,6 @@ TRAKT_API = "https://api.trakt.tv"
 SIMKL_CLIENT_ID = os.environ.get("SIMKL_CLIENT_ID")
 SIMKL_API = "https://api.simkl.com"
 PLACEHOLDER_POSTER = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500"
-
-CLAUDE_MODELS = {
-    "sonnet-5": "claude-sonnet-5",
-    "opus-5": "claude-opus-5",
-    "haiku-4.5": "claude-haiku-4-5-20251001",
-}
-DEFAULT_MODEL = "sonnet-5"
-
-
-def resolve_model(conn: Dict[str, Any], override: Optional[str] = None) -> tuple[str, str]:
-    key = override if override in CLAUDE_MODELS else (conn.get("llm_model") if conn.get("llm_model") in CLAUDE_MODELS else DEFAULT_MODEL)
-    return CLAUDE_MODELS[key], key
 
 
 class GenerateBody(BaseModel):
@@ -76,8 +104,89 @@ class Connections(BaseModel):
     plex_url: Optional[str] = None
     plex_token: Optional[str] = None
     ollama_url: Optional[str] = None
-    ollama_model: Optional[str] = "llama3.2"
-    llm_model: Optional[str] = DEFAULT_MODEL
+    ollama_model: Optional[str] = OLLAMA_MODEL
+    llm_model: Optional[str] = None
+    mediamanager_url: Optional[str] = None
+    mediamanager_email: Optional[str] = None
+    mediamanager_password: Optional[str] = None  # write-only; never returned
+    mediamanager_configured: bool = False
+    anilist_username: Optional[str] = None
+    anilist_connected: bool = False
+    anilist_client_configured: bool = False
+    plex_connected: bool = False
+    tmdb_configured: bool = False
+    ui_theme: Literal["vision", "apple"] = "vision"
+    glass_intensity: int = 78
+    wallpaper: str = "poster"
+
+
+class AddOptionsBody(BaseModel):
+    """Choices from the Add to MediaManager dialog; omitted fields keep MM defaults."""
+
+    series_type: Optional[Literal["standard", "anime"]] = None
+    metadata_provider: Optional[Literal["tmdb", "tvdb"]] = None
+    monitoring: Optional[Literal["monitored", "unmonitored"]] = None
+    monitor_scope: Optional[Literal["entire", "specific", "future", "missing"]] = None
+    monitor_season: Optional[List[int]] = None
+    monitor_episode: Optional[List[str]] = None
+    search_now: Optional[bool] = False
+    release_rules: Optional[Dict[str, Any]] = None
+
+
+class BulkRequestsBody(BaseModel):
+    ids: List[str]
+    action: Literal["approve", "reject"]
+    options: Optional[AddOptionsBody] = None
+
+
+DEFAULT_GLASS_INTENSITY = 78
+
+
+def normalize_ui_theme(value: Any) -> str:
+    return "apple" if str(value or "").strip().lower() == "apple" else "vision"
+
+
+# Selectable background gradients; "poster" is the original poster-lit wash.
+WALLPAPERS = {"poster", "midnight", "ember", "dusk", "mocha", "aurora", "graphite"}
+
+
+def normalize_wallpaper(value: Any) -> str:
+    name = str(value or "").strip().lower()
+    return name if name in WALLPAPERS else "poster"
+
+
+def normalize_glass_intensity(value: Any) -> int:
+    try:
+        n = int(round(float(value)))
+    except (TypeError, ValueError):
+        return DEFAULT_GLASS_INTENSITY
+    return max(0, min(100, n))
+
+
+def connections_public(doc: Dict[str, Any]) -> Connections:
+    """Serialize connections without leaking write-only secrets."""
+    data = {**doc}
+    data["trakt_connected"] = bool(doc.get("trakt_refresh_token"))
+    data["simkl_connected"] = bool(doc.get("simkl_access_token"))
+    data["anilist_connected"] = bool(doc.get("anilist_access_token"))
+    data["anilist_username"] = doc.get("anilist_username")
+    data["anilist_client_configured"] = anilist_credentials_configured() or bool(anilist_client_id())
+    data["plex_connected"] = bool(doc.get("plex_token"))
+    data["tmdb_configured"] = bool(TMDB_KEY)
+    data["mediamanager_configured"] = mediamanager_is_configured(doc)
+    if data.get("mediamanager_url"):
+        data["mediamanager_url"] = normalize_mediamanager_url(data["mediamanager_url"])
+    data["mediamanager_password"] = None
+    data["trakt_access_token"] = None
+    data["trakt_refresh_token"] = None
+    data["simkl_access_token"] = None
+    data["plex_token"] = None
+    data["ollama_url"] = doc.get("ollama_url") or OLLAMA_BASE_URL
+    data["ollama_model"] = resolve_model(doc)[1]
+    data["ui_theme"] = normalize_ui_theme(doc.get("ui_theme"))
+    data["glass_intensity"] = normalize_glass_intensity(doc.get("glass_intensity"))
+    data["wallpaper"] = normalize_wallpaper(doc.get("wallpaper"))
+    return Connections(**{k: data.get(k) for k in Connections.model_fields})
 
 
 class HistoryItem(BaseModel):
@@ -109,6 +218,100 @@ class Recommendation(BaseModel):
 
 
 # ---------- Auth helpers ----------
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+
+class RegisterBody(BaseModel):
+    name: str
+    email: str
+    password: str = Field(min_length=6)
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
+
+
+def _user_from_doc(user_doc: Dict[str, Any]) -> User:
+    created_at = user_doc.get("created_at")
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at)
+    return User(
+        user_id=user_doc["user_id"],
+        email=user_doc["email"],
+        name=user_doc["name"],
+        picture=user_doc.get("picture") or None,
+        created_at=created_at,
+    )
+
+
+def _auth_payload(user_doc: Dict[str, Any]) -> Dict[str, Any]:
+    return _user_from_doc(user_doc).model_dump(mode="json")
+
+
+async def issue_session(user_id: str, response: Response) -> str:
+    session_token = secrets.token_urlsafe(48)
+    now = datetime.now(timezone.utc)
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": (now + timedelta(days=SESSION_TTL_DAYS)).isoformat(),
+        "created_at": now.isoformat(),
+    })
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        path="/",
+        max_age=SESSION_TTL_DAYS * 24 * 3600,
+    )
+    return session_token
+
+
+async def upsert_google_user(profile: Dict[str, Any]) -> Dict[str, Any]:
+    email = str(profile.get("email") or "").strip().lower()
+    sub = str(profile.get("google_sub") or "").strip()
+    if not email:
+        raise ValueError("Google profile missing email")
+    existing = None
+    if sub:
+        existing = await db.users.find_one({"google_sub": sub}, {"_id": 0})
+    if not existing:
+        existing = await db.users.find_one({"email": email}, {"_id": 0})
+    if existing:
+        updates: Dict[str, Any] = {}
+        if sub and existing.get("google_sub") != sub:
+            updates["google_sub"] = sub
+        if profile.get("name") and not existing.get("name"):
+            updates["name"] = profile["name"]
+        if profile.get("picture") and not existing.get("picture"):
+            updates["picture"] = profile["picture"]
+        if updates:
+            await db.users.update_one({"user_id": existing["user_id"]}, {"$set": updates})
+            existing.update(updates)
+        return existing
+    user_doc = {
+        "user_id": f"user_{uuid.uuid4().hex[:12]}",
+        "email": email,
+        "name": (profile.get("name") or email.split("@")[0])[:80],
+        "picture": profile.get("picture") or "",
+        "google_sub": sub or None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.users.insert_one(dict(user_doc))
+    return user_doc
+
+
 async def get_current_user(
     session_token: Optional[str] = Cookie(None),
     authorization: Optional[str] = Header(None),
@@ -134,14 +337,71 @@ async def get_current_user(
     user_doc = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
     if not user_doc:
         raise HTTPException(status_code=401, detail="User not found")
-    if isinstance(user_doc.get("created_at"), str):
-        user_doc["created_at"] = datetime.fromisoformat(user_doc["created_at"])
-    return User(**user_doc)
+    return _user_from_doc(user_doc)
+
+
+def _frontend_auth_redirect(reason: str, frontend_base: Optional[str] = None) -> RedirectResponse:
+    base = (frontend_base or FRONTEND_URL).rstrip("/")
+    return RedirectResponse(f"{base}/?auth_error={reason}")
+
+
+def _safe_frontend_origin(candidate: Optional[str]) -> str:
+    """Allow localhost / private LAN origins only; fall back to FRONTEND_URL."""
+    raw = (candidate or "").strip()
+    if not raw:
+        return FRONTEND_URL
+    try:
+        parsed = urlparse(raw)
+    except Exception:
+        return FRONTEND_URL
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return FRONTEND_URL
+    host = parsed.hostname.lower()
+    if host in ("localhost", "127.0.0.1"):
+        return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    parts = host.split(".")
+    if len(parts) == 4 and all(p.isdigit() for p in parts):
+        a, b = int(parts[0]), int(parts[1])
+        private = a == 10 or (a == 192 and b == 168) or (a == 172 and 16 <= b <= 31)
+        if private:
+            # Google cookies land on localhost; send the browser back there, same port.
+            port = f":{parsed.port}" if parsed.port else ""
+            return f"{parsed.scheme}://localhost{port}"
+    return FRONTEND_URL
 
 
 # ---------- Auth routes ----------
+@api.post("/auth/register", status_code=201)
+async def register(body: RegisterBody, response: Response):
+    email = body.email.strip().lower()
+    if await db.users.find_one({"email": email}, {"_id": 1}):
+        raise HTTPException(status_code=409, detail="An account with that email already exists")
+    user_doc = {
+        "user_id": f"user_{uuid.uuid4().hex[:12]}",
+        "email": email,
+        "name": body.name.strip(),
+        "picture": "",
+        "password_hash": hash_password(body.password),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.users.insert_one(dict(user_doc))
+    await issue_session(user_doc["user_id"], response)
+    return _auth_payload(user_doc)
+
+
+@api.post("/auth/login")
+async def login(body: LoginBody, response: Response):
+    email = body.email.strip().lower()
+    user_doc = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user_doc or not verify_password(body.password, user_doc.get("password_hash") or ""):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    await issue_session(user_doc["user_id"], response)
+    return _auth_payload(user_doc)
+
+
 @api.post("/auth/session")
 async def create_session(request: Request, response: Response):
+    """Legacy Emergent session exchange (kept for compatibility)."""
     body = await request.json()
     session_id = body.get("session_id")
     if not session_id:
@@ -171,28 +431,70 @@ async def create_session(request: Request, response: Response):
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
 
-    session_token = data["session_token"]
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    await db.user_sessions.insert_one({
+    await issue_session(user_id, response)
+    return {
         "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": expires_at.isoformat(),
+        "email": email,
+        "name": data["name"],
+        "picture": data.get("picture", ""),
+    }
+
+
+@api.get("/auth/google/start")
+async def google_start(request: Request, return_to: Optional[str] = None):
+    if not google_oauth_configured():
+        return JSONResponse(
+            {"detail": "Google sign-in is not configured on this server yet."},
+            status_code=503,
+        )
+    state = secrets.token_urlsafe(24)
+    await db.oauth_states.insert_one({
+        "state": state,
+        "provider": "google",
+        "return_to": _safe_frontend_origin(return_to),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
-
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 3600,
-    )
-    return {"user_id": user_id, "email": email, "name": data["name"], "picture": data.get("picture", "")}
+    authorization_url = google_authorization_url(state)
+    # Browser navigation (not fetch) should bounce straight to Google, never sit on :8001 JSON.
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept and "application/json" not in accept.split(",")[0]:
+        return RedirectResponse(authorization_url)
+    return {"authorization_url": authorization_url}
 
 
-from fastapi import Depends
+@api.get("/auth/google/callback")
+async def google_callback(
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+):
+    frontend_base = FRONTEND_URL
+    if error:
+        return _frontend_auth_redirect("google_denied", frontend_base)
+    if not code or not state:
+        return _frontend_auth_redirect("google_state", frontend_base)
+    stored = await db.oauth_states.find_one_and_delete({"state": state, "provider": "google"})
+    if stored:
+        frontend_base = _safe_frontend_origin(stored.get("return_to"))
+    if not stored:
+        return _frontend_auth_redirect("google_state", frontend_base)
+    expires_at = stored.get("expires_at")
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at and expires_at < datetime.now(timezone.utc):
+        return _frontend_auth_redirect("google_state", frontend_base)
+    try:
+        profile = await google_exchange_code(code)
+        user_doc = await upsert_google_user(profile)
+    except Exception:
+        logging.warning("Google sign-in failed", exc_info=True)
+        return _frontend_auth_redirect("google_failed", frontend_base)
+    redirect = RedirectResponse(f"{frontend_base}/dashboard")
+    await issue_session(user_doc["user_id"], redirect)
+    return redirect
 
 
 @api.get("/auth/me", response_model=User)
@@ -204,7 +506,12 @@ async def me(user: User = Depends(get_current_user)):
 async def logout(response: Response, session_token: Optional[str] = Cookie(None)):
     if session_token:
         await db.user_sessions.delete_one({"session_token": session_token})
-    response.delete_cookie("session_token", path="/")
+    response.delete_cookie(
+        "session_token",
+        path="/",
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+    )
     return {"ok": True}
 
 
@@ -212,22 +519,51 @@ async def logout(response: Response, session_token: Optional[str] = Cookie(None)
 @api.get("/connections", response_model=Connections)
 async def get_connections(user: User = Depends(get_current_user)):
     doc = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0, "user_id": 0}) or {}
-    doc["trakt_connected"] = bool(doc.get("trakt_refresh_token"))
-    doc["simkl_connected"] = bool(doc.get("simkl_access_token"))
-    return Connections(**doc)
+    return connections_public(doc)
 
 
 @api.put("/connections", response_model=Connections)
 async def update_connections(payload: Connections, user: User = Depends(get_current_user)):
-    data = payload.model_dump(exclude={"trakt_connected", "simkl_connected"})
+    data = payload.model_dump(
+        exclude_unset=True,
+        exclude={
+            "trakt_connected",
+            "simkl_connected",
+            "mediamanager_configured",
+            "anilist_connected",
+            "anilist_client_configured",
+            "plex_connected",
+            "tmdb_configured",
+        },
+    )
+    # Blank secrets keep stored values; explicit null would clear.
+    for secret in (
+        "mediamanager_password",
+        "plex_token",
+        "trakt_access_token",
+        "simkl_access_token",
+    ):
+        if secret in data and data[secret] == "":
+            data.pop(secret)
+    if data.get("mediamanager_url"):
+        data["mediamanager_url"] = normalize_mediamanager_url(data["mediamanager_url"])
+    if "ollama_model" in data:
+        data["ollama_model"] = effective_ollama_model({"ollama_model": data.get("ollama_model")})
+    if "ollama_url" in data and not str(data.get("ollama_url") or "").strip():
+        data["ollama_url"] = OLLAMA_BASE_URL
+    if "ui_theme" in data:
+        data["ui_theme"] = normalize_ui_theme(data.get("ui_theme"))
+    if "glass_intensity" in data:
+        data["glass_intensity"] = normalize_glass_intensity(data.get("glass_intensity"))
+    if "wallpaper" in data:
+        data["wallpaper"] = normalize_wallpaper(data.get("wallpaper"))
     await db.connections.update_one(
         {"user_id": user.user_id},
         {"$set": {**data, "user_id": user.user_id}},
         upsert=True,
     )
-    payload.trakt_connected = bool(data.get("trakt_refresh_token"))
-    payload.simkl_connected = bool(data.get("simkl_access_token"))
-    return payload
+    doc = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0, "user_id": 0}) or {}
+    return connections_public(doc)
 
 
 # ---------- Simkl PIN OAuth ----------
@@ -246,15 +582,34 @@ class SimklPoll(BaseModel):
     user_code: str
 
 
+async def resolve_simkl_client_id(user_id: str) -> str:
+    """The manual field in Sources wins, exactly as the sync paths already treat it."""
+    conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0, "simkl_client_id": 1}) or {}
+    return (conn.get("simkl_client_id") or SIMKL_CLIENT_ID or "").strip()
+
+
+def simkl_error_detail(response: httpx.Response) -> str:
+    """Pass Simkl's own wording through; "responded 412" tells nobody anything."""
+    try:
+        payload = response.json() or {}
+    except Exception:
+        payload = {}
+    message = payload.get("message") or payload.get("error")
+    if message:
+        return f"Simkl: {message} (HTTP {response.status_code})"
+    return f"Simkl responded {response.status_code}"
+
+
 @api.post("/simkl/pin/start")
 async def simkl_pin_start(user: User = Depends(get_current_user)):
-    if not SIMKL_CLIENT_ID:
+    client_id = await resolve_simkl_client_id(user.user_id)
+    if not client_id:
         raise HTTPException(status_code=503, detail="Simkl app credentials not configured on server")
     async with httpx.AsyncClient(timeout=15) as hc:
-        r = await hc.get(f"{SIMKL_API}/oauth/pin", params=simkl_params(SIMKL_CLIENT_ID), headers=simkl_headers(SIMKL_CLIENT_ID))
+        r = await hc.get(f"{SIMKL_API}/oauth/pin", params=simkl_params(client_id), headers=simkl_headers(client_id))
     data = r.json() if r.status_code == 200 else {}
     if data.get("result") != "OK" or not data.get("user_code"):
-        raise HTTPException(status_code=502, detail=f"Simkl responded {r.status_code}")
+        raise HTTPException(status_code=502, detail=simkl_error_detail(r))
     return {
         "user_code": data["user_code"],
         "verification_url": data.get("verification_url") or data.get("verification_uri") or "https://simkl.com/pin",
@@ -265,8 +620,9 @@ async def simkl_pin_start(user: User = Depends(get_current_user)):
 
 @api.post("/simkl/pin/poll")
 async def simkl_pin_poll(body: SimklPoll, user: User = Depends(get_current_user)):
+    client_id = await resolve_simkl_client_id(user.user_id)
     async with httpx.AsyncClient(timeout=15) as hc:
-        r = await hc.get(f"{SIMKL_API}/oauth/pin/{body.user_code}", params=simkl_params(SIMKL_CLIENT_ID), headers=simkl_headers(SIMKL_CLIENT_ID))
+        r = await hc.get(f"{SIMKL_API}/oauth/pin/{body.user_code}", params=simkl_params(client_id), headers=simkl_headers(client_id))
         data = r.json() if r.status_code == 200 else {}
         if data.get("result") == "KO":
             return {"status": "pending"}
@@ -274,14 +630,18 @@ async def simkl_pin_poll(body: SimklPoll, user: User = Depends(get_current_user)
             token = data["access_token"]
             username = None
             try:
-                me = await hc.post(f"{SIMKL_API}/users/settings", params=simkl_params(SIMKL_CLIENT_ID), headers=simkl_headers(SIMKL_CLIENT_ID, token))
+                me = await hc.post(f"{SIMKL_API}/users/settings", params=simkl_params(client_id), headers=simkl_headers(client_id, token))
                 if me.status_code == 200:
                     username = (me.json().get("user") or {}).get("name")
             except Exception as e:
                 logging.warning(f"Simkl settings fetch failed: {e}")
             await db.connections.update_one(
                 {"user_id": user.user_id},
-                {"$set": {"user_id": user.user_id, "simkl_client_id": SIMKL_CLIENT_ID, "simkl_access_token": token, "simkl_username": username}},
+                # Only the token is stored. Persisting client_id here used to pin the
+                # account to whichever app was live at connect time, so rotating
+                # SIMKL_CLIENT_ID in .env had no effect until the row was cleared by hand.
+                # A manual client id still lives in the Sources form via PUT /connections.
+                {"$set": {"user_id": user.user_id, "simkl_access_token": token, "simkl_username": username}},
                 upsert=True,
             )
             return {"status": "authorized", "username": username}
@@ -297,6 +657,152 @@ async def simkl_disconnect(user: User = Depends(get_current_user)):
         {"$set": {"simkl_access_token": None, "simkl_username": None}},
     )
     return {"ok": True}
+
+
+# ---------- AniList OAuth ----------
+class AnilistCode(BaseModel):
+    code: str
+
+
+class AnilistListPayload(BaseModel):
+    data: Optional[Dict[str, Any]] = None
+
+
+@api.get("/anilist/oauth/start")
+async def anilist_oauth_start(user: User = Depends(get_current_user), mode: str = "code"):
+    cid = anilist_client_id()
+    if not cid:
+        raise HTTPException(status_code=503, detail="AniList app credentials are not configured on the server")
+    response_type = "token" if mode == "token" else "code"
+    callback = anilist_redirect_uri()
+    return {
+        "authorization_url": anilist_auth_url(cid, callback, response_type=response_type),
+        "redirect_uri": callback,
+        "mode": response_type,
+    }
+
+
+@api.get("/anilist/oauth/callback")
+@api.get("/anilist/auth/callback")
+async def anilist_oauth_callback(code: Optional[str] = None):
+    safe = html.escape(code or "")
+    frontend = html.escape(FRONTEND_URL.rstrip("/"))
+    return HTMLResponse(
+        f"""<!doctype html><html><head><meta charset="utf-8"><title>CineMind AniList</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem;background:#0b0f0c;color:#e7e5e4}}
+code,textarea{{display:block;width:100%;word-break:break-all;background:#111;border:1px solid #333;border-radius:8px;padding:12px;color:#f5f5f4;margin:12px 0}}
+p,.status{{line-height:1.5;color:#a8a29e}}.ok{{color:#6ee7b7}}.err{{color:#fb7185}}
+a{{color:#fda4af}}</style></head><body>
+<h1>AniList</h1>
+<p id="status" class="status">Finishing sign-in…</p>
+<textarea id="value" rows="3" readonly>{safe}</textarea>
+<p><a id="back" href="{frontend}/connections">Back to CineMind Sources</a></p>
+<script>
+(async function () {{
+  var status = document.getElementById("status");
+  var box = document.getElementById("value");
+  var hash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+  var token = hash.get("access_token");
+  var code = new URLSearchParams(location.search).get("code") || box.value.trim();
+  var payload = token || code;
+  if (!payload) {{
+    status.className = "status err";
+    status.textContent = "Missing code from AniList. Close this tab and click Connect with AniList again.";
+    return;
+  }}
+  box.value = payload;
+  try {{
+    var res = await fetch("/api/anilist/oauth/exchange", {{
+      method: "POST",
+      credentials: "include",
+      headers: {{ "Content-Type": "application/json", "Accept": "application/json" }},
+      body: JSON.stringify({{ code: payload }})
+    }});
+    var data = await res.json().catch(function () {{ return {{}}; }});
+    if (!res.ok) {{
+      status.className = "status err";
+      status.textContent = (data && data.detail) || ("Exchange failed (" + res.status + ")");
+      return;
+    }}
+    status.className = "status ok";
+    status.textContent = data.status === "authorized"
+      ? ("Connected" + (data.username ? (" as @" + data.username) : "") + ". You can close this tab.")
+      : (data.detail || "Saved. Return to CineMind Sources.");
+    setTimeout(function () {{ location.href = "{frontend}/connections"; }}, 1200);
+  }} catch (err) {{
+    status.className = "status err";
+    status.textContent = "Could not reach CineMind API to finish AniList login.";
+  }}
+}})();
+</script>
+</body></html>"""
+    )
+
+
+@api.post("/anilist/oauth/exchange")
+async def anilist_oauth_exchange(body: AnilistCode, user: User = Depends(get_current_user)):
+    if not body.code.strip():
+        raise HTTPException(status_code=422, detail="Missing authorization code")
+    raw = body.code.strip()
+    if raw.count(".") >= 2 and " " not in raw and len(raw) > 40:
+        update = {
+            "user_id": user.user_id,
+            "anilist_access_token": raw,
+            "anilist_oauth_code": None,
+        }
+        viewer = await anilist_fetch_viewer(raw)
+        if viewer and viewer.get("name"):
+            update["anilist_username"] = viewer["name"]
+        await db.connections.update_one({"user_id": user.user_id}, {"$set": update}, upsert=True)
+        return {"status": "authorized", "username": update.get("anilist_username")}
+
+    token_payload, error = await anilist_exchange_code(raw)
+    update: Dict[str, Any] = {
+        "user_id": user.user_id,
+        "anilist_oauth_code": raw,
+    }
+    if token_payload and token_payload.get("access_token"):
+        update["anilist_access_token"] = token_payload["access_token"]
+        viewer = await anilist_fetch_viewer(token_payload["access_token"])
+        if viewer and viewer.get("name"):
+            update["anilist_username"] = viewer["name"]
+        await db.connections.update_one({"user_id": user.user_id}, {"$set": update}, upsert=True)
+        return {"status": "authorized", "username": update.get("anilist_username")}
+    if error:
+        raise HTTPException(status_code=401, detail=error)
+    await db.connections.update_one({"user_id": user.user_id}, {"$set": update}, upsert=True)
+    return {
+        "status": "stored",
+        "detail": "Authorization code stored server-side. Live token exchange runs when AniList credentials are present.",
+    }
+
+
+@api.post("/anilist/import")
+async def anilist_import(payload: AnilistListPayload, user: User = Depends(get_current_user)):
+    items = parse_media_list_collection(payload.model_dump())
+    docs = [{**item, "id": str(uuid.uuid4()), "user_id": user.user_id} for item in items]
+    if docs:
+        await db.history.insert_many(docs)
+    return {"count": len(docs)}
+
+
+@api.post("/anilist/disconnect")
+async def anilist_disconnect(user: User = Depends(get_current_user)):
+    await db.connections.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"anilist_access_token": None, "anilist_username": None, "anilist_oauth_code": None}},
+    )
+    return {"ok": True}
+
+
+@api.post("/connections/test/anilist")
+async def test_anilist(user: User = Depends(get_current_user)):
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    if conn.get("anilist_access_token"):
+        return {"ok": True, "message": "AniList token stored server-side"}
+    if anilist_client_id():
+        return {"ok": False, "message": "AniList app configured but not authorized — connect AniList"}
+    return {"ok": False, "message": "No AniList client id or token configured"}
 
 
 # ---------- Trakt device OAuth ----------
@@ -408,16 +914,16 @@ async def trakt_token(user_id: str, conn: Dict[str, Any]) -> Optional[str]:
 @api.post("/connections/test/ollama")
 async def test_ollama(user: User = Depends(get_current_user)):
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-    url = conn.get("ollama_url")
-    model = conn.get("ollama_model") or "llama3.2"
-    if not url:
-        return {"ok": False, "message": "No Ollama URL configured"}
+    url, model = resolve_model(conn)
     try:
         async with httpx.AsyncClient(timeout=8) as hc:
             r = await hc.get(f"{url.rstrip('/')}/api/tags")
         if r.status_code == 200:
             tags = r.json().get("models", [])
-            return {"ok": True, "message": f"Connected. {len(tags)} model(s) available.", "models": [m.get("name") for m in tags]}
+            names = [m.get("name") for m in tags]
+            present = any(model == n or (n or "").startswith(f"{model}") for n in names)
+            extra = f" {model} is ready." if present else f" Pull {model} with `ollama pull {model}` if it is missing."
+            return {"ok": True, "message": f"Connected. {len(tags)} model(s) available.{extra}", "models": names}
         return {"ok": False, "message": f"Ollama responded {r.status_code}"}
     except Exception as e:
         return {"ok": False, "message": f"Unreachable: {e.__class__.__name__}"}
@@ -478,6 +984,32 @@ async def test_plex(user: User = Depends(get_current_user)):
         return {"ok": False, "message": f"Unreachable: {e.__class__.__name__}"}
 
 
+@api.post("/connections/test/mediamanager")
+async def test_mediamanager(user: User = Depends(get_current_user)):
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    if not mediamanager_is_configured(conn):
+        return {"ok": False, "message": "No MediaManager URL, email, or password configured"}
+    try:
+        async with httpx.AsyncClient(timeout=12) as hc:
+            token = await mediamanager_login(
+                hc,
+                conn["mediamanager_url"],
+                conn["mediamanager_email"],
+                conn["mediamanager_password"],
+            )
+            health = await hc.get(
+                f"{normalize_mediamanager_url(conn['mediamanager_url'])}/api/v1/health",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        if health.status_code == 200:
+            return {"ok": True, "message": f"Connected as {conn['mediamanager_email']}"}
+        return {"ok": True, "message": f"Login succeeded (health {health.status_code})"}
+    except HTTPException as e:
+        return {"ok": False, "message": e.detail if isinstance(e.detail, str) else "MediaManager auth failed"}
+    except Exception as e:
+        return {"ok": False, "message": f"Unreachable: {e.__class__.__name__}"}
+
+
 # ---------- Demo Data ----------
 DEMO_HISTORY: List[Dict[str, Any]] = [
     {"title": "Blade Runner 2049", "year": 2017, "type": "movie", "genres": ["Sci-Fi", "Neo-Noir"], "rating": 8.0, "poster": "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg", "source": "trakt"},
@@ -509,14 +1041,24 @@ DEMO_RECS: List[Dict[str, Any]] = [
 # ---------- History ----------
 @api.post("/history/sync")
 async def sync_history(user: User = Depends(get_current_user)):
-    """Fetch history from configured sources; falls back to demo if none configured or all fail."""
+    """Fetch history from every connected source; falls back to demo when none is configured.
+
+    Each provider is committed on its own. A provider that fails keeps the history it
+    synced last time instead of having every row wiped by the next partial sync, and
+    every attempt writes provider_sync_state so the job engine can tell "never synced"
+    apart from "synced and genuinely empty".
+    """
+    from providers.sync_lock import record_sync_result
+
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-    items: List[Dict[str, Any]] = []
+    synced: Dict[str, List[Dict[str, Any]]] = {}
+    errors: Dict[str, str] = {}
 
     # Trakt
     trakt_cid = conn.get("trakt_client_id") or TRAKT_CLIENT_ID
     trakt_tok = await trakt_token(user.user_id, conn) if trakt_cid else None
     if trakt_cid and trakt_tok:
+        rows: List[Dict[str, Any]] = []
         try:
             async with httpx.AsyncClient(timeout=12) as hc:
                 r = await hc.get(
@@ -526,7 +1068,7 @@ async def sync_history(user: User = Depends(get_current_user)):
                 if r.status_code == 200:
                     for entry in r.json():
                         m = entry.get("movie") or entry.get("show") or {}
-                        items.append({
+                        rows.append({
                             "id": str(uuid.uuid4()),
                             "title": m.get("title", "Unknown"),
                             "year": m.get("year"),
@@ -538,14 +1080,18 @@ async def sync_history(user: User = Depends(get_current_user)):
                             "watched_at": entry.get("watched_at"),
                             "source": "trakt",
                         })
+                    synced["trakt"] = rows
                 else:
-                    logging.warning(f"Trakt history responded {r.status_code}")
+                    errors["trakt"] = f"Trakt history responded {r.status_code}"
         except Exception as e:
-            logging.warning(f"Trakt sync failed: {e}")
+            errors["trakt"] = safe_provider_error(e)
+        if "trakt" in errors:
+            logging.warning("Trakt sync failed: %s", errors["trakt"])
 
     # Simkl
     simkl_cid = conn.get("simkl_client_id") or SIMKL_CLIENT_ID
     if simkl_cid and conn.get("simkl_access_token"):
+        rows = []
         try:
             async with httpx.AsyncClient(timeout=20) as hc:
                 r = await hc.get(
@@ -558,7 +1104,7 @@ async def sync_history(user: User = Depends(get_current_user)):
                     for kind, key in (("movie", "movies"), ("show", "shows"), ("show", "anime")):
                         for entry in (data.get(key) or [])[:50]:
                             m = entry.get(kind) or entry.get("show") or {}
-                            items.append({
+                            rows.append({
                                 "id": str(uuid.uuid4()),
                                 "title": m.get("title", "Unknown"),
                                 "year": m.get("year"),
@@ -570,13 +1116,17 @@ async def sync_history(user: User = Depends(get_current_user)):
                                 "watched_at": entry.get("last_watched_at"),
                                 "source": "simkl",
                             })
+                    synced["simkl"] = rows
                 else:
-                    logging.warning(f"Simkl all-items responded {r.status_code}")
+                    errors["simkl"] = f"Simkl all-items responded {r.status_code}"
         except Exception as e:
-            logging.warning(f"Simkl sync failed: {e}")
+            errors["simkl"] = safe_provider_error(e)
+        if "simkl" in errors:
+            logging.warning("Simkl sync failed: %s", errors["simkl"])
 
     # Plex
     if conn.get("plex_url") and conn.get("plex_token"):
+        rows = []
         try:
             async with httpx.AsyncClient(timeout=12, verify=False) as hc:
                 r = await hc.get(
@@ -586,7 +1136,7 @@ async def sync_history(user: User = Depends(get_current_user)):
                 if r.status_code == 200:
                     data = r.json().get("MediaContainer", {}).get("Metadata", [])[:50]
                     for m in data:
-                        items.append({
+                        rows.append({
                             "id": str(uuid.uuid4()),
                             "title": m.get("title", "Unknown"),
                             "year": m.get("year"),
@@ -597,20 +1147,59 @@ async def sync_history(user: User = Depends(get_current_user)):
                             "watched_at": datetime.fromtimestamp(m["lastViewedAt"], tz=timezone.utc).isoformat() if m.get("lastViewedAt") else None,
                             "source": "plex",
                         })
+                    synced["plex"] = rows
+                else:
+                    errors["plex"] = f"Plex library responded {r.status_code}"
         except Exception as e:
-            logging.warning(f"Plex sync failed: {e}")
+            errors["plex"] = safe_provider_error(e)
+        if "plex" in errors:
+            logging.warning("Plex sync failed: %s", errors["plex"])
 
+    # AniList — previously only reachable through a hand-pasted /anilist/import payload,
+    # which left every connected account looking permanently unsynced to the job engine.
+    if conn.get("anilist_access_token"):
+        try:
+            rows = [
+                {**item, "id": str(uuid.uuid4())}
+                for item in await anilist_fetch_media_list(
+                    conn["anilist_access_token"], conn.get("anilist_username")
+                )
+            ]
+            synced["anilist"] = rows
+        except Exception as e:
+            errors["anilist"] = safe_provider_error(e)
+            logging.warning("AniList sync failed: %s", errors["anilist"])
+
+    for provider, rows in synced.items():
+        await record_sync_result(provider, user.user_id, items_synced=len(rows))
+    for provider, message in errors.items():
+        await record_sync_result(provider, user.user_id, error=message)
+
+    items = [row for rows in synced.values() for row in rows]
     used_demo = False
-    if not items:
+    if not synced and not errors:
+        # Nothing is connected at all — seed the demo shelf so the app is explorable.
         items = [{**h, "id": str(uuid.uuid4()), "watched_at": (datetime.now(timezone.utc) - timedelta(days=i*3)).isoformat()} for i, h in enumerate(DEMO_HISTORY)]
         used_demo = True
-    else:
-        await enrich_history_posters(items)
-
-    await db.history.delete_many({"user_id": user.user_id})
-    if items:
+        await db.history.delete_many({"user_id": user.user_id})
         await db.history.insert_many([{**it, "user_id": user.user_id} for it in items])
-    return {"count": len(items), "demo": used_demo}
+        return {"count": len(items), "demo": True, "sources": {}, "errors": {}}
+
+    if items:
+        await enrich_history_posters(items)
+    # Replace only the sources that actually came back, so a failing provider does not
+    # take the other providers' history down with it.
+    for provider, rows in synced.items():
+        await db.history.delete_many({"user_id": user.user_id, "source": provider})
+        if rows:
+            await db.history.insert_many([{**it, "user_id": user.user_id} for it in rows])
+
+    return {
+        "count": len(items),
+        "demo": used_demo,
+        "sources": {provider: len(rows) for provider, rows in synced.items()},
+        "errors": errors,
+    }
 
 
 @api.get("/history")
@@ -661,20 +1250,6 @@ async def history_stats(user: User = Depends(get_current_user)):
 
 
 # ---------- LLM helpers ----------
-async def call_ollama(url: str, model: str, prompt: str, system: str = "") -> Optional[str]:
-    try:
-        async with httpx.AsyncClient(timeout=90) as hc:
-            r = await hc.post(
-                f"{url.rstrip('/')}/api/generate",
-                json={"model": model, "prompt": prompt, "system": system, "stream": False, "format": "json"},
-            )
-            if r.status_code == 200:
-                return r.json().get("response", "")
-    except Exception as e:
-        logging.warning(f"Ollama call failed: {e}")
-    return None
-
-
 async def record_usage(user_id: str, model_key: str, action: str, prompt_chars: int, output_chars: int) -> None:
     await db.llm_usage.insert_one({
         "user_id": user_id,
@@ -685,32 +1260,12 @@ async def record_usage(user_id: str, model_key: str, action: str, prompt_chars: 
     })
 
 
-async def call_claude(session_id: str, prompt: str, system: str = "", model_id: str = "claude-sonnet-5",
-                      user_id: str = "", model_key: str = DEFAULT_MODEL, action: str = "generate") -> Optional[str]:
-    """Non-streaming Claude call via Emergent LLM key. Returns raw text."""
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        return None
-    try:
-        chat = LlmChat(
-            api_key=key,
-            session_id=session_id,
-            system_message=system or "You are a helpful assistant.",
-        ).with_model("anthropic", model_id)
-        text = await chat.send_message(UserMessage(text=prompt))
-        text = text if isinstance(text, str) else str(text)
-        await record_usage(user_id, model_key, action, len(prompt) + len(system), len(text))
-        return text
-    except Exception as e:
-        logging.warning(f"Claude call failed ({model_id}): {e}")
-        return None
-
-
 # ---------- TMDB enrichment ----------
 async def tmdb_lookup(hc: httpx.AsyncClient, title: str, year: Optional[int], type_: str) -> Optional[Dict[str, Any]]:
     if not TMDB_KEY:
         return None
-    endpoint = "tv" if type_ == "show" else "movie"
+    kind = str(type_ or "movie").casefold()
+    endpoint = "tv" if kind in {"show", "tv", "series", "anime"} else "movie"
     year_param = "first_air_date_year" if endpoint == "tv" else "year"
     clean = re.sub(r"\s*[\(\[:–-]\s*(season|part|vol\.?|volume)\b.*$", "", title, flags=re.I)
     clean = re.sub(r"\s*\(.*?\)\s*$", "", clean).strip() or title
@@ -808,46 +1363,6 @@ async def backfill_posters(user_id: str, docs: List[Dict[str, Any]]) -> List[Dic
                 {"$set": {k: d[k] for k in ("poster", "backdrop", "tmdb_rating", "tmdb_id") if d.get(k)}},
             )
     return docs
-
-
-def _extract_json(raw: str) -> Optional[Any]:
-    if not raw:
-        return None
-    try:
-        return json.loads(raw)
-    except Exception:
-        pass
-    m = re.search(r"\{[\s\S]*\}|\[[\s\S]*\]", raw)
-    if m:
-        try:
-            return json.loads(m.group(0))
-        except Exception:
-            return None
-    return None
-
-
-async def generate_with_llm(conn: Dict[str, Any], session_id: str, system: str, prompt: str,
-                            user_id: str = "", action: str = "generate", model_override: Optional[str] = None) -> tuple[Optional[Any], str, str]:
-    """Try Ollama first (if configured), then Claude with one retry. Returns (parsed_json_or_none, provider, model_key)."""
-    url = conn.get("ollama_url")
-    model = conn.get("ollama_model") or "llama3.2"
-    if url:
-        raw = await call_ollama(url, model, prompt, system)
-        parsed = _extract_json(raw) if raw else None
-        if parsed is not None:
-            return parsed, "ollama", model
-        if raw:
-            logging.warning(f"Ollama unparseable: {raw[:400]}")
-
-    model_id, model_key = resolve_model(conn, model_override)
-    for attempt in (1, 2):
-        raw = await call_claude(f"{session_id}-{attempt}", prompt, system, model_id, user_id, model_key, action)
-        parsed = _extract_json(raw) if raw else None
-        if parsed is not None:
-            return parsed, "claude", model_key
-        if raw:
-            logging.warning(f"Claude unparseable (attempt {attempt}): {raw[:400]}")
-    return None, "demo", model_key
 
 
 async def ensure_history(user_id: str) -> None:
@@ -996,10 +1511,25 @@ async def unsave_rec(rec_id: str, user: User = Depends(get_current_user)):
 
 @api.post("/recommendations/{rec_id}/dismiss")
 async def dismiss_rec(rec_id: str, user: User = Depends(get_current_user)):
+    rec = await db.recommendations.find_one({"user_id": user.user_id, "id": rec_id}, {"_id": 0})
     await db.recommendations.update_one(
         {"user_id": user.user_id, "id": rec_id},
-        {"$set": {"dismissed": True}},
+        {"$set": {"dismissed": True, "needs_approval": False}},
     )
+    request_filter = {
+        "user_id": user.user_id,
+        "status": {"$in": ["pending_approval", "pending", "requested"]},
+    }
+    if rec and rec.get("request_id"):
+        await db.requests.update_one(
+            {**request_filter, "id": rec["request_id"]},
+            {"$set": {"status": "rejected", "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
+    else:
+        await db.requests.update_one(
+            {**request_filter, "recommendation_id": rec_id},
+            {"$set": {"status": "rejected", "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
     return {"ok": True}
 
 
@@ -1037,6 +1567,399 @@ async def add_to_trakt_watchlist(rec_id: str, user: User = Depends(get_current_u
         {"$set": {"in_watchlist": True, "tmdb_id": int(tmdb_id), "watchlisted_at": datetime.now(timezone.utc).isoformat()}},
     )
     return {"ok": True, "added": bool(added), "existing": bool(existing)}
+
+
+async def send_title_to_mediamanager(
+    item: Dict[str, Any],
+    conn: Dict[str, Any],
+    options: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Login to MediaManager and add the title to the movie or TV library."""
+    from providers.keys import resolve_tmdb_api_key
+
+    return await send_item_to_library(
+        item,
+        conn,
+        tmdb_api_key=resolve_tmdb_api_key(conn) or TMDB_KEY,
+        options=options,
+    )
+
+
+async def library_item_from_request(user_id: str, doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Fill missing TMDb / type fields from the linked recommendation so add is a single MM call."""
+    item = dict(doc)
+    rec_id = doc.get("recommendation_id")
+    if not rec_id:
+        return item
+    rec = await db.recommendations.find_one({"user_id": user_id, "id": rec_id}, {"_id": 0}) or {}
+    for key in ("tmdb_id", "type", "year", "title", "poster", "match_score"):
+        if item.get(key) in (None, "") and rec.get(key) not in (None, ""):
+            item[key] = rec[key]
+    return item
+
+
+def clamp_match_score(value: Any) -> Optional[int]:
+    try:
+        n = int(round(float(value)))
+    except (TypeError, ValueError):
+        return None
+    return max(0, min(100, n))
+
+
+async def attach_request_match_scores(user_id: str, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Fill taste match % from the request, linked recommendation, title match, or taste rank."""
+    for row in rows:
+        score = clamp_match_score(row.get("match_score"))
+        if score is not None:
+            row["match_score"] = score
+
+    missing = [row for row in rows if row.get("match_score") is None]
+    if not missing:
+        return rows
+
+    rec_ids = [row["recommendation_id"] for row in missing if row.get("recommendation_id")]
+    titles = [row.get("title") for row in missing if row.get("title")]
+    query: Dict[str, Any] = {"user_id": user_id}
+    clauses = []
+    if rec_ids:
+        clauses.append({"id": {"$in": rec_ids}})
+    if titles:
+        clauses.append({"title": {"$in": titles}})
+    recs: List[Dict[str, Any]] = []
+    if clauses:
+        query["$or"] = clauses
+        recs = await db.recommendations.find(
+            query,
+            {"_id": 0, "id": 1, "title": 1, "year": 1, "match_score": 1, "genres": 1},
+        ).to_list(500)
+
+    by_id = {row["id"]: clamp_match_score(row.get("match_score")) for row in recs}
+    by_title: Dict[tuple, int] = {}
+    genres_by_title: Dict[tuple, List[str]] = {}
+    for rec in recs:
+        score = clamp_match_score(rec.get("match_score"))
+        key = (str(rec.get("title") or "").casefold(), rec.get("year"))
+        loose = (str(rec.get("title") or "").casefold(), None)
+        if rec.get("genres"):
+            genres_by_title[key] = rec["genres"]
+            genres_by_title[loose] = rec["genres"]
+        if score is None:
+            continue
+        by_title[key] = score
+        by_title[loose] = score
+
+    still = []
+    for row in rows:
+        if row.get("match_score") is not None:
+            continue
+        title_key = (str(row.get("title") or "").casefold(), row.get("year"))
+        loose = (str(row.get("title") or "").casefold(), None)
+        if not row.get("genres"):
+            row["genres"] = genres_by_title.get(title_key) or genres_by_title.get(loose) or []
+        score = by_id.get(row.get("recommendation_id")) or by_title.get(title_key) or by_title.get(loose)
+        if score is not None:
+            row["match_score"] = score
+        else:
+            still.append(row)
+
+    if still:
+        taste = await db.taste_profiles.find_one({"user_id": user_id}, {"_id": 0}) or {}
+        from recommendation.ranking_engine import score_candidates
+        ranked = score_candidates(still, taste)
+        lookup = {
+            (str(item.get("title") or "").casefold(), item.get("year")): clamp_match_score(item.get("match_score"))
+            for item in ranked
+        }
+        for row in still:
+            score = lookup.get((str(row.get("title") or "").casefold(), row.get("year")))
+            if score is not None:
+                row["match_score"] = score
+    return rows
+
+
+@api.post("/recommendations/{rec_id}/approve")
+async def approve_to_mediamanager(
+    rec_id: str,
+    user: User = Depends(get_current_user),
+    body: Optional[AddOptionsBody] = None,
+):
+    """Approve a recommendation into MediaManager's movie or TV library."""
+    rec = await db.recommendations.find_one({"user_id": user.user_id, "id": rec_id}, {"_id": 0})
+    if not rec:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    result = await send_title_to_mediamanager(rec, conn, body.model_dump(exclude_none=True) if body else None)
+    now = datetime.now(timezone.utc).isoformat()
+    await db.recommendations.update_one(
+        {"user_id": user.user_id, "id": rec_id},
+        {
+            "$set": {
+                "in_library": True,
+                "tmdb_id": result["tmdb_id"],
+                "approved_at": now,
+                "needs_approval": False,
+            }
+        },
+    )
+    request_filter = {"user_id": user.user_id, "status": {"$in": ["pending_approval", "pending", "requested"]}}
+    if rec.get("request_id"):
+        await db.requests.update_one(
+            {**request_filter, "id": rec["request_id"]},
+            {
+                "$set": {
+                    "status": "approved",
+                    "provider": "mediamanager",
+                    "tmdb_id": result["tmdb_id"],
+                    "approved_at": now,
+                    "updated_at": now,
+                }
+            },
+        )
+    else:
+        await db.requests.update_one(
+            {**request_filter, "recommendation_id": rec_id},
+            {
+                "$set": {
+                    "status": "approved",
+                    "provider": "mediamanager",
+                    "tmdb_id": result["tmdb_id"],
+                    "approved_at": now,
+                    "updated_at": now,
+                }
+            },
+        )
+    return result
+
+
+@api.get("/requests")
+async def list_requests(user: User = Depends(get_current_user)):
+    rows = await db.requests.find(
+        {"user_id": user.user_id, "status": {"$nin": ["rejected"]}},
+        {"_id": 0, "user_id": 0},
+    ).to_list(500)
+    rows = await attach_request_match_scores(user.user_id, rows)
+    pending = {"pending_approval", "pending", "requested"}
+    hidden = {"rejected"}
+    visible = [row for row in rows if row.get("status") not in hidden]
+    pending_rows = [row for row in visible if row.get("status") in pending]
+    other_rows = [row for row in visible if row.get("status") not in pending]
+    pending_rows.sort(key=lambda row: row.get("updated_at") or "", reverse=True)
+    other_rows.sort(key=lambda row: row.get("updated_at") or "", reverse=True)
+    return pending_rows + other_rows
+
+
+@api.get("/requests/stats")
+async def request_stats(user: User = Depends(get_current_user)):
+    """Tally for the Requests header.
+
+    GET /requests hides rejected rows, so the queue cannot count them itself.
+    """
+    rows = await db.requests.find(
+        {"user_id": user.user_id}, {"_id": 0, "status": 1}
+    ).to_list(5000)
+    pending = {"pending_approval", "pending", "requested"}
+    approved = {"approved", "available", "completed"}
+    tally = {"total": len(rows), "pending": 0, "approved": 0, "rejected": 0, "failed": 0}
+    for row in rows:
+        status = row.get("status")
+        if status in pending:
+            tally["pending"] += 1
+        elif status in approved:
+            tally["approved"] += 1
+        elif status == "rejected":
+            tally["rejected"] += 1
+        else:
+            tally["failed"] += 1
+    tally["blacklisted"] = await db.blacklist.count_documents({"user_id": user.user_id})
+    return tally
+
+
+@api.post("/requests/bulk")
+async def bulk_requests(payload: BulkRequestsBody, user: User = Depends(get_current_user)):
+    ids = [str(item).strip() for item in (payload.ids or []) if str(item).strip()][:50]
+    if not ids:
+        raise HTTPException(status_code=422, detail="Select at least one title")
+    docs = await db.requests.find({"user_id": user.user_id, "id": {"$in": ids}}, {"_id": 0}).to_list(50)
+    if payload.action == "reject":
+        now = datetime.now(timezone.utc).isoformat()
+        rec_ids = [doc.get("recommendation_id") for doc in docs if doc.get("recommendation_id")]
+        await db.requests.update_many(
+            {"user_id": user.user_id, "id": {"$in": [doc["id"] for doc in docs]}},
+            {"$set": {"status": "rejected", "updated_at": now}},
+        )
+        if rec_ids:
+            await db.recommendations.update_many(
+                {"user_id": user.user_id, "id": {"$in": rec_ids}},
+                {"$set": {"dismissed": True, "needs_approval": False}},
+            )
+        return {"ok": True, "action": "reject", "ids": [doc["id"] for doc in docs]}
+
+    pending = {"pending_approval", "pending", "requested"}
+    targets = [doc for doc in docs if doc.get("status") in pending]
+    results = []
+    for doc in targets:
+        try:
+            result = await approve_request(doc["id"], user, payload.options)
+            results.append({"id": doc["id"], "ok": True, **{k: result.get(k) for k in ("created", "already_existed", "tmdb_id", "media_type") if k in result}})
+        except HTTPException as exc:
+            results.append({"id": doc["id"], "ok": False, "error": str(exc.detail)})
+    return {"ok": True, "action": "approve", "results": results}
+
+
+async def _load_request(user_id: str, request_id: str) -> Optional[Dict[str, Any]]:
+    doc = await db.requests.find_one({"user_id": user_id, "id": request_id}, {"_id": 0})
+    if doc:
+        return doc
+    doc = await db.requests.find_one({"user_id": user_id, "recommendation_id": request_id}, {"_id": 0})
+    if doc:
+        return doc
+    rec = await db.recommendations.find_one(
+        {"user_id": user_id, "$or": [{"id": request_id}, {"request_id": request_id}]},
+        {"_id": 0},
+    )
+    if rec:
+        linked = None
+        if rec.get("request_id"):
+            linked = await db.requests.find_one({"user_id": user_id, "id": rec["request_id"]}, {"_id": 0})
+        if not linked:
+            linked = await db.requests.find_one({"user_id": user_id, "recommendation_id": rec["id"]}, {"_id": 0})
+        if linked:
+            return linked
+        return {"_from_recommendation": rec}
+    return None
+
+
+@api.post("/requests/{request_id}/approve")
+async def approve_request(
+    request_id: str,
+    user: User = Depends(get_current_user),
+    body: Optional[AddOptionsBody] = None,
+):
+    loaded = await _load_request(user.user_id, request_id)
+    if not loaded:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if loaded.get("_from_recommendation"):
+        rec = loaded["_from_recommendation"]
+        if body:
+            return await approve_to_mediamanager(rec["id"], user, body)
+        return await approve_to_mediamanager(rec["id"], user)
+    doc = loaded
+    if doc.get("status") not in {
+        "pending_approval",
+        "pending",
+        "requested",
+        "approved",
+        "request_failed",
+        "failed",
+    }:
+        raise HTTPException(status_code=422, detail="This request cannot be sent to MediaManager")
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    # Approving is the user's decision and always sticks: the title leaves the
+    # queue for the Approved tab even when MediaManager cannot take it right
+    # now. The delivery outcome is recorded so the row can be retried.
+    delivery_error: Optional[str] = None
+    try:
+        result = await send_title_to_mediamanager(
+            await library_item_from_request(user.user_id, doc),
+            conn,
+            body.model_dump(exclude_none=True) if body else None,
+        )
+    except HTTPException as exc:
+        result = {"ok": False, "created": False, "already_existed": False,
+                  "tmdb_id": doc.get("tmdb_id"), "media_type": doc.get("type") or "movie"}
+        delivery_error = str(exc.detail)
+    now = datetime.now(timezone.utc).isoformat()
+    approved_fields = {
+        "status": "approved",
+        "provider": "mediamanager" if not delivery_error else (doc.get("provider") or "local"),
+        "approved_at": now,
+        "updated_at": now,
+        "delivery_status": "not_delivered" if delivery_error else "delivered",
+    }
+    if result.get("tmdb_id"):
+        approved_fields["tmdb_id"] = result["tmdb_id"]
+    if delivery_error:
+        approved_fields["delivery_error"] = delivery_error
+    await db.requests.update_one(
+        {"user_id": user.user_id, "id": doc["id"]},
+        {"$set": approved_fields, **({} if delivery_error else {"$unset": {"delivery_error": ""}})},
+    )
+    rec_id = doc.get("recommendation_id")
+    if rec_id:
+        await db.recommendations.update_one(
+            {"user_id": user.user_id, "id": rec_id},
+            {
+                "$set": {
+                    "in_library": True,
+                    "tmdb_id": result["tmdb_id"],
+                    "approved_at": now,
+                    "needs_approval": False,
+                }
+            },
+        )
+    updated = await db.requests.find_one({"user_id": user.user_id, "id": doc["id"]}, {"_id": 0, "user_id": 0})
+    payload = {**result, "status": "approved", "request": updated}
+    if delivery_error:
+        payload["delivery_error"] = delivery_error
+    return payload
+
+
+@api.post("/requests/{request_id}/reject")
+async def reject_request(request_id: str, user: User = Depends(get_current_user)):
+    doc = await db.requests.find_one({"user_id": user.user_id, "id": request_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.requests.update_one(
+        {"user_id": user.user_id, "id": request_id},
+        {"$set": {"status": "rejected", "updated_at": now}},
+    )
+    rec_id = doc.get("recommendation_id")
+    if rec_id:
+        await db.recommendations.update_one(
+            {"user_id": user.user_id, "id": rec_id},
+            {"$set": {"dismissed": True, "needs_approval": False}},
+        )
+    return {"ok": True, "status": "rejected"}
+
+
+@api.post("/requests/{request_id}/retry")
+async def retry_request(request_id: str, user: User = Depends(get_current_user)):
+    doc = await db.requests.find_one({"user_id": user.user_id, "id": request_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if doc.get("status") not in {"request_failed", "failed"}:
+        raise HTTPException(status_code=422, detail="Only failed requests can be retried")
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    result = await send_title_to_mediamanager(await library_item_from_request(user.user_id, doc), conn)
+    now = datetime.now(timezone.utc).isoformat()
+    await db.requests.update_one(
+        {"user_id": user.user_id, "id": request_id},
+        {
+            "$set": {
+                "status": "approved",
+                "provider": "mediamanager",
+                "tmdb_id": result["tmdb_id"],
+                "approved_at": now,
+                "updated_at": now,
+            }
+        },
+    )
+    rec_id = doc.get("recommendation_id")
+    if rec_id:
+        await db.recommendations.update_one(
+            {"user_id": user.user_id, "id": rec_id},
+            {
+                "$set": {
+                    "in_library": True,
+                    "tmdb_id": result["tmdb_id"],
+                    "approved_at": now,
+                    "needs_approval": False,
+                }
+            },
+        )
+    updated = await db.requests.find_one({"user_id": user.user_id, "id": request_id}, {"_id": 0, "user_id": 0})
+    return {**result, "status": "approved", "request": updated}
 
 
 @api.get("/recommendations/saved")
@@ -1085,22 +2008,90 @@ async def get_trailer(rec_id: str, user: User = Depends(get_current_user)):
     return {"key": key, "name": name, "cached": False}
 
 
+@api.get("/requests/{request_id}/details")
+async def request_details(request_id: str, user: User = Depends(get_current_user)):
+    """Overview, cast and YouTube trailer for a queued title, cached for a day."""
+    doc = await db.requests.find_one({"user_id": user.user_id, "id": request_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    tmdb_id = doc.get("tmdb_id")
+    if not tmdb_id or not TMDB_KEY:
+        return {"id": request_id, "title": doc.get("title"), "overview": None, "trailer": None, "cast": []}
+
+    endpoint = "tv" if str(doc.get("type") or "").lower() in {"show", "tv", "series", "anime"} else "movie"
+    cache_key = f"tmdb:details:{endpoint}:{tmdb_id}"
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": cache_key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), dict):
+        return {"id": request_id, **cached["payload"]}
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as hc:
+            r = await hc.get(
+                f"https://api.themoviedb.org/3/{endpoint}/{tmdb_id}",
+                params={"api_key": TMDB_KEY, "append_to_response": "videos,credits"},
+            )
+        data = r.json() if r.status_code == 200 else {}
+    except httpx.HTTPError as exc:
+        logging.warning("TMDb details failed for %s: %s", doc.get("title"), exc)
+        data = {}
+
+    videos = [v for v in ((data.get("videos") or {}).get("results") or []) if v.get("site") == "YouTube"]
+    videos.sort(key=lambda v: (v.get("type") != "Trailer", not v.get("official"), v.get("type") != "Teaser"))
+    trailer = {"key": videos[0]["key"], "name": videos[0].get("name")} if videos else None
+
+    cast = [
+        {
+            "name": row.get("name"),
+            "character": row.get("character")
+            or ((row.get("roles") or [{}])[0].get("character") if row.get("roles") else None),
+            "profile": f"https://image.tmdb.org/t/p/w185{row['profile_path']}" if row.get("profile_path") else None,
+        }
+        for row in ((data.get("credits") or {}).get("cast") or [])[:12]
+    ]
+
+    payload = {
+        "title": data.get("name") or data.get("title") or doc.get("title"),
+        "overview": data.get("overview") or None,
+        "tagline": data.get("tagline") or None,
+        "genres": [g.get("name") for g in (data.get("genres") or []) if g.get("name")],
+        "rating": data.get("vote_average"),
+        "vote_count": data.get("vote_count"),
+        "runtime": data.get("runtime") or ((data.get("episode_run_time") or [None])[0]),
+        "seasons": data.get("number_of_seasons"),
+        "episodes": data.get("number_of_episodes"),
+        "status": data.get("status"),
+        "release_date": data.get("first_air_date") or data.get("release_date"),
+        "networks": [n.get("name") for n in (data.get("networks") or []) if n.get("name")][:3],
+        "trailer": trailer,
+        "cast": cast,
+    }
+    if data:
+        await db.provider_cache.update_one(
+            {"key": cache_key},
+            {"$set": {
+                "key": cache_key,
+                "payload": payload,
+                "expires_at": (now + timedelta(hours=24)).isoformat(),
+                "updated_at": now.isoformat(),
+            }},
+            upsert=True,
+        )
+    return {"id": request_id, **payload}
+
+
 @api.get("/recommendations/{rec_id}/reason/stream")
 async def stream_reason(rec_id: str, model: Optional[str] = None, user: User = Depends(get_current_user)):
     rec = await db.recommendations.find_one({"user_id": user.user_id, "id": rec_id}, {"_id": 0})
     if not rec:
         raise HTTPException(status_code=404, detail="Recommendation not found")
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-    model_id, model_key = resolve_model(conn, model)
+    url, model_key = resolve_model(conn, model)
 
     async def gen():
         if rec.get("deep_why"):
             yield _sse({"t": rec["deep_why"], "cached": True})
             yield _sse({"done": True, "model": rec.get("deep_why_model", model_key), "cached": True})
-            return
-        key = os.environ.get("EMERGENT_LLM_KEY")
-        if not key:
-            yield _sse({"error": "LLM key not configured"})
             return
         docs = await db.history.find({"user_id": user.user_id}, {"_id": 0, "user_id": 0}).to_list(60)
         titles = ", ".join(f"{d['title']} ({d.get('year', '')})" for d in docs[:30])
@@ -1111,18 +2102,14 @@ async def stream_reason(rec_id: str, model: Optional[str] = None, user: User = D
             f"Synopsis: {rec.get('synopsis')}\nShort reason given so far: {rec.get('why')}\n"
             "Explain in depth why this pick fits their taste: connect specific titles they watched to specific qualities of this one (tone, themes, craft, pacing), and mention one thing that might surprise them."
         )
-        chat = LlmChat(api_key=key, session_id=f"reason-{user.user_id}-{rec_id}", system_message=system).with_model("anthropic", model_id)
         acc: List[str] = []
         try:
-            async for ev in chat.stream_message(UserMessage(text=prompt)):
-                if isinstance(ev, TextDelta):
-                    acc.append(ev.content)
-                    yield _sse({"t": ev.content})
-                elif isinstance(ev, StreamDone):
-                    break
+            async for chunk in stream_ollama(url, model_key, prompt, system):
+                acc.append(chunk)
+                yield _sse({"t": chunk})
         except Exception as e:
-            logging.warning(f"Reason stream failed ({model_id}): {e}")
-            yield _sse({"error": "Claude stream failed"})
+            logging.warning("Reason stream failed (%s): %s", model_key, e)
+            yield _sse({"error": "Ollama stream failed"})
             return
         text = "".join(acc).strip()
         if text:
@@ -1164,12 +2151,23 @@ async def root():
     return {"app": "CineMind AI", "status": "ok"}
 
 
+from api_extra import router as extra_router
+api.include_router(extra_router)
+
 app.include_router(api)
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=[
+        o.strip().strip('"').strip("'")
+        for o in os.environ.get(
+            "CORS_ORIGINS",
+            "http://localhost:3000,http://127.0.0.1:3000,http://192.168.50.223:3000",
+        ).split(",")
+        if o.strip()
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1177,7 +2175,47 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+_scheduler_task = None
+
+
+@app.on_event("startup")
+async def start_job_scheduler():
+    global _scheduler_task
+    from jobs.engine import migrate_jobs_to_interval, start_scheduler
+    try:
+        await migrate_jobs_to_interval()
+    except Exception:
+        logging.exception("Could not migrate jobs to 30-minute schedule")
+    _scheduler_task = start_scheduler()
+
+
+# Serve the built frontend when it exists, so one process runs the whole app in
+# the background. Mounted last: /api keeps priority, everything else falls
+# through to index.html for client-side routing.
+_BUILD_DIR = Path(__file__).resolve().parents[1] / "frontend" / "build"
+if _BUILD_DIR.is_dir():
+    from fastapi.staticfiles import StaticFiles
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+    from starlette.responses import FileResponse
+    from starlette.types import Scope
+
+    class SPAStaticFiles(StaticFiles):
+        """Unknown paths fall back to index.html so client-side routes work."""
+
+        async def get_response(self, path: str, scope: Scope):
+            try:
+                return await super().get_response(path, scope)
+            except StarletteHTTPException as exc:
+                if exc.status_code != 404:
+                    raise
+                return FileResponse(_BUILD_DIR / "index.html")
+
+    app.mount("/", SPAStaticFiles(directory=str(_BUILD_DIR), html=True), name="frontend")
+    logger.info("Serving frontend build from %s", _BUILD_DIR)
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    if _scheduler_task is not None:
+        _scheduler_task.cancel()
     client.close()

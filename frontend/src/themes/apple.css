@@ -1,0 +1,279 @@
+/* Apple Liquid Glass — optional overlay. Vision UI files stay locked. */
+
+html[data-theme="apple"] {
+  --bg: #000000;
+  --surface: #0b0b0d;
+  --gold: #0a84ff;
+  --gold-soft: #64d2ff;
+  --sage: #30d158;
+  --clay: #ff453a;
+  --text: #f5f5f7;
+  --muted: #aeaeb2;
+  --subtle: #8e8e93;
+  color-scheme: dark;
+}
+
+html[data-theme="apple"],
+html[data-theme="apple"] body {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="apple"] #root {
+  background: transparent !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="apple"] body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif !important;
+  background:
+    radial-gradient(1100px 640px at 16% -12%, rgba(10, 132, 255, calc(0.1 + var(--lg-t, 0.78) * 0.22)), transparent 58%),
+    radial-gradient(900px 540px at 112% 8%, rgba(100, 210, 255, calc(0.06 + var(--lg-t, 0.78) * 0.16)), transparent 58%),
+    radial-gradient(820px 520px at 48% 118%, rgba(48, 209, 88, calc(0.04 + var(--lg-t, 0.78) * 0.1)), transparent 62%),
+    #000000 !important;
+  background-attachment: fixed;
+}
+
+html[data-theme="apple"] .font-display {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif !important;
+  letter-spacing: -0.022em;
+}
+
+html[data-theme="apple"] .font-mono {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+}
+
+html[data-theme="apple"] ::selection {
+  background: rgba(10, 132, 255, 0.45);
+  color: #ffffff;
+}
+
+html[data-theme="apple"] .glass {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--lg-stroke, 0.14)) !important;
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, var(--lg-shine, 0.18)),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+html[data-theme="apple"] .glass-strong,
+html[data-theme="apple"] .glass-shell {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--lg-stroke, 0.14)) !important;
+  box-shadow:
+    0 14px 50px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, var(--lg-shine, 0.18)),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+html[data-theme="apple"] .grain::before {
+  opacity: 0 !important;
+}
+
+html[data-theme="apple"] .ambient-scrim {
+  background: radial-gradient(
+    1400px 900px at 50% 45%,
+    rgba(0, 0, 0, calc(0.1 * (1 - var(--lg-t, 0.78)))),
+    rgba(0, 0, 0, calc(0.7 - var(--lg-t, 0.78) * 0.42)) 82%
+  );
+}
+
+html[data-theme="apple"] .brutal-shadow-rose,
+html[data-theme="apple"] .brutal-shadow-cyan {
+  box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.4), 0 12px 34px -12px rgba(10, 132, 255, 0.35) !important;
+}
+
+html[data-theme="apple"] .poster-hover:hover {
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="apple"] .chip {
+  border: 1px solid rgba(255, 255, 255, var(--lg-stroke, 0.14)) !important;
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  color: #aeaeb2 !important;
+  backdrop-filter: blur(calc(var(--lg-blur, 60px) * 0.55)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(calc(var(--lg-blur, 60px) * 0.55)) saturate(var(--lg-sat, 200%)) !important;
+}
+
+html[data-theme="apple"] .chip-rose {
+  border-color: rgba(10, 132, 255, 0.45) !important;
+  background: rgba(10, 132, 255, 0.16) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="apple"] .chip-cyan,
+html[data-theme="apple"] .chip-emerald {
+  border-color: rgba(48, 209, 88, 0.4) !important;
+  background: rgba(48, 209, 88, 0.12) !important;
+  color: #30d158 !important;
+}
+
+html[data-theme="apple"] .chip-amber {
+  border-color: rgba(255, 214, 10, 0.35) !important;
+  background: rgba(255, 214, 10, 0.12) !important;
+  color: #ffd60a !important;
+}
+
+html[data-theme="apple"] .divider {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent) !important;
+}
+
+html[data-theme="apple"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="apple"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(10, 132, 255, 0.45) !important;
+}
+
+/* Icon rail: true black rims, liquid glass fill */
+html[data-theme="apple"] nav[data-testid="icon-rail"] {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  border: 1px solid #000000 !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, var(--lg-shine, 0.18)) !important;
+}
+
+html[data-theme="apple"] nav[data-testid="icon-rail"] a {
+  color: #8e8e93 !important;
+  background: transparent !important;
+  border: 1px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="apple"] nav[data-testid="icon-rail"] a:hover {
+  color: #f5f5f7 !important;
+  background: rgba(255, 255, 255, var(--lg-fill, 0.04)) !important;
+}
+
+html[data-theme="apple"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+  color: #f5f5f7 !important;
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  border: 1px solid #000000 !important;
+}
+
+html[data-theme="apple"] nav.lg\:hidden {
+  border-color: #000000 !important;
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur, 60px)) saturate(var(--lg-sat, 200%)) !important;
+}
+
+html[data-theme="apple"] header a[data-testid^="tab-"] {
+  color: #8e8e93 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="apple"] header a[data-testid^="tab-"][aria-current="page"] {
+  color: #f5f5f7 !important;
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="apple"] [data-testid="usage-bell-button"] {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  border-color: #000000 !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="apple"] [data-testid="profile-pill"] {
+  border-color: rgba(255, 255, 255, var(--lg-stroke, 0.14)) !important;
+}
+
+html[data-theme="apple"] header label.glass:focus-within {
+  border-color: rgba(10, 132, 255, 0.55) !important;
+}
+
+html[data-theme="apple"] input,
+html[data-theme="apple"] textarea,
+html[data-theme="apple"] select {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+  backdrop-filter: blur(20px) saturate(var(--lg-sat, 200%)) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(var(--lg-sat, 200%)) !important;
+}
+
+html[data-theme="apple"] .liquid-glass-slider {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(10, 132, 255, 0.55));
+}
+
+html[data-theme="apple"] .liquid-glass-slider::-webkit-slider-thumb {
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+html[data-theme="apple"] .liquid-glass-slider::-moz-range-thumb {
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+html[data-theme="apple"] .liquid-glass-track {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03));
+  border: 1px solid rgba(255, 255, 255, var(--lg-stroke, 0.14));
+}
+
+/* Recolor Vision hex utilities inside Apple */
+html[data-theme="apple"] .text-\[\#D8B26A\],
+html[data-theme="apple"] .text-\[\#EBD3A3\] {
+  color: #0a84ff !important;
+}
+
+html[data-theme="apple"] .text-\[\#F6EFE4\] {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="apple"] .text-\[\#8C7F6D\],
+html[data-theme="apple"] .text-\[\#9C907E\],
+html[data-theme="apple"] .text-\[\#A5987F\],
+html[data-theme="apple"] .text-\[\#BFB09A\] {
+  color: #8e8e93 !important;
+}
+
+html[data-theme="apple"] .bg-\[rgba\(216\,178\,106\,0\.18\)\],
+html[data-theme="apple"] .bg-\[rgba\(216\,178\,106\,0\.28\)\],
+html[data-theme="apple"] .bg-\[rgba\(216\,178\,106\,0\.25\)\] {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+}
+
+html[data-theme="apple"] .hover\:border-\[rgba\(216\,178\,106\,0\.5\)\]:hover,
+html[data-theme="apple"] .hover\:border-\[rgba\(216\,178\,106\,0\.4\)\]:hover,
+html[data-theme="apple"] .focus-within\:border-\[rgba\(216\,178\,106\,0\.5\)\]:focus-within {
+  border-color: rgba(10, 132, 255, 0.5) !important;
+}
+
+html[data-theme="apple"] .text-rose-300,
+html[data-theme="apple"] .text-rose-400,
+html[data-theme="apple"] .text-rose-500 {
+  color: #0a84ff !important;
+}
+
+html[data-theme="apple"] .bg-rose-500,
+html[data-theme="apple"] .bg-rose-400,
+html[data-theme="apple"] .hover\:bg-rose-500:hover {
+  background-color: #0a84ff !important;
+}
+
+html[data-theme="apple"] .border-rose-500,
+html[data-theme="apple"] .border-rose-500\/40,
+html[data-theme="apple"] .border-rose-500\/50,
+html[data-theme="apple"] .focus\:border-rose-500\/50:focus,
+html[data-theme="apple"] .focus-within\:border-rose-500\/50:focus-within {
+  border-color: rgba(10, 132, 255, 0.5) !important;
+}
+
+html[data-theme="apple"] .\!bg-\[\#17130F\]\/75,
+html[data-theme="apple"] .\!bg-\[\#17130F\]\/80,
+html[data-theme="apple"] .bg-\[\#17130F\] {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.03)) !important;
+}
+
+html[data-theme="apple"] .text-slate-200 { color: #f5f5f7 !important; }
+html[data-theme="apple"] .text-slate-300 { color: #d2d2d7 !important; }
+html[data-theme="apple"] .text-slate-400 { color: #aeaeb2 !important; }
+html[data-theme="apple"] .text-slate-500 { color: #8e8e93 !important; }
+html[data-theme="apple"] .text-slate-600 { color: #636366 !important; }

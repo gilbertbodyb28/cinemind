@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cinemind-frontend",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": [
+        "start"
+      ],
+      "port": 3001,
+      "autoPort": false,
+      "env": {
+        "PORT": "3001",
+        "BROWSER": "none"
+      },
+      "cwd": "frontend"
+    }
+  ]
+}

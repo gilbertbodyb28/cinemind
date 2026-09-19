@@ -1,0 +1,91 @@
+/* Liquid Glass intensity slider. Vision theme files stay locked. */
+
+.liquid-glass-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 240, 220, 0.08), rgba(216, 178, 106, 0.5));
+  outline: none;
+  cursor: pointer;
+}
+
+.liquid-glass-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 246, 232, 0.35);
+  border: 1px solid rgba(255, 240, 220, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.liquid-glass-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 246, 232, 0.35);
+  border: 1px solid rgba(255, 240, 220, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.liquid-glass-track {
+  background: rgba(255, 246, 232, var(--lg-fill, 0.04));
+  border: 1px solid rgba(255, 240, 220, var(--lg-stroke, 0.1));
+  box-shadow: inset 0 1px 0 rgba(255, 240, 220, 0.08);
+  backdrop-filter: blur(var(--lg-blur, 28px)) saturate(var(--lg-sat, 160%));
+  -webkit-backdrop-filter: blur(var(--lg-blur, 28px)) saturate(var(--lg-sat, 160%));
+}
+
+.theme-swatch {
+  position: relative;
+  height: 7.25rem;
+  overflow: hidden;
+}
+
+.theme-swatch img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.theme-swatch .preview-circle {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(var(--lg-blur, 22px)) saturate(var(--lg-sat, 160%));
+  -webkit-backdrop-filter: blur(var(--lg-blur, 22px)) saturate(var(--lg-sat, 160%));
+}
+
+.theme-swatch-vision .preview-circle {
+  background: rgba(255, 246, 232, var(--lg-fill, 0.11));
+  border: 1px solid rgba(255, 240, 220, var(--lg-stroke, 0.14));
+  box-shadow: inset 0 1px 0 rgba(255, 240, 220, var(--lg-shine, 0.18));
+}
+
+.theme-swatch-apple .preview-circle {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.11));
+  border: 1px solid rgba(255, 255, 255, var(--lg-stroke, 0.18));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, var(--lg-shine, 0.18));
+}
+
+.preview-circle-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 240, 220, 0.35);
+}
+
+.theme-swatch-apple .preview-circle-dot {
+  border-color: rgba(255, 255, 255, 0.45);
+}

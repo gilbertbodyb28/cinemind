@@ -1,0 +1,13 @@
+---
+description: Hard stop — do not edit Vision theme source files
+globs: frontend/src/index.css,frontend/src/App.css,frontend/tailwind.config.js,frontend/public/index.html
+alwaysApply: false
+---
+
+# Stop. These files are the Vision UI theme.
+
+Do not modify this file. Do not restyle, recolor, reformat tokens, or
+“improve” glass/chip utilities. Functional work belongs in pages and
+components that reuse existing classes.
+
+If you opened this file to change the look: close it and stop.

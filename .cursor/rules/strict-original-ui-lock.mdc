@@ -1,0 +1,29 @@
+---
+description: Vision UI is permanently locked. Never restyle, recolor, or replace the theme.
+alwaysApply: true
+---
+
+# Vision UI is locked permanently
+
+Gilbert owns the look. No agent (Cursor, Codex, Claude Code, ChatGPT) may
+change, restyle, recolor, “modernize”, or delete Vision UI.
+
+Canonical tokens: `#0B0907` `#17130F` `#D8B26A` `#EBD3A3` `#A8BE92`
+`#C97A54` `#F6EFE4` `#BFB09A` `#8C7F6D`.
+
+Canonical classes: `.glass` `.glass-strong` `.glass-shell` `.chip`
+`.chip-rose` `.font-display` `.float-in` `.grain`.
+
+Do not edit `frontend/src/index.css`, `frontend/src/App.css`,
+`frontend/tailwind.config.js`, or `frontend/public/index.html` theme values.
+
+Do not introduce `.glass-panel`, `.form-input`, `.btn-primary`, or
+`font-heading`. Do not swap gold glass for cool slate/rose/cyan.
+
+New screens must copy existing chips, pills, glass cards, and the gold rail.
+If a control does not exist, copy one. Do not invent a look.
+
+The only person who can unlock this is Gilbert, in an explicit message that
+names the visual change.
+
+After frontend work, `python3 scripts/check_vision_ui_lock.py` must pass.

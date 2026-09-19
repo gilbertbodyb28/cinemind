@@ -1,0 +1,623 @@
+"""TMDb search and poster enrichment."""
+
+from typing import Any, Dict, List, Optional
+import asyncio
+import logging
+import re
+
+import httpx
+
+from config import PLACEHOLDER_POSTER, TMDB_KEY
+
+
+def _clean_title(title: str) -> str:
+    clean = re.sub(r"\s*[\(\[:–-]\s*(season|part|vol\.?|volume)\b.*$", "", title, flags=re.I)
+    clean = re.sub(r"\s*\(.*?\)\s*$", "", clean).strip()
+    return clean or title
+
+
+async def tmdb_lookup(
+    hc: httpx.AsyncClient,
+    title: str,
+    year: Optional[int],
+    type_: str,
+    api_key: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    key = TMDB_KEY if api_key is None else api_key
+    if not key:
+        return None
+    kind = str(type_ or "").casefold()
+    endpoint = "tv" if kind in {"show", "tv", "series", "anime"} else "movie"
+    year_param = "first_air_date_year" if endpoint == "tv" else "year"
+    clean = _clean_title(title)
+    attempts = [{"query": title, year_param: year} if year else None, {"query": title}]
+    if clean != title:
+        attempts.append({"query": clean})
+    for params in attempts:
+        if params is None:
+            continue
+        try:
+            response = await hc.get(
+                f"https://api.themoviedb.org/3/search/{endpoint}",
+                params={"api_key": key, **params},
+            )
+            results = response.json().get("results") or [] if response.status_code == 200 else []
+        except Exception as exc:
+            logging.warning("TMDB lookup failed for %s: %s", title, exc)
+            return None
+        if results:
+            top = results[0]
+            out: Dict[str, Any] = {"tmdb_id": top.get("id")}
+            if top.get("poster_path"):
+                out["poster"] = f"https://image.tmdb.org/t/p/w500{top['poster_path']}"
+            if top.get("backdrop_path"):
+                out["backdrop"] = f"https://image.tmdb.org/t/p/w1280{top['backdrop_path']}"
+            if top.get("vote_average"):
+                out["tmdb_rating"] = round(float(top["vote_average"]), 1)
+            return out
+    return None
+
+
+async def tmdb_details(
+    hc: httpx.AsyncClient,
+    tmdb_id: int,
+    type_: str,
+    api_key: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    key = TMDB_KEY if api_key is None else api_key
+    if not key:
+        return None
+    kind = str(type_ or "").casefold()
+    endpoint = "tv" if kind in {"show", "tv", "series", "anime"} else "movie"
+    try:
+        response = await hc.get(
+            f"https://api.themoviedb.org/3/{endpoint}/{tmdb_id}",
+            params={"api_key": key},
+        )
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        out: Dict[str, Any] = {"tmdb_id": tmdb_id}
+        if data.get("poster_path"):
+            out["poster"] = f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
+        if data.get("backdrop_path"):
+            out["backdrop"] = f"https://image.tmdb.org/t/p/w1280{data['backdrop_path']}"
+        return out
+    except Exception as exc:
+        logging.warning("TMDB details failed for %s: %s", tmdb_id, exc)
+        return None
+
+
+async def enrich_history_posters(
+    items: List[Dict[str, Any]],
+    api_key: Optional[str] = None,
+    *,
+    tvdb_api_key: Optional[str] = None,
+) -> None:
+    key = TMDB_KEY if api_key is None else api_key
+    if not key and not tvdb_api_key:
+        return
+    targets = [item for item in items if not item.get("poster")]
+    if not targets:
+        return
+    sem = asyncio.Semaphore(6)
+
+    async def one(hc: httpx.AsyncClient, item: Dict[str, Any]):
+        async with sem:
+            meta = None
+            if key:
+                meta = await tmdb_details(hc, item["tmdb_id"], item.get("type", "movie"), key) if item.get("tmdb_id") else None
+                if not (meta and meta.get("poster")):
+                    meta = await tmdb_lookup(hc, item["title"], item.get("year"), item.get("type", "movie"), key)
+            if meta:
+                if meta.get("poster"):
+                    item["poster"] = meta["poster"]
+                if meta.get("tmdb_id"):
+                    item["tmdb_id"] = meta["tmdb_id"]
+                if meta.get("backdrop"):
+                    item["backdrop"] = meta["backdrop"]
+            if not item.get("poster") and tvdb_api_key:
+                from .tvdb import tvdb_poster_lookup
+
+                fallback = await tvdb_poster_lookup(
+                    item.get("title") or "",
+                    item.get("year"),
+                    item.get("type") or item.get("media_type") or "movie",
+                    tvdb_api_key,
+                )
+                if fallback and fallback.get("poster"):
+                    item["poster"] = fallback["poster"]
+                    if fallback.get("tvdb_id"):
+                        item["tvdb_id"] = fallback["tvdb_id"]
+
+    async with httpx.AsyncClient(timeout=10) as hc:
+        await asyncio.gather(*[one(hc, item) for item in targets])
+
+
+async def enrich_with_tmdb(
+    recs: List[Dict[str, Any]],
+    api_key: Optional[str] = None,
+    *,
+    tvdb_api_key: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    key = TMDB_KEY if api_key is None else api_key
+    if not key and not tvdb_api_key:
+        return recs
+    targets = [
+        rec for rec in recs
+        if not rec.get("poster") or rec["poster"] == PLACEHOLDER_POSTER
+    ]
+    if not targets:
+        return recs
+    async with httpx.AsyncClient(timeout=10) as hc:
+        results = []
+        if key:
+            results = await asyncio.gather(
+                *[tmdb_lookup(hc, rec["title"], rec.get("year"), rec.get("type", "movie"), key) for rec in targets]
+            )
+        else:
+            results = [None] * len(targets)
+    for rec, meta in zip(targets, results):
+        if meta:
+            rec.update({k: v for k, v in meta.items() if v})
+        if (not rec.get("poster") or rec.get("poster") == PLACEHOLDER_POSTER) and tvdb_api_key:
+            from .tvdb import tvdb_poster_lookup
+
+            fallback = await tvdb_poster_lookup(
+                rec.get("title") or "",
+                rec.get("year"),
+                rec.get("type") or rec.get("media_type") or "movie",
+                tvdb_api_key,
+            )
+            if fallback and fallback.get("poster"):
+                rec["poster"] = fallback["poster"]
+                if fallback.get("tvdb_id"):
+                    rec["tvdb_id"] = fallback["tvdb_id"]
+    return recs
+
+
+TMDB_MOVIE_GENRES = {
+    "action": 28,
+    "adventure": 12,
+    "animation": 16,
+    "anime": 16,
+    "comedy": 35,
+    "crime": 80,
+    "documentary": 99,
+    "drama": 18,
+    "family": 10751,
+    "fantasy": 14,
+    "history": 36,
+    "horror": 27,
+    "kid": 10751,
+    "kids": 10751,
+    "music": 10402,
+    "mystery": 9648,
+    "romance": 10749,
+    "sci-fi": 878,
+    "science fiction": 878,
+    "science-fiction": 878,
+    "thriller": 53,
+    "war": 10752,
+    "western": 37,
+}
+
+# TV genre IDs differ from movies for several buckets (Action & Adventure, Sci-Fi & Fantasy, Kids).
+TMDB_TV_GENRES = {
+    "action": 10759,
+    "adventure": 10759,
+    "animation": 16,
+    "anime": 16,
+    "comedy": 35,
+    "crime": 80,
+    "documentary": 99,
+    "drama": 18,
+    "family": 10751,
+    "fantasy": 10765,
+    "history": 18,
+    "horror": 9648,
+    "kid": 10762,
+    "kids": 10762,
+    "mystery": 9648,
+    "romance": 10749,
+    "sci-fi": 10765,
+    "science fiction": 10765,
+    "science-fiction": 10765,
+    "talk": 10767,
+    "talk show": 10767,
+    "reality": 10764,
+    "thriller": 9648,
+    "war": 10768,
+    "western": 37,
+}
+
+
+TMDB_GENRE_ID_NAMES = {
+    28: "Action",
+    12: "Adventure",
+    16: "Animation",
+    35: "Comedy",
+    80: "Crime",
+    99: "Documentary",
+    18: "Drama",
+    10751: "Family",
+    14: "Fantasy",
+    36: "History",
+    27: "Horror",
+    10402: "Music",
+    9648: "Mystery",
+    10749: "Romance",
+    878: "Sci-Fi",
+    53: "Thriller",
+    10752: "War",
+    37: "Western",
+    10759: "Action",
+    10762: "Kids",
+    10764: "Reality",
+    10765: "Sci-Fi",
+    10767: "Talk",
+    10768: "War",
+}
+
+
+def _genre_ids(names: Optional[List[str]], media_type: str = "movie") -> str:
+    """Map include genres to TMDb IDs.
+
+    TMDb treats comma as AND and pipe as OR. Include lists are OR — requiring
+    Action AND Sci-Fi AND Animation simultaneously returns almost nothing.
+    """
+    table = TMDB_TV_GENRES if media_type in {"tv", "show", "anime"} else TMDB_MOVIE_GENRES
+    ids: List[str] = []
+    seen = set()
+    for name in names or []:
+        mapped = table.get(str(name).casefold())
+        if mapped and mapped not in seen:
+            seen.add(mapped)
+            ids.append(str(mapped))
+    return "|".join(ids)
+
+
+def _genres_from_ids(row: Dict[str, Any]) -> List[str]:
+    names = []
+    for raw in row.get("genre_ids") or []:
+        try:
+            mapped = TMDB_GENRE_ID_NAMES.get(int(raw))
+        except (TypeError, ValueError):
+            mapped = None
+        if mapped and mapped not in names:
+            names.append(mapped)
+    for item in row.get("genres") or []:
+        if isinstance(item, dict):
+            mapped = TMDB_GENRE_ID_NAMES.get(item.get("id")) or item.get("name")
+        else:
+            mapped = str(item)
+        if mapped and mapped not in names:
+            names.append(mapped)
+    return names
+
+
+def _normalize_tmdb_result(row: Dict[str, Any], media_type: str, source: str) -> Dict[str, Any]:
+    title = row.get("title") or row.get("name") or "Unknown"
+    date = row.get("release_date") or row.get("first_air_date") or ""
+    year = int(date[:4]) if len(date) >= 4 and date[:4].isdigit() else None
+    popularity = float(row.get("popularity") or 0)
+    vote_average = float(row.get("vote_average") or 0)
+    origins = [str(item) for item in (row.get("origin_country") or []) if item]
+    language = row.get("original_language")
+    genres = _genres_from_ids(row)
+    is_anime = (
+        media_type == "tv"
+        and language in {"ja", "zh", "ko"}
+        and any(str(g).casefold() == "animation" for g in genres)
+    )
+    return {
+        "title": title,
+        "year": year,
+        "type": "anime" if is_anime else ("show" if media_type == "tv" else "movie"),
+        "media_type": "anime" if is_anime else ("tv" if media_type == "tv" else "movie"),
+        "genres": genres,
+        "synopsis": row.get("overview") or "",
+        "tmdb_rating": round(vote_average, 1),
+        "vote_count": row.get("vote_count"),
+        "popularity": popularity,
+        "tmdb_id": row.get("id"),
+        "poster": f"https://image.tmdb.org/t/p/w500{row['poster_path']}" if row.get("poster_path") else None,
+        "backdrop": f"https://image.tmdb.org/t/p/w1280{row['backdrop_path']}" if row.get("backdrop_path") else None,
+        "original_language": language,
+        "origin_countries": origins,
+        "country": origins[0] if origins else None,
+        "release_date": date[:10] if len(date) >= 10 else (date or None),
+        "first_air_date": row.get("first_air_date"),
+        "source": source,
+        # Prefer popularity for upcoming / low-vote titles so junk 9.0/2-vote rows don't win.
+        "candidate_score": round(popularity / 10.0 + vote_average, 3),
+    }
+
+
+async def _tmdb_list(path: str, params: Dict[str, Any], api_key: Optional[str] = None) -> List[Dict[str, Any]]:
+    key = api_key or TMDB_KEY
+    if not key:
+        return []
+    from datetime import datetime, timedelta, timezone
+    from database import db
+
+    cache_key = "tmdb:" + path + ":" + "&".join(f"{k}={params[k]}" for k in sorted(params))
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": cache_key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), list):
+        return cached["payload"]
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            response = await client.get(f"https://api.themoviedb.org/3/{path}", params={"api_key": key, **params})
+        if response.status_code != 200:
+            return []
+        payload = response.json().get("results") or []
+        await db.provider_cache.update_one(
+            {"key": cache_key},
+            {"$set": {
+                "key": cache_key,
+                "payload": payload,
+                "expires_at": (now + timedelta(hours=6)).isoformat(),
+                "updated_at": now.isoformat(),
+            }},
+            upsert=True,
+        )
+        return payload
+    except Exception as exc:
+        from jobs.engine import safe_provider_error
+
+        logging.warning("TMDb %s failed: %s", path, safe_provider_error(exc))
+        return []
+
+
+async def _keyword_ids(names: Optional[List[str]], api_key: Optional[str] = None) -> str:
+    """Resolve keyword names to TMDb keyword ids (pipe-joined = OR)."""
+    ids: List[str] = []
+    for name in names or []:
+        query = str(name).strip()
+        if not query:
+            continue
+        rows = await _tmdb_list("search/keyword", {"query": query}, api_key=api_key)
+        for row in rows[:1]:
+            if row.get("id") and str(row["id"]) not in ids:
+                ids.append(str(row["id"]))
+    return "|".join(ids)
+
+
+#: TMDb refuses page numbers above this.
+TMDB_MAX_PAGE = 500
+
+
+def discover_page_span(job: Dict[str, Any]) -> int:
+    """How many pages one run walks — 20 rows per page."""
+    limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
+    return min(10, max(1, (limit + 19) // 20))
+
+
+async def tmdb_discover(
+    job: Dict[str, Any],
+    media_type: str,
+    api_key: Optional[str] = None,
+    start_page: int = 1,
+) -> List[Dict[str, Any]]:
+    filters = job.get("filters") or {}
+    endpoint = "tv" if media_type in {"tv", "show", "anime"} else "movie"
+    limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
+    # TMDb returns 20 per page; cap pages so a 100-limit job actually asks for ~100 rows.
+    max_pages = discover_page_span(job)
+    # Every run starts where the last one stopped. Without this the same first
+    # pages come back for ever, every title is already requested, and the job
+    # accepts nothing no matter how long it runs.
+    first_page = max(1, int(start_page or 1))
+    base: Dict[str, Any] = {"sort_by": "popularity.desc", "include_adult": "false"}
+    genre_ids = _genre_ids(filters.get("include_genres"), endpoint)
+    if genre_ids:
+        base["with_genres"] = genre_ids
+    min_date = filters.get("min_release_date")
+    max_date = filters.get("max_release_date")
+    if min_date:
+        key = "first_air_date.gte" if endpoint == "tv" else "primary_release_date.gte"
+        base[key] = str(min_date)[:10]
+    elif filters.get("min_year"):
+        key = "first_air_date.gte" if endpoint == "tv" else "primary_release_date.gte"
+        base[key] = f"{int(filters['min_year'])}-01-01"
+    if max_date:
+        key = "first_air_date.lte" if endpoint == "tv" else "primary_release_date.lte"
+        base[key] = str(max_date)[:10]
+    elif filters.get("max_year"):
+        key = "first_air_date.lte" if endpoint == "tv" else "primary_release_date.lte"
+        base[key] = f"{int(filters['max_year'])}-12-31"
+    if filters.get("min_rating") is not None:
+        base["vote_average.gte"] = filters["min_rating"]
+    if filters.get("min_vote_count") is not None:
+        base["vote_count.gte"] = filters["min_vote_count"]
+    elif not min_date and (not filters.get("min_year") or int(filters.get("min_year") or 0) < 2025):
+        # Established catalogue: skip zero-vote noise unless the job is explicitly "upcoming".
+        base["vote_count.gte"] = 50
+    languages = []
+    if filters.get("languages"):
+        languages = [str(item) for item in filters["languages"] if item]
+    elif filters.get("language"):
+        languages = [str(filters["language"])]
+    countries = []
+    if filters.get("countries"):
+        countries = [str(item) for item in filters["countries"] if item]
+    elif filters.get("country"):
+        countries = [str(filters["country"])]
+    country_code = None
+    for item in countries:
+        key = str(item).strip().upper()
+        if key in {"US", "USA", "UNITED STATES"}:
+            country_code = "US"
+            break
+        if len(key) == 2:
+            country_code = key
+            break
+    if country_code:
+        base["with_origin_country"] = country_code
+
+    collected: List[Dict[str, Any]] = []
+    seen_ids = set()
+
+    async def _collect(extra_params: Dict[str, Any], cap: Optional[int] = None, tags: Optional[List[str]] = None) -> None:
+        nonlocal collected
+        ceiling = min(limit, cap) if cap else limit
+        for step in range(max_pages):
+            page = first_page + step
+            if page > TMDB_MAX_PAGE:
+                page = ((page - 1) % TMDB_MAX_PAGE) + 1
+            params = {**base, **extra_params, "page": page}
+            params = {key: value for key, value in params.items() if value is not None}
+            rows = await _tmdb_list(f"discover/{endpoint}", params, api_key=api_key)
+            if not rows:
+                break
+            for row in rows:
+                tid = row.get("id")
+                if tid in seen_ids:
+                    continue
+                seen_ids.add(tid)
+                normalized = _normalize_tmdb_result(row, endpoint, "tmdb_discover")
+                if tags:
+                    normalized["tags"] = sorted({*(normalized.get("tags") or []), *tags})
+                collected.append(normalized)
+                if len(collected) >= ceiling:
+                    return
+
+    keyword_ids = await _keyword_ids(filters.get("keywords"), api_key=api_key)
+
+    async def _lanes(extra: Dict[str, Any]) -> None:
+        # Keywords widen the job: the keyword lane runs first with a reserved
+        # quota so the popular genre lane cannot fill the limit on its own.
+        if keyword_ids:
+            without_genres = {"with_keywords": keyword_ids}
+            if "with_genres" in base:
+                without_genres["with_genres"] = None
+            await _collect(
+                {**extra, **without_genres},
+                cap=len(collected) + max(5, limit // 4),
+                tags=[str(item).casefold() for item in (filters.get("keywords") or [])],
+            )
+        await _collect(extra)
+
+    if languages:
+        for lang in languages:
+            if len(collected) >= limit:
+                break
+            await _lanes({"with_original_language": lang})
+    else:
+        await _lanes({})
+    return collected[:limit]
+
+
+async def tmdb_related(history: List[Dict[str, Any]], kind: str, api_key: Optional[str] = None) -> List[Dict[str, Any]]:
+    seeds: List[Dict[str, Any]] = []
+    seen = set()
+    for item in history:
+        tid = item.get("tmdb_id")
+        if not tid or tid in seen:
+            continue
+        seen.add(tid)
+        seeds.append(item)
+        if len(seeds) >= 8:
+            break
+    out: List[Dict[str, Any]] = []
+    for item in seeds:
+        endpoint = "tv" if (item.get("type") or item.get("media_type")) in {"show", "tv", "anime"} else "movie"
+        rows = await _tmdb_list(f"{endpoint}/{item['tmdb_id']}/{kind}", {"page": 1}, api_key=api_key)
+        out.extend(_normalize_tmdb_result(row, endpoint, f"tmdb_{kind}") for row in rows[:12])
+    return out
+
+
+async def fetch_job_candidates(
+    job: Dict[str, Any],
+    history: List[Dict[str, Any]],
+    api_key: Optional[str] = None,
+    start_page: int = 1,
+) -> List[Dict[str, Any]]:
+    key = api_key or TMDB_KEY
+    if not key:
+        return []
+    sources = set(job.get("candidate_sources") or [])
+    wanted = sources & {"tmdb_discover", "tmdb_similar", "tmdb_recommendations"}
+    if not wanted:
+        return []
+    extra: List[Dict[str, Any]] = []
+    media_types = job.get("media_types") or ["movie", "tv"]
+    limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
+    filters = job.get("filters") or {}
+    by_media = filters.get("by_media_type") if isinstance(filters.get("by_media_type"), dict) else {}
+    discover_job = {**job, "candidate_limit": limit}
+    if "tmdb_discover" in wanted:
+        kinds = []
+        if any(item in media_types for item in ("movie", "movies")):
+            kinds.append("movie")
+        if any(item in media_types for item in ("tv", "show", "anime")):
+            kinds.append("tv")
+        per = max(20, (limit + len(kinds) - 1) // max(len(kinds), 1)) if kinds else limit
+        for kind in kinds:
+            lane = dict(filters)
+            if by_media:
+                overlay = by_media.get(kind) or by_media.get("tv" if kind == "tv" else "movie") or {}
+                # Western lane: do not inherit anime-only genre constraints.
+                lane = {**filters, **overlay}
+                lane.pop("by_media_type", None)
+            extra.extend(
+                await tmdb_discover(
+                    {**discover_job, "candidate_limit": per, "filters": lane},
+                    kind,
+                    api_key=key,
+                    start_page=start_page,
+                )
+            )
+        include = {str(g).casefold() for g in (filters.get("include_genres") or [])}
+        want_anime = "anime" in include or "anime" in media_types or bool(by_media.get("anime"))
+        if want_anime:
+            anime_overlay = dict(by_media.get("anime") or {})
+            anime_langs = anime_overlay.get("languages") or ["ja", "zh"]
+            anime_job = {
+                **discover_job,
+                "candidate_limit": min(per, 60),
+                "filters": {
+                    **{k: v for k, v in filters.items() if k != "by_media_type"},
+                    **anime_overlay,
+                    "include_genres": anime_overlay.get("include_genres") or ["animation"],
+                    "languages": anime_langs,
+                    "countries": None,
+                    "country": None,
+                    "language": None,
+                },
+            }
+            extra.extend(await tmdb_discover(anime_job, "tv", api_key=key, start_page=start_page))
+    if "tmdb_similar" in wanted or "tmdb_discover" in wanted:
+        extra.extend(await tmdb_related(history, "similar", api_key=key))
+    if "tmdb_recommendations" in wanted or "tmdb_discover" in wanted:
+        extra.extend(await tmdb_related(history, "recommendations", api_key=key))
+    return extra
+
+
+async def tmdb_search_candidates(intent: Dict[str, Any], api_key: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Discover + keyword search from structured AI Search intent."""
+    key = api_key or TMDB_KEY
+    if not key:
+        return []
+    job = {
+        "filters": {
+            "include_genres": intent.get("include_genres") or [],
+            "min_year": intent.get("min_year"),
+            "max_year": intent.get("max_year"),
+        },
+        "media_types": intent.get("media_types") or ["movie", "tv"],
+        "candidate_sources": ["tmdb_discover"],
+    }
+    extra: List[Dict[str, Any]] = []
+    extra.extend(await fetch_job_candidates(job, [], api_key=key))
+    query = (intent.get("search_text") or intent.get("query") or "").strip()
+    if len(query) >= 2:
+        media = intent.get("media_types") or ["movie", "tv"]
+        if any(item in media for item in ("movie", "movies")):
+            rows = await _tmdb_list("search/movie", {"query": query, "include_adult": "false", "page": 1}, api_key=key)
+            extra.extend(_normalize_tmdb_result(row, "movie", "tmdb_search") for row in rows[:12])
+        if any(item in media for item in ("tv", "show", "anime")):
+            rows = await _tmdb_list("search/tv", {"query": query, "include_adult": "false", "page": 1}, api_key=key)
+            extra.extend(_normalize_tmdb_result(row, "tv", "tmdb_search") for row in rows[:12])
+    return extra
