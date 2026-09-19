@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Check, Filter, Inbox, Loader2, RefreshCw, Search, Star } from "lucide-react";
-import ApproveRejectOverlay, {
+import {
   APPROVE_ICON,
+  ActionIconButton,
   POSTER_GRID,
   REJECT_ICON,
   SendToLibraryButton,
@@ -35,9 +36,10 @@ const SORTS = [
   { value: "title_asc", label: "Title A–Z" },
 ];
 
-/** Select circle, taste match and rating share this exact footprint. */
-const POSTER_PILL =
-  "absolute bottom-3 z-30 w-[3.75rem] h-[3.75rem] sm:w-16 sm:h-16 rounded-full glass grid place-items-center";
+/** Select circle, taste match, rating and the two action buttons share this
+ *  exact footprint, so the bottom row reads as one set of equal controls. */
+const POSTER_SLOT = "w-[3.75rem] h-[3.75rem] sm:w-16 sm:h-16 shrink-0";
+const POSTER_PILL = `${POSTER_SLOT} z-30 rounded-full glass grid place-items-center`;
 
 const FIELD =
   "glass rounded-full box-border h-11 w-full px-4 text-sm inline-flex items-center gap-2 bg-transparent outline-none focus-within:border-[rgba(216,178,106,0.5)] transition-colors";
@@ -639,56 +641,78 @@ function RequestPoster({ item, index, busy, selected, onToggleSelect, onOpenDeta
           </div>
         </div>
 
-        {pending && (
-          <button
-            type="button"
-            data-testid={`select-request-${item.id}`}
-            aria-pressed={selected}
-            aria-label={selected ? `Deselect ${item.title}` : `Select ${item.title}`}
-            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleSelect(); }}
-            className={`${POSTER_PILL} left-3 hover:border-[rgba(216,178,106,0.5)] transition-colors`}
-          >
-            {selected ? <Check className="w-6 h-6 text-[#D8B26A]" /> : <span className="w-5 h-5 rounded-full border border-[rgba(255,240,220,0.35)]" />}
-          </button>
-        )}
+        {/* One row across the foot of the poster, in the order you act in:
+            pick it, approve it, see the match, reject it, see the rating. */}
+        <div className="absolute inset-x-0 bottom-0 z-30 px-3 pb-3 pt-16 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between gap-1">
+          {pending ? (
+            <button
+              type="button"
+              data-testid={`select-request-${item.id}`}
+              aria-pressed={selected}
+              aria-label={selected ? `Deselect ${item.title}` : `Select ${item.title}`}
+              onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleSelect(); }}
+              className={`${POSTER_PILL} hover:border-[rgba(216,178,106,0.5)] transition-colors`}
+            >
+              {selected ? <Check className="w-6 h-6 text-[#D8B26A]" /> : <span className="w-5 h-5 rounded-full border border-[rgba(255,240,220,0.35)]" />}
+            </button>
+          ) : (
+            <span className={POSTER_SLOT} aria-hidden />
+          )}
 
-        {/* Taste match sits under the approve/reject buttons, level with the
-            select circle on the left and the rating on the right. */}
-        {item.match_score != null && (
-          <span
-            data-testid={`match-score-${item.id}`}
-            title={`${Math.round(item.match_score)}% match to your taste — 100% is exactly your thing`}
-            className={`${POSTER_PILL} left-1/2 -translate-x-1/2 flex-col !gap-0 pointer-events-none`}
-          >
-            <span className="font-mono text-sm font-bold leading-none text-[#D8B26A]">{Math.round(item.match_score)}%</span>
-            <span className="font-mono text-[8px] uppercase tracking-wider text-[#8C7F6D] mt-0.5">match</span>
-          </span>
-        )}
+          {pending ? (
+            <ActionIconButton
+              testid={`approve-request-${item.id}`}
+              label="Approve"
+              src={APPROVE_ICON}
+              onClick={onApprove}
+              disabled={busy}
+            />
+          ) : (
+            <span className={POSTER_SLOT} aria-hidden />
+          )}
 
-        {item.rating != null && (
-          <span
-            data-testid={`rating-${item.id}`}
-            title={Number(item.rating) > 0
-              ? `TMDb rating ${Number(item.rating).toFixed(1)} of 10`
-              : "Not rated yet — no votes on TMDb"}
-            className={`${POSTER_PILL} right-3 flex-col !gap-0 pointer-events-none`}
-          >
-            <Star className="w-3.5 h-3.5 fill-current text-[#D8B26A]" />
-            <span className="font-mono text-sm font-bold leading-none text-[#F6EFE4] mt-0.5">
-              {Number(item.rating) > 0 ? Number(item.rating).toFixed(1) : "–"}
+          {item.match_score != null ? (
+            <span
+              data-testid={`match-score-${item.id}`}
+              title={`${Math.round(item.match_score)}% match to your taste — 100% is exactly your thing`}
+              className={`${POSTER_PILL} flex-col !gap-0 pointer-events-none`}
+            >
+              <span className="font-mono text-sm font-bold leading-none text-[#D8B26A]">{Math.round(item.match_score)}%</span>
+              <span className="font-mono text-[8px] uppercase tracking-wider text-[#8C7F6D] mt-0.5">match</span>
             </span>
-          </span>
-        )}
+          ) : (
+            <span className={POSTER_SLOT} aria-hidden />
+          )}
 
-        {pending && (
-          <ApproveRejectOverlay
-            id={item.id}
-            onApprove={onApprove}
-            onReject={onReject}
-            disabled={busy}
-            className="!pb-[5.75rem]"
-          />
-        )}
+          {pending ? (
+            <ActionIconButton
+              testid={`reject-request-${item.id}`}
+              label="Reject"
+              src={REJECT_ICON}
+              onClick={onReject}
+              disabled={busy}
+            />
+          ) : (
+            <span className={POSTER_SLOT} aria-hidden />
+          )}
+
+          {item.rating != null ? (
+            <span
+              data-testid={`rating-${item.id}`}
+              title={Number(item.rating) > 0
+                ? `TMDb rating ${Number(item.rating).toFixed(1)} of 10`
+                : "Not rated yet — no votes on TMDb"}
+              className={`${POSTER_PILL} flex-col !gap-0 pointer-events-none`}
+            >
+              <Star className="w-3.5 h-3.5 fill-current text-[#D8B26A]" />
+              <span className="font-mono text-sm font-bold leading-none text-[#F6EFE4] mt-0.5">
+                {Number(item.rating) > 0 ? Number(item.rating).toFixed(1) : "–"}
+              </span>
+            </span>
+          ) : (
+            <span className={POSTER_SLOT} aria-hidden />
+          )}
+        </div>
 
         {failed && (
           <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-center">

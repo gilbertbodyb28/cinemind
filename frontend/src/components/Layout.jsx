@@ -40,10 +40,6 @@ export default function Layout({ children }) {
   const [q, setQ] = useState("");
   const [bell, setBell] = useState(false);
   const [menu, setMenu] = useState(false);
-  // Which rail button the pointer is on. Driving the label from state instead of
-  // Tailwind's group-hover takes the whole CSS cascade out of the picture: no
-  // theme override, no missing utility, no stale stylesheet can swallow it.
-  const [railHover, setRailHover] = useState(null);
   const popRef = useRef(null);
 
   const isHome = location.pathname === "/dashboard";
@@ -143,23 +139,18 @@ export default function Layout({ children }) {
                 hang below the buttons, so it wraps instead. */}
             <div className="flex-1 min-w-0 order-3 lg:order-none w-full lg:w-auto">
               <nav data-testid="icon-rail" className="flex flex-wrap items-center gap-1">
-                {RAIL.map((n) => {
-                  const showLabel = railHover === n.to;
-                  return (
+                {RAIL.map((n) => (
                     <NavLink
                       key={n.to}
                       to={n.to}
                       data-testid={n.testid}
-                      onMouseEnter={() => setRailHover(n.to)}
-                      onMouseLeave={() => setRailHover((current) => (current === n.to ? null : current))}
-                      onFocus={() => setRailHover(n.to)}
-                      onBlur={() => setRailHover((current) => (current === n.to ? null : current))}
+                      title={n.label}
                       style={{
                         width: "min(var(--rail-icon, 40px), 38px)",
                         height: "min(var(--rail-icon, 40px), 38px)",
                       }}
                       className={({ isActive }) =>
-                        `group relative shrink-0 rounded-full grid place-items-center transition-colors ${
+                        `relative shrink-0 rounded-full grid place-items-center transition-colors ${
                           isActive
                             ? "bg-[rgba(216,178,106,0.2)] text-[#EBD3A3]"
                             : "text-[#A5987F] hover:text-[#F6EFE4] hover:bg-white/[0.06]"
@@ -167,36 +158,8 @@ export default function Layout({ children }) {
                       }
                     >
                       <n.icon style={{ width: "min(var(--rail-glyph, 18px), 18px)", height: "min(var(--rail-glyph, 18px), 18px)" }} />
-                      {/* Hangs below the button here, where there is room. Every visual
-                          property is inline so the theme layer cannot reach it. */}
-                      <span
-                        data-testid={`rail-label-${n.to.slice(1)}`}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{
-                          position: "absolute",
-                          top: "calc(100% + 8px)",
-                          left: "50%",
-                          transform: `translateX(-50%) translateY(${showLabel ? "0" : "-4px"})`,
-                          ...(showLabel ? { opacity: 1 } : {}),
-                          pointerEvents: "none",
-                          whiteSpace: "nowrap",
-                          zIndex: 60,
-                          background: "#17130F",
-                          color: "#F6EFE4",
-                          border: "1px solid rgba(255,240,220,0.18)",
-                          borderRadius: "999px",
-                          padding: "6px 12px",
-                          fontSize: "12px",
-                          lineHeight: 1.2,
-                          boxShadow: "0 10px 30px rgba(0,0,0,0.55)",
-                          transition: "transform 180ms ease",
-                        }}
-                      >
-                        {n.label}
-                      </span>
-                    </NavLink>
-                  );
-                })}
+                  </NavLink>
+                ))}
               </nav>
             </div>
 
