@@ -9,6 +9,11 @@ export const WALLPAPER_STORAGE_KEY = "cinemind-wallpaper";
 /** "poster" keeps the original poster-lit background; the rest are gradients. */
 export const WALLPAPERS = ["poster", "midnight", "ember", "dusk", "mocha", "aurora", "graphite"];
 export const DEFAULT_GLASS_INTENSITY = 78;
+export const ICON_SIZE_STORAGE_KEY = "cinemind-sidebar-icon-size";
+/** Icon rail button size in px. 40 is the original rail; 98 is the ceiling. */
+export const DEFAULT_ICON_SIZE = 40;
+export const MIN_ICON_SIZE = 28;
+export const MAX_ICON_SIZE = 98;
 
 export function normalizeTheme(value) {
   return String(value || "").trim().toLowerCase() === "apple" ? "apple" : "vision";
@@ -87,6 +92,36 @@ export function readStoredTheme() {
   }
 }
 
+export function normalizeIconSize(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return DEFAULT_ICON_SIZE;
+  return Math.max(MIN_ICON_SIZE, Math.min(MAX_ICON_SIZE, Math.round(n)));
+}
+
+export function applyIconSize(value) {
+  const n = normalizeIconSize(value);
+  // The rail reads these; keeping them on the root means the size survives a
+  // route change without every page threading the number through.
+  const root = document.documentElement;
+  root.style.setProperty("--rail-icon", `${n}px`);
+  // The glyph kept the original 18/40 proportion at every size.
+  root.style.setProperty("--rail-glyph", `${Math.round(n * 0.45)}px`);
+  try {
+    localStorage.setItem(ICON_SIZE_STORAGE_KEY, String(n));
+  } catch {
+    /* ignore */
+  }
+  return n;
+}
+
+export function readStoredIconSize() {
+  try {
+    return normalizeIconSize(localStorage.getItem(ICON_SIZE_STORAGE_KEY));
+  } catch {
+    return DEFAULT_ICON_SIZE;
+  }
+}
+
 export function readStoredGlass() {
   try {
     return normalizeGlassIntensity(localStorage.getItem(GLASS_STORAGE_KEY));
@@ -102,6 +137,8 @@ export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(readStoredTheme);
   const [glassIntensity, setGlassState] = useState(readStoredGlass);
   const [wallpaper, setWallpaperState] = useState(readStoredWallpaper);
+  // The rail size previews live but only reaches the server on Save.
+  const [sidebarIconSize, setSidebarIconSizeState] = useState(readStoredIconSize);
   const persistGlass = useRef(null);
 
   useEffect(() => {
@@ -117,6 +154,10 @@ export function ThemeProvider({ children }) {
   }, [wallpaper]);
 
   useEffect(() => {
+    applyIconSize(sidebarIconSize);
+  }, [sidebarIconSize]);
+
+  useEffect(() => {
     if (!user) return undefined;
     let cancelled = false;
     api.get("/connections")
@@ -128,6 +169,9 @@ export function ThemeProvider({ children }) {
         }
         if (r.data?.wallpaper) {
           setWallpaperState(normalizeWallpaper(r.data.wallpaper));
+        }
+        if (r.data?.sidebar_icon_size != null) {
+          setSidebarIconSizeState(normalizeIconSize(r.data.sidebar_icon_size));
         }
       })
       .catch(() => {});
@@ -173,6 +217,22 @@ export function ThemeProvider({ children }) {
     return resolved;
   }, [user]);
 
+  // Dragging the slider only previews. Save is what writes it to the account,
+  // so a size tried out and abandoned does not follow you to the next device.
+  const setSidebarIconSize = useCallback((next) => {
+    const resolved = normalizeIconSize(next);
+    setSidebarIconSizeState(resolved);
+    return resolved;
+  }, []);
+
+  const saveSidebarIconSize = useCallback(async (next) => {
+    const resolved = normalizeIconSize(next ?? sidebarIconSize);
+    setSidebarIconSizeState(resolved);
+    if (!user) return resolved;
+    await api.put("/connections", { sidebar_icon_size: resolved });
+    return resolved;
+  }, [user, sidebarIconSize]);
+
   const value = useMemo(
     () => ({
       theme,
@@ -182,8 +242,21 @@ export function ThemeProvider({ children }) {
       setGlassIntensity,
       wallpaper,
       setWallpaper,
+      sidebarIconSize,
+      setSidebarIconSize,
+      saveSidebarIconSize,
     }),
-    [theme, setTheme, glassIntensity, setGlassIntensity, wallpaper, setWallpaper],
+    [
+      theme,
+      setTheme,
+      glassIntensity,
+      setGlassIntensity,
+      wallpaper,
+      setWallpaper,
+      sidebarIconSize,
+      setSidebarIconSize,
+      saveSidebarIconSize,
+    ],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

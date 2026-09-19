@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from auth import get_current_user
 from database import db
 from jobs.engine import (
+    _parse_stamp,
     create_job,
     delete_job,
     due_jobs,
@@ -216,6 +217,28 @@ def _level_for_code(code: str) -> str:
     return "bug" if str(code or "").endswith(BUG_CODE_SUFFIXES) else "warning"
 
 
+# These two say "go and sync", so a later successful sync answers them.
+HISTORY_WARNING_CODES = {"history_never_synced", "history_stale"}
+
+
+def _warning_already_resolved(
+    warning: Dict[str, Any],
+    run_stamp: Any,
+    synced_at: Dict[str, Any],
+) -> bool:
+    """True when the provider synced after the run that raised this warning.
+
+    The feed keeps every warning and trims only the healthy rows, so a
+    "never synced" from one run used to stay pinned at the top long after the
+    sync it asked for had actually run.
+    """
+    if (warning.get("code") or "") not in HISTORY_WARNING_CODES:
+        return False
+    raised = _parse_stamp(run_stamp)
+    synced = _parse_stamp(synced_at.get(warning.get("source")))
+    return bool(raised and synced and synced > raised)
+
+
 @router.get("/runtime/logs")
 async def runtime_logs(
     user: User = Depends(get_current_user),
@@ -229,6 +252,15 @@ async def runtime_logs(
     limit = max(1, min(int(limit or 400), 1000))
     jobs = {job["id"]: job.get("name") or job["id"] for job in await list_jobs(user.user_id)}
     rows: List[Dict[str, Any]] = []
+
+    sync_states = await db.provider_sync_state.find(
+        {"account_id": user.user_id}, {"_id": 0}
+    ).to_list(50)
+    synced_at = {
+        state.get("provider"): state.get("last_success_at")
+        for state in sync_states
+        if state.get("last_success_at")
+    }
 
     runs = await db.job_runs.find({"user_id": user.user_id}, {"_id": 0}).sort("started_at", -1).to_list(limit)
     for run in runs:
@@ -251,6 +283,8 @@ async def runtime_logs(
             })
         for warning in run.get("warnings") or []:
             code = warning.get("code") or "warning"
+            if _warning_already_resolved(warning, stamp, synced_at):
+                continue
             rows.append({
                 **base,
                 "level": _level_for_code(code),
@@ -267,9 +301,7 @@ async def runtime_logs(
                 "detail": f"{run.get('accepted_count') or 0} picks from {run.get('candidate_count') or 0} candidates",
             })
 
-    for state in await db.provider_sync_state.find(
-        {"account_id": user.user_id}, {"_id": 0}
-    ).to_list(50):
+    for state in sync_states:
         provider = state.get("provider") or "provider"
         if state.get("last_error"):
             rows.append({

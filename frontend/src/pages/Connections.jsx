@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Loader2, Server, Cpu, Film, Tv, Inbox, Library, AppWindow, Clapperboard, Droplets, Image, Check } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Server, Cpu, Film, Tv, Inbox, Library, AppWindow, Clapperboard, Droplets, Image, Check, Maximize2 } from "lucide-react";
 import { DEFAULT_MODEL } from "@/lib/models";
 import DeviceConnect from "@/components/DeviceConnect";
 import AnilistConnect from "@/components/AnilistConnect";
-import { useTheme, WALLPAPERS } from "@/context/ThemeContext";
+import { useTheme, WALLPAPERS, MIN_ICON_SIZE, MAX_ICON_SIZE } from "@/context/ThemeContext";
 
 const THEME_SWATCH = {
   vision: "https://image.tmdb.org/t/p/w500/o8H6HmQNt2qx5bIfmvuI6VJn13A.jpg",
@@ -69,7 +69,18 @@ export default function Connections() {
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [tests, setTests] = useState({});
-  const { theme, setTheme, glassIntensity, setGlassIntensity, wallpaper, setWallpaper } = useTheme();
+  const [savingIconSize, setSavingIconSize] = useState(false);
+  const {
+    theme,
+    setTheme,
+    glassIntensity,
+    setGlassIntensity,
+    wallpaper,
+    setWallpaper,
+    sidebarIconSize,
+    setSidebarIconSize,
+    saveSidebarIconSize,
+  } = useTheme();
 
   const reload = () =>
     api.get("/connections")
@@ -108,6 +119,18 @@ export default function Connections() {
       r.data.ok ? toast.success(`${name}: ${r.data.message}`) : toast.error(`${name}: ${r.data.message}`);
     } catch (e) {
       setTests(t => ({ ...t, [name]: { ok: false, message: e?.message || "Test failed" } }));
+    }
+  };
+
+  const saveIconSize = async () => {
+    setSavingIconSize(true);
+    try {
+      await saveSidebarIconSize(sidebarIconSize);
+      toast.success(`Icon size saved at ${sidebarIconSize}px`);
+    } catch {
+      toast.error("Could not save the icon size");
+    } finally {
+      setSavingIconSize(false);
     }
   };
 
@@ -245,6 +268,42 @@ export default function Connections() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div data-testid="icon-size-picker" className="mt-6 glass rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-lg chip-rose grid place-items-center shrink-0"><Maximize2 className="w-5 h-5" /></div>
+              <div className="min-w-0">
+                <h4 className="font-display font-bold">Icon size</h4>
+                <p className="text-xs text-slate-500 mt-0.5">How large the buttons on the icon rail are. Dragging previews it here; Save keeps it on your account.</p>
+              </div>
+            </div>
+            <span className="chip shrink-0" data-testid="icon-size-value">{sidebarIconSize}px</span>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">{MIN_ICON_SIZE}</span>
+            <input
+              type="range"
+              min={MIN_ICON_SIZE}
+              max={MAX_ICON_SIZE}
+              value={sidebarIconSize}
+              onChange={(e) => setSidebarIconSize(Number(e.target.value))}
+              className="liquid-glass-slider"
+              data-testid="icon-size-slider"
+              aria-label="Icon size"
+            />
+            <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">{MAX_ICON_SIZE}</span>
+          </div>
+          <button
+            type="button"
+            data-testid="icon-size-save-button"
+            onClick={saveIconSize}
+            disabled={savingIconSize}
+            className="chip hover:chip-rose transition-colors flex items-center gap-1.5 disabled:opacity-60 mt-4"
+          >
+            {savingIconSize ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Save
+          </button>
         </div>
       </div>
 

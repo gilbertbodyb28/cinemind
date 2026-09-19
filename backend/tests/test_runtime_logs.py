@@ -157,3 +157,50 @@ def test_anilist_list_raises_so_the_sync_records_a_real_error():
     with patch("providers.anilist.httpx.AsyncClient", return_value=client):
         with pytest.raises(RuntimeError, match="Invalid token"):
             asyncio.run(fetch_media_list("token", "gibbe21"))
+
+
+def test_history_warning_disappears_once_the_provider_has_synced():
+    """A sync that ran after the run answers that run's "never synced" warning.
+
+    The feed keeps every warning and trims only healthy rows, so without this
+    one stale warning stayed pinned at the top for good.
+    """
+    runs = [
+        {
+            "id": "run_1",
+            "job_id": "job_1",
+            "status": "completed",
+            "trigger_type": "manual",
+            "started_at": "2026-09-19T10:59:30+00:00",
+            "finished_at": "2026-09-19T10:59:36+00:00",
+            "accepted_count": 0,
+            "candidate_count": 12,
+            "warnings": [
+                {"code": "history_never_synced", "source": "anilist"},
+                {"code": "history_stale", "source": "plex"},
+                {"code": "tmdb_failed", "source": "tmdb", "detail": "boom"},
+            ],
+        },
+    ]
+    states = [
+        # Synced after the run: resolved.
+        {"provider": "anilist", "last_success_at": "2026-09-19T11:24:40+00:00", "items_synced": 44},
+        # Synced before the run: still worth showing.
+        {"provider": "plex", "last_success_at": "2026-09-19T09:00:00+00:00", "items_synced": 50},
+    ]
+
+    fake_db = MagicMock()
+    fake_db.job_runs.find.return_value = _cursor(runs)
+    fake_db.provider_sync_state.find.return_value = _cursor(states)
+    fake_db.requests.find.return_value = _cursor([])
+
+    with patch("api_extra.db", fake_db), patch(
+        "api_extra.list_jobs", AsyncMock(return_value=[{"id": "job_1", "name": "Upcoming 2027"}])
+    ):
+        out = asyncio.run(runtime_logs(user=_user()))
+
+    codes = [row["code"] for row in out["rows"]]
+    assert "history_never_synced" not in codes
+    assert "history_stale" in codes
+    # Only history warnings self-resolve; a provider that broke still reports it.
+    assert "tmdb_failed" in codes

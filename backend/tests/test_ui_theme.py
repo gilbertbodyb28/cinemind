@@ -42,3 +42,24 @@ def test_normalize_glass_intensity():
     assert server.normalize_glass_intensity(-8) == 0
     assert server.normalize_glass_intensity("64") == 64
     assert server.normalize_glass_intensity(None) == 78
+
+
+def test_sidebar_icon_size_defaults_to_the_original_rail():
+    server = _import_server()
+    public = server.connections_public({})
+    assert public.sidebar_icon_size == 40
+
+
+def test_normalize_sidebar_icon_size_clamps_to_the_allowed_range():
+    server = _import_server()
+    assert server.normalize_sidebar_icon_size(98) == 98
+    assert server.normalize_sidebar_icon_size(140) == 98
+    assert server.normalize_sidebar_icon_size(4) == 28
+    assert server.normalize_sidebar_icon_size("64") == 64
+    assert server.normalize_sidebar_icon_size(None) == 40
+
+
+def test_connections_public_keeps_a_saved_icon_size():
+    server = _import_server()
+    public = server.connections_public({"sidebar_icon_size": 72})
+    assert public.sidebar_icon_size == 72

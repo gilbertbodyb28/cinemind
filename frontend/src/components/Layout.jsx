@@ -213,24 +213,32 @@ export default function Layout({ children }) {
 
         {/* Icon rail: spans the full working width along the bottom edge, its
             side gutters matching the shell's so the two line up. */}
-        <nav data-testid="icon-rail" className="fixed bottom-3 left-3 right-3 sm:left-5 sm:right-5 z-40 glass-strong rounded-full px-2 py-2 flex items-center justify-around gap-1">
+        {/* Button and glyph size come from Sources. The rail wraps onto more rows
+            when a large size stops ten buttons fitting — it must never scroll,
+            because any overflow here turns the bar into a clipping box and eats
+            the hover labels that sit above it. */}
+        <nav data-testid="icon-rail" className="fixed bottom-3 left-3 right-3 sm:left-5 sm:right-5 z-40 glass-strong rounded-[1.9rem] px-2 py-2 flex flex-wrap items-center justify-around gap-1">
           {RAIL.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
               data-testid={`${n.testid}-mobile`}
               title={n.label}
+              style={{ width: "var(--rail-icon, 40px)", height: "var(--rail-icon, 40px)" }}
               className={({ isActive }) =>
-                `group relative w-10 h-10 rounded-full grid place-items-center transition-colors ${
+                `group relative shrink-0 rounded-full grid place-items-center transition-colors ${
                   isActive
                     ? "bg-[rgba(216,178,106,0.2)] text-[#EBD3A3]"
                     : "text-[#9C907E] hover:text-[#F6EFE4] hover:bg-white/[0.06]"
                 }`
               }
             >
-              <n.icon className="w-[18px] h-[18px]" />
+              <n.icon style={{ width: "var(--rail-glyph, 18px)", height: "var(--rail-glyph, 18px)" }} />
               {/* Same label chip the left rail used, lifted above the bar. */}
-              <span className="pointer-events-none absolute bottom-12 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap glass-strong rounded-full px-3 py-1.5 text-xs opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-[opacity,transform] duration-200">
+              <span
+                style={{ bottom: "calc(var(--rail-icon, 40px) + 14px)" }}
+                className="pointer-events-none absolute left-1/2 -translate-x-1/2 z-50 whitespace-nowrap glass-strong rounded-full px-3 py-1.5 text-xs opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-[opacity,transform] duration-200"
+              >
                 {n.label}
               </span>
             </NavLink>
