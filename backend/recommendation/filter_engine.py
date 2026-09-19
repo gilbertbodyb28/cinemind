@@ -106,6 +106,29 @@ def _merge_media_filters(filters: Dict[str, Any], candidate: Dict[str, Any]) -> 
     return merged
 
 
+def _never_rated_yet(candidate: Dict[str, Any], rating: Any, votes: Any) -> bool:
+    """An unreleased title scores 0.0 because nobody has voted, not because it is bad.
+
+    Without this an "upcoming" job with a rating floor rejects every single
+    candidate and reports zero picks with no visible reason.
+    """
+    if rating not in (None, 0, 0.0):
+        return False
+    if votes not in (None, 0):
+        return False
+    from datetime import datetime, timezone
+
+    today = datetime.now(timezone.utc)
+    release = _release_stamp(candidate)
+    if release:
+        return release > today.date().isoformat()
+    year = candidate.get("year")
+    try:
+        return year is not None and int(year) > today.year
+    except (TypeError, ValueError):
+        return False
+
+
 def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
     filters = _merge_media_filters(filters or {}, candidate)
     media_types = filters.get("media_types") or filters.get("media_type")
@@ -145,9 +168,13 @@ def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) 
             return False, "rejected_release_date"
 
     rating = candidate.get("tmdb_rating") if candidate.get("tmdb_rating") is not None else candidate.get("rating")
-    if filters.get("min_rating") is not None and (rating is None or float(rating) < float(filters["min_rating"])):
-        return False, "rejected_rating"
     votes = candidate.get("vote_count")
+    if (
+        filters.get("min_rating") is not None
+        and not _never_rated_yet(candidate, rating, votes)
+        and (rating is None or float(rating) < float(filters["min_rating"]))
+    ):
+        return False, "rejected_rating"
     if filters.get("min_vote_count") is not None and (votes is None or int(votes) < int(filters["min_vote_count"])):
         return False, "rejected_vote_count"
 

@@ -1,6 +1,6 @@
 """TMDb search and poster enrichment."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import asyncio
 import logging
 import re
@@ -334,6 +334,54 @@ def _normalize_tmdb_result(row: Dict[str, Any], media_type: str, source: str) ->
     }
 
 
+async def _tmdb_page(
+    path: str,
+    params: Dict[str, Any],
+    api_key: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """One page of results plus the query's real page count.
+
+    A filtered discover query often has only a handful of pages. Without
+    total_pages the page cursor walks straight past the end and every later
+    run gets an empty body back for ever.
+    """
+    key = api_key or TMDB_KEY
+    if not key:
+        return [], 0
+    from datetime import datetime, timedelta, timezone
+    from database import db
+
+    cache_key = "tmdbpage:" + path + ":" + "&".join(f"{k}={params[k]}" for k in sorted(params))
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": cache_key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), dict):
+        body = cached["payload"]
+        return body.get("results") or [], int(body.get("total_pages") or 0)
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            response = await client.get(f"https://api.themoviedb.org/3/{path}", params={"api_key": key, **params})
+        if response.status_code != 200:
+            return [], 0
+        body = response.json() or {}
+        payload = {"results": body.get("results") or [], "total_pages": int(body.get("total_pages") or 0)}
+        await db.provider_cache.update_one(
+            {"key": cache_key},
+            {"$set": {
+                "key": cache_key,
+                "payload": payload,
+                "expires_at": (now + timedelta(hours=6)).isoformat(),
+                "updated_at": now.isoformat(),
+            }},
+            upsert=True,
+        )
+        return payload["results"], payload["total_pages"]
+    except Exception as exc:
+        from jobs.engine import safe_provider_error
+
+        logging.warning("TMDb %s failed: %s", path, safe_provider_error(exc))
+        return [], 0
+
+
 async def _tmdb_list(path: str, params: Dict[str, Any], api_key: Optional[str] = None) -> List[Dict[str, Any]]:
     key = api_key or TMDB_KEY
     if not key:
@@ -388,6 +436,19 @@ async def _keyword_ids(names: Optional[List[str]], api_key: Optional[str] = None
 TMDB_MAX_PAGE = 500
 
 
+def _window_is_upcoming(filters: Dict[str, Any]) -> bool:
+    """True when the job asks for titles that have not been released yet."""
+    from datetime import datetime, timezone
+
+    today = datetime.now(timezone.utc)
+    start = filters.get("min_release_date") or (
+        f"{int(filters['min_year'])}-01-01" if filters.get("min_year") else None
+    )
+    if not start:
+        return False
+    return str(start)[:10] > today.date().isoformat()
+
+
 def discover_page_span(job: Dict[str, Any]) -> int:
     """How many pages one run walks — 20 rows per page."""
     limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
@@ -427,7 +488,9 @@ async def tmdb_discover(
     elif filters.get("max_year"):
         key = "first_air_date.lte" if endpoint == "tv" else "primary_release_date.lte"
         base[key] = f"{int(filters['max_year'])}-12-31"
-    if filters.get("min_rating") is not None:
+    if filters.get("min_rating") is not None and not _window_is_upcoming(filters):
+        # Unreleased titles carry vote_average 0.0, so a rating floor on an
+        # upcoming window matches nothing at all and the job silently returns 0.
         base["vote_average.gte"] = filters["min_rating"]
     if filters.get("min_vote_count") is not None:
         base["vote_count.gte"] = filters["min_vote_count"]
@@ -462,13 +525,22 @@ async def tmdb_discover(
     async def _collect(extra_params: Dict[str, Any], cap: Optional[int] = None, tags: Optional[List[str]] = None) -> None:
         nonlocal collected
         ceiling = min(limit, cap) if cap else limit
+        # Learned from the first response. Until then assume TMDb's hard ceiling.
+        last_page = TMDB_MAX_PAGE
         for step in range(max_pages):
-            page = first_page + step
-            if page > TMDB_MAX_PAGE:
-                page = ((page - 1) % TMDB_MAX_PAGE) + 1
+            page = ((first_page - 1 + step) % max(1, min(last_page, TMDB_MAX_PAGE))) + 1
             params = {**base, **extra_params, "page": page}
             params = {key: value for key, value in params.items() if value is not None}
-            rows = await _tmdb_list(f"discover/{endpoint}", params, api_key=api_key)
+            rows, total_pages = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)
+            if total_pages:
+                last_page = total_pages
+            if not rows and step == 0 and total_pages and page > total_pages:
+                # The stored cursor had run past the end of this query. Wrap and retry
+                # once, so a job can never be stranded on a page that does not exist.
+                page = ((first_page - 1) % max(1, min(total_pages, TMDB_MAX_PAGE))) + 1
+                params = {**base, **extra_params, "page": page}
+                params = {key: value for key, value in params.items() if value is not None}
+                rows, _ = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)
             if not rows:
                 break
             for row in rows:

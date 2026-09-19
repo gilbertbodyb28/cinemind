@@ -244,19 +244,43 @@ def test_library_item_from_request_fills_tmdb_id():
     assert item["type"] == "show"
 
 
+def _requests_db(rows, recs=None):
+    """Mongo double that applies the status filter the query asks for.
+
+    list_requests reads the queue in two sorted lanes, so a cursor that ignored
+    the query would make these tests pass whatever the endpoint did.
+    """
+    fake_db = MagicMock()
+
+    def _match(row, status_filter):
+        status = row.get("status")
+        if "$in" in status_filter:
+            return status in status_filter["$in"]
+        if "$nin" in status_filter:
+            return status not in status_filter["$nin"]
+        return True
+
+    def find(query, projection=None):
+        matched = [dict(row) for row in rows if _match(row, query.get("status") or {})]
+        cursor = MagicMock()
+        cursor.sort.return_value = cursor
+        cursor.to_list = AsyncMock(return_value=matched)
+        return cursor
+
+    fake_db.requests.find.side_effect = find
+    fake_db.recommendations.find.return_value.to_list = AsyncMock(return_value=recs or [])
+    fake_db.taste_profiles.find_one = AsyncMock(return_value={})
+    return fake_db
+
+
 def test_list_requests_hides_rejected():
     server = _import_server()
     user = MagicMock(user_id="u1")
-    fake_db = MagicMock()
-    fake_db.requests.find.return_value.to_list = AsyncMock(
-        return_value=[
-            {"id": "a", "status": "pending_approval", "title": "Keep", "updated_at": "2"},
-            {"id": "b", "status": "rejected", "title": "Gone", "updated_at": "3"},
-            {"id": "c", "status": "approved", "title": "Done", "updated_at": "1"},
-        ]
-    )
-    fake_db.recommendations.find.return_value.to_list = AsyncMock(return_value=[])
-    fake_db.taste_profiles.find_one = AsyncMock(return_value={})
+    fake_db = _requests_db([
+        {"id": "a", "status": "pending_approval", "title": "Keep", "updated_at": "2"},
+        {"id": "b", "status": "rejected", "title": "Gone", "updated_at": "3"},
+        {"id": "c", "status": "approved", "title": "Done", "updated_at": "1"},
+    ])
 
     async def run():
         with patch.object(server, "db", fake_db):
@@ -269,17 +293,13 @@ def test_list_requests_hides_rejected():
 def test_list_requests_fills_match_score_from_recommendation():
     server = _import_server()
     user = MagicMock(user_id="u1")
-    fake_db = MagicMock()
-    fake_db.requests.find.return_value.to_list = AsyncMock(
-        return_value=[
+    fake_db = _requests_db(
+        [
             {"id": "a", "status": "pending_approval", "recommendation_id": "rec1", "updated_at": "2"},
             {"id": "b", "status": "pending_approval", "match_score": 81, "updated_at": "1"},
-        ]
+        ],
+        recs=[{"id": "rec1", "match_score": 94, "title": "Keep", "year": 2024}],
     )
-    fake_db.recommendations.find.return_value.to_list = AsyncMock(
-        return_value=[{"id": "rec1", "match_score": 94, "title": "Keep", "year": 2024}]
-    )
-    fake_db.taste_profiles.find_one = AsyncMock(return_value={})
 
     async def run():
         with patch.object(server, "db", fake_db):
@@ -294,14 +314,10 @@ def test_list_requests_fills_match_score_from_recommendation():
 def test_list_requests_fills_match_score_from_title():
     server = _import_server()
     user = MagicMock(user_id="u1")
-    fake_db = MagicMock()
-    fake_db.requests.find.return_value.to_list = AsyncMock(
-        return_value=[{"id": "a", "status": "pending_approval", "title": "Zip Wire", "year": 2026, "updated_at": "1"}]
+    fake_db = _requests_db(
+        [{"id": "a", "status": "pending_approval", "title": "Zip Wire", "year": 2026, "updated_at": "1"}],
+        recs=[{"id": "rec9", "title": "Zip Wire", "year": 2026, "match_score": 88}],
     )
-    fake_db.recommendations.find.return_value.to_list = AsyncMock(
-        return_value=[{"id": "rec9", "title": "Zip Wire", "year": 2026, "match_score": 88}]
-    )
-    fake_db.taste_profiles.find_one = AsyncMock(return_value={})
 
     async def run():
         with patch.object(server, "db", fake_db):

@@ -24,13 +24,26 @@ USER_ID = "test-user-claude-1"
 
 
 def _seed_session():
-    """Seed a user + session directly in mongo per /app/auth_testing.md."""
+    """Seed a user + session directly in mongo per /app/auth_testing.md.
+
+    Upsert rather than delete-then-insert: this fixture is session scoped and
+    autouse, so every xdist worker runs it at once against the same database.
+    The old pair raced — one worker's delete landed between another's delete and
+    insert — which the unique indexes on user_id and session_token turn into a
+    duplicate-key error and 89 collection errors.
+    """
     script = f"""
 use('{DB_NAME}');
-db.users.deleteMany({{user_id: '{USER_ID}'}});
-db.user_sessions.deleteMany({{session_token: '{SESSION_TOKEN}'}});
-db.users.insertOne({{user_id: '{USER_ID}', email: 'test.user.claude1@example.com', name: 'Test User', picture: 'https://via.placeholder.com/150', created_at: new Date()}});
-db.user_sessions.insertOne({{user_id: '{USER_ID}', session_token: '{SESSION_TOKEN}', expires_at: new Date(Date.now() + 7*24*60*60*1000), created_at: new Date()}});
+db.users.replaceOne(
+  {{user_id: '{USER_ID}'}},
+  {{user_id: '{USER_ID}', email: 'test.user.claude1@example.com', name: 'Test User', picture: 'https://via.placeholder.com/150', created_at: new Date()}},
+  {{upsert: true}}
+);
+db.user_sessions.replaceOne(
+  {{session_token: '{SESSION_TOKEN}'}},
+  {{user_id: '{USER_ID}', session_token: '{SESSION_TOKEN}', expires_at: new Date(Date.now() + 7*24*60*60*1000), created_at: new Date()}},
+  {{upsert: true}}
+);
 print('seeded');
 """
     subprocess.run(["mongosh", "--quiet", "--eval", script], check=True, capture_output=True, timeout=60)

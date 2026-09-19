@@ -606,6 +606,65 @@ async def _advance_schedule(user_id: str, job: Dict[str, Any], finished: datetim
     )
 
 
+REJECTION_HINTS = {
+    "rejected_year": "No candidate fell inside the job's year window. Widen it, or add a source that can reach those years.",
+    "rejected_genre": "No candidate matched the job's genres.",
+    "rejected_rating": "Every candidate scored below the job's minimum rating.",
+    "rejected_vote_count": "Every candidate had fewer votes than the job requires.",
+    "rejected_media_type": "No candidate matched the job's media types.",
+    "rejected_language": "No candidate matched the job's languages.",
+    "rejected_runtime": "No candidate matched the job's runtime window.",
+    "rejected_release_date": "No candidate fell inside the job's release-date window.",
+    "rejected_already_requested": "Every candidate had already been requested. The job needs fresh candidates.",
+    "rejected_already_watched": "Every candidate was already in your watch history.",
+    "rejected_already_in_library": "Every candidate was already in your library.",
+}
+
+
+def empty_result_warnings(
+    job: Dict[str, Any],
+    result: Dict[str, Any],
+    extra: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Explain a run that picked nothing, instead of reporting a silent zero.
+
+    A job can return 0 for entirely mundane reasons, but it can also be stuck —
+    a page cursor past the end of its TMDb query, or a filter no candidate can
+    ever satisfy. Both used to look identical from the outside.
+    """
+    if result.get("accepted"):
+        return []
+    rows: List[Dict[str, Any]] = []
+    sources = set(job.get("candidate_sources") or [])
+    if sources & {"tmdb_discover", "tmdb_similar", "tmdb_recommendations"} and not extra:
+        rows.append({
+            "code": "tmdb_no_candidates",
+            "source": "tmdb",
+            "detail": "TMDb returned no candidates for this job's filters.",
+        })
+
+    counts: Dict[str, int] = {}
+    for row in result.get("rejected") or []:
+        outcome = row.get("filter_outcome") or "rejected"
+        counts[outcome] = counts.get(outcome, 0) + 1
+    if counts:
+        outcome, hits = max(counts.items(), key=lambda item: item[1])
+        total = sum(counts.values())
+        hint = REJECTION_HINTS.get(outcome, "")
+        rows.append({
+            "code": "no_picks",
+            "source": "filters",
+            "detail": f"0 of {total} candidates accepted; {hits} fell on {outcome}. {hint}".strip(),
+        })
+    elif not rows:
+        rows.append({
+            "code": "no_candidates",
+            "source": "job",
+            "detail": "No candidate source returned anything for this job.",
+        })
+    return rows
+
+
 async def execute_job(
     user_id: str,
     job: Dict[str, Any],
@@ -686,6 +745,7 @@ async def execute_job(
                 model = "deterministic"
         limit = int((result.get("job") or job).get("final_recommendation_limit") or 8)
         result["accepted"] = ranked[:limit]
+        warnings.extend(empty_result_warnings(job, result, extra))
         result["ai_reranked"] = ai_reranked
         action_warnings = await persist_run_results(
             user_id,

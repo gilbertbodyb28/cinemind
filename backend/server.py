@@ -118,6 +118,7 @@ class Connections(BaseModel):
     ui_theme: Literal["vision", "apple"] = "vision"
     glass_intensity: int = 78
     wallpaper: str = "poster"
+    sidebar_icon_size: int = 40
 
 
 class AddOptionsBody(BaseModel):
@@ -141,6 +142,12 @@ class BulkRequestsBody(BaseModel):
 
 DEFAULT_GLASS_INTENSITY = 78
 
+# Icon rail button size in px. 40 is the original rail; 98 is the largest the
+# bar can grow to before the buttons stop reading as one row of controls.
+DEFAULT_SIDEBAR_ICON_SIZE = 40
+MIN_SIDEBAR_ICON_SIZE = 28
+MAX_SIDEBAR_ICON_SIZE = 98
+
 
 def normalize_ui_theme(value: Any) -> str:
     return "apple" if str(value or "").strip().lower() == "apple" else "vision"
@@ -161,6 +168,14 @@ def normalize_glass_intensity(value: Any) -> int:
     except (TypeError, ValueError):
         return DEFAULT_GLASS_INTENSITY
     return max(0, min(100, n))
+
+
+def normalize_sidebar_icon_size(value: Any) -> int:
+    try:
+        n = int(round(float(value)))
+    except (TypeError, ValueError):
+        return DEFAULT_SIDEBAR_ICON_SIZE
+    return max(MIN_SIDEBAR_ICON_SIZE, min(MAX_SIDEBAR_ICON_SIZE, n))
 
 
 def connections_public(doc: Dict[str, Any]) -> Connections:
@@ -186,6 +201,7 @@ def connections_public(doc: Dict[str, Any]) -> Connections:
     data["ui_theme"] = normalize_ui_theme(doc.get("ui_theme"))
     data["glass_intensity"] = normalize_glass_intensity(doc.get("glass_intensity"))
     data["wallpaper"] = normalize_wallpaper(doc.get("wallpaper"))
+    data["sidebar_icon_size"] = normalize_sidebar_icon_size(doc.get("sidebar_icon_size"))
     return Connections(**{k: data.get(k) for k in Connections.model_fields})
 
 
@@ -557,6 +573,8 @@ async def update_connections(payload: Connections, user: User = Depends(get_curr
         data["glass_intensity"] = normalize_glass_intensity(data.get("glass_intensity"))
     if "wallpaper" in data:
         data["wallpaper"] = normalize_wallpaper(data.get("wallpaper"))
+    if "sidebar_icon_size" in data:
+        data["sidebar_icon_size"] = normalize_sidebar_icon_size(data.get("sidebar_icon_size"))
     await db.connections.update_one(
         {"user_id": user.user_id},
         {"$set": {**data, "user_id": user.user_id}},
@@ -1731,21 +1749,48 @@ async def approve_to_mediamanager(
     return result
 
 
+PENDING_STATUSES = ["pending_approval", "pending", "requested"]
+# One queue page. Matches the tally in /requests/stats so the header count and
+# the list on screen cannot disagree.
+REQUEST_LIST_CAP = 5000
+
+
 @api.get("/requests")
 async def list_requests(user: User = Depends(get_current_user)):
-    rows = await db.requests.find(
-        {"user_id": user.user_id, "status": {"$nin": ["rejected"]}},
+    """Newest first, pending ahead of everything else.
+
+    The sort used to run in Python *after* .to_list(500). Mongo returns rows in
+    natural order, so that cap took an arbitrary 500 of the collection and the
+    reorder only shuffled those. Titles a job had just written sat past the cap
+    and never reached the queue, however often the tab polled for them.
+    """
+    base = {"user_id": user.user_id}
+    pending_rows = await db.requests.find(
+        {**base, "status": {"$in": PENDING_STATUSES}},
         {"_id": 0, "user_id": 0},
-    ).to_list(500)
-    rows = await attach_request_match_scores(user.user_id, rows)
-    pending = {"pending_approval", "pending", "requested"}
-    hidden = {"rejected"}
-    visible = [row for row in rows if row.get("status") not in hidden]
-    pending_rows = [row for row in visible if row.get("status") in pending]
-    other_rows = [row for row in visible if row.get("status") not in pending]
-    pending_rows.sort(key=lambda row: row.get("updated_at") or "", reverse=True)
-    other_rows.sort(key=lambda row: row.get("updated_at") or "", reverse=True)
-    return pending_rows + other_rows
+    ).sort("updated_at", -1).to_list(REQUEST_LIST_CAP)
+    other_rows = await db.requests.find(
+        {**base, "status": {"$nin": [*PENDING_STATUSES, "rejected"]}},
+        {"_id": 0, "user_id": 0},
+    ).sort("updated_at", -1).to_list(REQUEST_LIST_CAP)
+    return await attach_request_match_scores(user.user_id, pending_rows + other_rows)
+
+
+@api.get("/requests/version")
+async def requests_version(user: User = Depends(get_current_user)):
+    """Cheap change token so an open queue can poll often without refetching 1 MB.
+
+    The tab compares this to what it holds and only pulls the full list when a
+    job has actually written something.
+    """
+    query = {"user_id": user.user_id, "status": {"$nin": ["rejected"]}}
+    latest = await db.requests.find(query, {"_id": 0, "updated_at": 1}).sort(
+        "updated_at", -1
+    ).limit(1).to_list(1)
+    return {
+        "count": await db.requests.count_documents(query),
+        "latest": (latest[0].get("updated_at") if latest else None),
+    }
 
 
 @api.get("/requests/stats")
@@ -2181,7 +2226,12 @@ _scheduler_task = None
 @app.on_event("startup")
 async def start_job_scheduler():
     global _scheduler_task
+    from database import ensure_indexes
     from jobs.engine import migrate_jobs_to_interval, start_scheduler
+    try:
+        await ensure_indexes()
+    except Exception:
+        logging.exception("Could not create indexes")
     try:
         await migrate_jobs_to_interval()
     except Exception:

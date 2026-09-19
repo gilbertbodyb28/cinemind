@@ -51,6 +51,8 @@ async def ensure_indexes() -> None:
     await _create_index(db.blacklist, [("user_id", 1), ("canonical_media_id", 1)], unique=True)
     await _create_index(db.recommendation_feedback, [("user_id", 1), ("recommendation_id", 1)])
     await _create_index(db.requests, [("user_id", 1), ("id", 1)], unique=True)
+    # The queue sorts newest-first per status; without this it is a collection scan.
+    await _create_index(db.requests, [("user_id", 1), ("status", 1), ("updated_at", -1)])
     await _create_index(db.provider_sync_state, [("provider", 1), ("account_id", 1)], unique=True)
     await _create_index(db.provider_cache, "key", unique=True)
     await _create_index(db.provider_cache, "expires_at")

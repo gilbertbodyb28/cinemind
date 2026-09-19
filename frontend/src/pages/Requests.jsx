@@ -56,8 +56,9 @@ function releaseKey(item) {
 }
 
 const PAGE = 40;
-/** The queue re-checks the server this often so job runs appear without a reload. */
-const POLL_MS = 20000;
+/** How often the queue asks whether anything changed. The check is a tiny
+ *  count + timestamp, so this can be short without refetching the whole list. */
+const POLL_MS = 5000;
 
 const BULK_CTRL =
   "glass rounded-full box-border h-12 w-full px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap hover:brutal-shadow-rose transition-shadow disabled:opacity-40";
@@ -89,8 +90,10 @@ export default function Requests() {
   // GET /requests hides rejected rows, so the tally comes from its own endpoint.
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, blacklisted: 0 });
   const sentinel = useRef(null);
-  // The poll reads this instead of the state, which its empty dep list would freeze.
+  // The poll reads these instead of the state, which its empty dep list would freeze.
   const workingRef = useRef(false);
+  // Last count+timestamp seen from the server; null until the first check lands.
+  const versionRef = useRef(null);
 
   const loadStats = async () => {
     try {
@@ -116,18 +119,33 @@ export default function Requests() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { refresh(); }, []);
 
-  // Job runs write straight into the queue, so the open tab has to go look for them:
-  // poll while visible, and refresh the moment the window or tab regains focus.
+  // Job runs write straight into the queue, so the open tab has to go look for
+  // them. Asking for the full list every few seconds would mean refetching a
+  // megabyte of posters, so the tick reads a count + newest timestamp and only
+  // pulls the list when a job has actually written something.
   useEffect(() => {
-    const tick = () => {
+    let alive = true;
+    const tick = async () => {
       // Never overwrite the list mid-approve; the action refreshes it when it lands.
       if (document.hidden || workingRef.current) return;
-      refresh({ quiet: true });
+      try {
+        const r = await api.get("/requests/version");
+        const token = `${r.data?.count ?? ""}:${r.data?.latest ?? ""}`;
+        if (!alive || token === versionRef.current) return;
+        // First tick after mount only records the token; the initial load is fresh.
+        const first = versionRef.current === null;
+        versionRef.current = token;
+        if (!first) await refresh({ quiet: true });
+      } catch {
+        // A dropped check is harmless; the next tick tries again.
+      }
     };
+    tick();
     const timer = setInterval(tick, POLL_MS);
     window.addEventListener("focus", tick);
     document.addEventListener("visibilitychange", tick);
     return () => {
+      alive = false;
       clearInterval(timer);
       window.removeEventListener("focus", tick);
       document.removeEventListener("visibilitychange", tick);
