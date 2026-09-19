@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCheck, Filter, Loader2, RefreshCw, Star } from "lucide-react";
+import { AlertTriangle, CheckCheck, Filter, RefreshCw, Star } from "lucide-react";
 import {
   POSTER_GRID,
+  SendToLibraryButton,
   StatusStat,
-  handleApproveError,
   mediaManagerLibraryLabel,
 } from "@/components/ApproveRejectOverlay";
-import { useNavigate } from "react-router-dom";
 import TitleDetailModal from "@/components/TitleDetailModal";
 import ReleaseTypeFilters from "@/components/ReleaseTypeFilters";
 import {
@@ -20,9 +19,9 @@ import {
 } from "@/lib/mediaFilters";
 
 const APPROVED = new Set(["approved", "available", "completed"]);
-/** Same footprint as the queue's select circle. */
-const POSTER_PILL =
-  "absolute bottom-3 z-30 w-[3.75rem] h-[3.75rem] sm:w-16 sm:h-16 rounded-full glass grid place-items-center flex-col !gap-0 pointer-events-none";
+/** The queue's footprint, so both tabs show the same card. */
+const POSTER_SLOT = "w-11 h-11 sm:w-12 sm:h-12 shrink-0";
+const POSTER_PILL = `${POSTER_SLOT} z-30 rounded-full glass grid place-items-center flex-col !gap-0 pointer-events-none`;
 const PAGE = 40;
 
 function isApproved(item) {
@@ -30,7 +29,6 @@ function isApproved(item) {
 }
 
 export default function Approved() {
-  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   // Same chunked rendering as the queue, so a long list still scrolls at 60fps.
@@ -85,19 +83,9 @@ export default function Approved() {
 
   const shown = useMemo(() => visible.slice(0, limit), [visible, limit]);
 
-  // Titles approved while MediaManager was unreachable stay here and can be sent again.
-  const retryDelivery = async (item) => {
-    try {
-      const r = await api.post(`/requests/${item.id}/approve`, {});
-      if (r.data?.delivery_error) {
-        toast.error(r.data.delivery_error);
-      } else {
-        toast.success(`${item.title} sent to MediaManager`);
-      }
-      setItems((rows) => rows.map((row) => (row.id === item.id ? { ...row, ...(r.data?.request || {}) } : row)));
-    } catch (error) {
-      handleApproveError(error, navigate);
-    }
+  // The send button owns the request itself; this only folds its answer back in.
+  const applyDelivery = (id, data) => {
+    setItems((rows) => rows.map((row) => (row.id === id ? { ...row, ...(data?.request || {}) } : row)));
   };
 
   useEffect(() => {
@@ -175,7 +163,7 @@ export default function Approved() {
 
       <div className={`mt-10 ${POSTER_GRID}`}>
         {shown.map((item, index) => (
-          <ApprovedPoster key={item.id} item={item} index={index} onRetry={retryDelivery} onOpenDetails={() => setDetailItem(item)} />
+          <ApprovedPoster key={item.id} item={item} index={index} onDelivered={applyDelivery} onOpenDetails={() => setDetailItem(item)} />
         ))}
       </div>
 
@@ -199,15 +187,8 @@ export default function Approved() {
   );
 }
 
-function ApprovedPoster({ item, index, onRetry, onOpenDetails }) {
+function ApprovedPoster({ item, index, onDelivered, onOpenDetails }) {
   const undelivered = item.delivery_status === "not_delivered";
-  const [busy, setBusy] = useState(false);
-
-  const retry = async () => {
-    if (busy) return;
-    setBusy(true);
-    try { await onRetry(item); } finally { setBusy(false); }
-  };
 
   return (
     <div
@@ -241,50 +222,70 @@ function ApprovedPoster({ item, index, onRetry, onOpenDetails }) {
             {item.type && (
               <span className="chip backdrop-blur-md !bg-[#17130F]/75 shadow-md">{item.type}</span>
             )}
-          </div>
-          <div className="min-w-0 flex justify-end">
+            {/* The warning keeps its place on the card even though the send button
+                is now the same one the queue uses. */}
             {undelivered ? (
-              <button
-                type="button"
-                data-testid={`approved-retry-${item.id}`}
-                onClick={retry}
-                disabled={busy}
-                title={item.delivery_error || "Not in MediaManager yet — send again"}
-                className="chip chip-amber shadow-md flex items-center gap-1.5 disabled:opacity-60"
+              <span
+                data-testid={`approved-undelivered-${item.id}`}
+                title={item.delivery_error || "Not in MediaManager yet"}
+                className="chip chip-amber shadow-md flex items-center gap-1.5"
               >
-                {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <AlertTriangle className="w-3 h-3" />} Send again
-              </button>
+                <AlertTriangle className="w-3 h-3" /> Not sent
+              </span>
             ) : (
               <span className="chip !bg-[#17130F]/75 shadow-md flex items-center gap-1.5">
                 <CheckCheck className="w-3 h-3 text-[#A8BE92]" /> {mediaManagerLibraryLabel(item)}
               </span>
             )}
           </div>
+          <div className="min-w-0 flex justify-end">
+            <SendToLibraryButton
+              rec={item}
+              requestId={item.id}
+              testid={`approved-send-${item.id}`}
+              onDone={(id, data) => onDelivered(item.id, data)}
+              className="!w-full"
+            />
+          </div>
         </div>
 
-        {item.match_score != null && (
-          <span
-            data-testid={`approved-match-${item.id}`}
-            title={`${Math.round(item.match_score)}% match to your taste`}
-            className={`${POSTER_PILL} left-1/2 -translate-x-1/2`}
-          >
-            <span className="font-mono text-sm font-bold leading-none text-[#D8B26A]">{Math.round(item.match_score)}%</span>
-            <span className="font-mono text-[8px] uppercase tracking-wider text-[#8C7F6D] mt-0.5">match</span>
-          </span>
-        )}
+        {/* Same row the queue uses. Approved titles need no select, approve or
+            reject, so those slots stay empty and match and rating keep the exact
+            positions they have in the queue. */}
+        <div className="absolute inset-x-0 bottom-0 z-30 px-3 pb-3 pt-16 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between gap-1">
+          <span className={POSTER_SLOT} aria-hidden />
+          <span className={POSTER_SLOT} aria-hidden />
 
-        {item.rating != null && (
-          <span
-            data-testid={`approved-rating-${item.id}`}
-            title={Number(item.rating) > 0 ? `TMDb rating ${Number(item.rating).toFixed(1)} of 10` : "Not rated yet"}
-            className={`${POSTER_PILL} right-3`}
-          >
-            <Star className="w-3.5 h-3.5 fill-current text-[#D8B26A]" />
-            <span className="font-mono text-sm font-bold leading-none text-[#F6EFE4] mt-0.5">
-              {Number(item.rating) > 0 ? Number(item.rating).toFixed(1) : "–"}
+          {item.match_score != null ? (
+            <span
+              data-testid={`approved-match-${item.id}`}
+              title={`${Math.round(item.match_score)}% match to your taste`}
+              className={POSTER_PILL}
+            >
+              <span className="font-mono text-sm font-bold leading-none text-[#D8B26A]">{Math.round(item.match_score)}%</span>
+              <span className="font-mono text-[8px] uppercase tracking-wider text-[#8C7F6D] mt-0.5">match</span>
             </span>
-          </span>
-        )}
+          ) : (
+            <span className={POSTER_SLOT} aria-hidden />
+          )}
+
+          <span className={POSTER_SLOT} aria-hidden />
+
+          {item.rating != null ? (
+            <span
+              data-testid={`approved-rating-${item.id}`}
+              title={Number(item.rating) > 0 ? `TMDb rating ${Number(item.rating).toFixed(1)} of 10` : "Not rated yet"}
+              className={POSTER_PILL}
+            >
+              <Star className="w-3.5 h-3.5 fill-current text-[#D8B26A]" />
+              <span className="font-mono text-sm font-bold leading-none text-[#F6EFE4] mt-0.5">
+                {Number(item.rating) > 0 ? Number(item.rating).toFixed(1) : "–"}
+              </span>
+            </span>
+          ) : (
+            <span className={POSTER_SLOT} aria-hidden />
+          )}
+        </div>
       </div>
 
       <div className="mt-3.5">

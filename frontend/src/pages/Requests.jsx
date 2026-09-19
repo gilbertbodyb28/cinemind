@@ -38,7 +38,7 @@ const SORTS = [
 
 /** Select circle, taste match, rating and the two action buttons share this
  *  exact footprint, so the bottom row reads as one set of equal controls. */
-const POSTER_SLOT = "w-[3.75rem] h-[3.75rem] sm:w-16 sm:h-16 shrink-0";
+const POSTER_SLOT = "w-11 h-11 sm:w-12 sm:h-12 shrink-0";
 const POSTER_PILL = `${POSTER_SLOT} z-30 rounded-full glass grid place-items-center`;
 
 const FIELD =
@@ -666,6 +666,7 @@ function RequestPoster({ item, index, busy, selected, onToggleSelect, onOpenDeta
               src={APPROVE_ICON}
               onClick={onApprove}
               disabled={busy}
+              className="!w-11 !h-11 sm:!w-12 sm:!h-12"
             />
           ) : (
             <span className={POSTER_SLOT} aria-hidden />
@@ -691,6 +692,7 @@ function RequestPoster({ item, index, busy, selected, onToggleSelect, onOpenDeta
               src={REJECT_ICON}
               onClick={onReject}
               disabled={busy}
+              className="!w-11 !h-11 sm:!w-12 sm:!h-12"
             />
           ) : (
             <span className={POSTER_SLOT} aria-hidden />
