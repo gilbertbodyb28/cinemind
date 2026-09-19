@@ -168,8 +168,8 @@ export default function Requests() {
     return [...found].sort((a, b) => a.localeCompare(b));
   }, [queued]);
 
-  // Whole steps. Setting both ends to the same number asks for that rating and
-  // nothing else: 7 to 7 keeps 7.0 and drops 6.9 and 7.1 alike.
+  // A number means the whole band it heads: 7 is 7.0 through 7.9. So "to 7"
+  // stops below 8, and picking 7 at both ends keeps every seven-point-something.
   const RATING_OPTIONS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 
   const yearOptions = useMemo(() => {
@@ -187,7 +187,8 @@ export default function Requests() {
     const from = fromYear === "any" ? null : Number(fromYear);
     const to = toYear === "any" ? null : Number(toYear);
     const ratingFrom = fromRating === "any" ? null : Number(fromRating);
-    const ratingTo = toRating === "any" ? null : Number(toRating);
+    // Exclusive: "to 7" runs up to but not including 8.
+    const ratingBelow = toRating === "any" ? null : Number(toRating) + 1;
     const rows = queued.filter((row) => {
       if (needle && !String(row.title || "").toLowerCase().includes(needle)) return false;
       if (!matchesChecks(typeBucket(row), types)) return false;
@@ -196,7 +197,7 @@ export default function Requests() {
       if (from != null && (row.year == null || Number(row.year) < from)) return false;
       if (to != null && (row.year == null || Number(row.year) > to)) return false;
       if (ratingFrom != null && (row.rating == null || Number(row.rating) < ratingFrom)) return false;
-      if (ratingTo != null && (row.rating == null || Number(row.rating) > ratingTo)) return false;
+      if (ratingBelow != null && (row.rating == null || Number(row.rating) >= ratingBelow)) return false;
       return true;
     });
     const sorted = [...rows];
