@@ -237,7 +237,11 @@ export default function Layout({ children }) {
               {/* Same label chip the left rail used, lifted above the bar. */}
               <span
                 style={{ bottom: "calc(var(--rail-icon, 40px) + 14px)" }}
-                className="pointer-events-none absolute left-1/2 -translate-x-1/2 z-50 whitespace-nowrap glass-strong rounded-full px-3 py-1.5 text-xs opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-[opacity,transform] duration-200"
+                /* The label floats over poster art, so it cannot lean on glass-strong:
+                   the vision-glass theme forces that fill to ~2% with !important, which
+                   reads as nothing over a bright poster. --surface from index.css is the
+                   app's own panel colour, kept opaque enough to stay legible. */
+                className="pointer-events-none absolute left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-full px-3 py-1.5 text-xs text-[#F6EFE4] bg-[#17130F]/90 backdrop-blur-md border border-[rgba(255,240,220,0.13)] shadow-lg opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-[opacity,transform] duration-200"
               >
                 {n.label}
               </span>
