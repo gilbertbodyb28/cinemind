@@ -53,6 +53,10 @@ export default function Layout({ children }) {
   const [q, setQ] = useState("");
   const [bell, setBell] = useState(false);
   const [menu, setMenu] = useState(false);
+  // Which rail button the pointer is on. Driving the label from state instead of
+  // Tailwind's group-hover takes the whole CSS cascade out of the picture: no
+  // theme override, no missing utility, no stale stylesheet can swallow it.
+  const [railHover, setRailHover] = useState(null);
   const popRef = useRef(null);
 
   const isHome = location.pathname === "/dashboard";
@@ -218,35 +222,63 @@ export default function Layout({ children }) {
             because any overflow here turns the bar into a clipping box and eats
             the hover labels that sit above it. */}
         <nav data-testid="icon-rail" className="fixed bottom-3 left-3 right-3 sm:left-5 sm:right-5 z-40 glass-strong rounded-[1.9rem] px-2 py-2 flex flex-wrap items-center justify-around gap-1">
-          {RAIL.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              data-testid={`${n.testid}-mobile`}
-              title={n.label}
-              style={{ width: "var(--rail-icon, 40px)", height: "var(--rail-icon, 40px)" }}
-              className={({ isActive }) =>
-                `group relative shrink-0 rounded-full grid place-items-center transition-colors ${
-                  isActive
-                    ? "bg-[rgba(216,178,106,0.2)] text-[#EBD3A3]"
-                    : "text-[#9C907E] hover:text-[#F6EFE4] hover:bg-white/[0.06]"
-                }`
-              }
-            >
-              <n.icon style={{ width: "var(--rail-glyph, 18px)", height: "var(--rail-glyph, 18px)" }} />
-              {/* Same label chip the left rail used, lifted above the bar. */}
-              <span
-                style={{ bottom: "calc(var(--rail-icon, 40px) + 14px)" }}
-                /* The label floats over poster art, so it cannot lean on glass-strong:
-                   the vision-glass theme forces that fill to ~2% with !important, which
-                   reads as nothing over a bright poster. --surface from index.css is the
-                   app's own panel colour, kept opaque enough to stay legible. */
-                className="pointer-events-none absolute left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-full px-3 py-1.5 text-xs text-[#F6EFE4] bg-[#17130F]/90 backdrop-blur-md border border-[rgba(255,240,220,0.13)] shadow-lg opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-[opacity,transform] duration-200"
+          {RAIL.map((n) => {
+            const showLabel = railHover === n.to;
+            return (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                data-testid={`${n.testid}-mobile`}
+                onMouseEnter={() => setRailHover(n.to)}
+                onMouseLeave={() => setRailHover((current) => (current === n.to ? null : current))}
+                onFocus={() => setRailHover(n.to)}
+                onBlur={() => setRailHover((current) => (current === n.to ? null : current))}
+                style={{ width: "var(--rail-icon, 40px)", height: "var(--rail-icon, 40px)" }}
+                className={({ isActive }) =>
+                  `group relative shrink-0 rounded-full grid place-items-center transition-colors ${
+                    isActive
+                      ? "bg-[rgba(216,178,106,0.2)] text-[#EBD3A3]"
+                      : "text-[#9C907E] hover:text-[#F6EFE4] hover:bg-white/[0.06]"
+                  }`
+                }
               >
-                {n.label}
-              </span>
-            </NavLink>
-          ))}
+                <n.icon style={{ width: "var(--rail-glyph, 18px)", height: "var(--rail-glyph, 18px)" }} />
+                {/* Every visual property is inline. The label floats outside the bar
+                    over poster art, and glass-strong is forced to a ~2% fill by the
+                    theme layer, so it carries its own surface colour instead. */}
+                <span
+                  data-testid={`rail-label-${n.to.slice(1)}`}
+                  /* Two independent paths to the same result. React state covers the
+                     normal case; the group-hover class covers the one it misses, where
+                     the pointer is already resting where the button re-renders and no
+                     enter event ever fires. Inline opacity is only set while hovered,
+                     so it never blocks the CSS path. */
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  style={{
+                    position: "absolute",
+                    bottom: "calc(var(--rail-icon, 40px) + 14px)",
+                    left: "50%",
+                    transform: `translateX(-50%) translateY(${showLabel ? "0" : "4px"})`,
+                    ...(showLabel ? { opacity: 1 } : {}),
+                    pointerEvents: "none",
+                    whiteSpace: "nowrap",
+                    zIndex: 60,
+                    background: "#17130F",
+                    color: "#F6EFE4",
+                    border: "1px solid rgba(255,240,220,0.18)",
+                    borderRadius: "999px",
+                    padding: "6px 12px",
+                    fontSize: "12px",
+                    lineHeight: 1.2,
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.55)",
+                    transition: "transform 180ms ease",
+                  }}
+                >
+                  {n.label}
+                </span>
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
     </SearchContext.Provider>
