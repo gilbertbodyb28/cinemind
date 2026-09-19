@@ -19,19 +19,6 @@ const RAIL = [
   { to: "/logs", label: "Runtime logs", icon: ScrollText, testid: "nav-logs-link" },
 ];
 
-const TABS = [
-  { to: "/dashboard", label: "Home" },
-  { to: "/recommendations", label: "AI Picks" },
-  { to: "/saved", label: "Library" },
-  { to: "/taste", label: "Taste" },
-  { to: "/stats", label: "Stats" },
-  { to: "/connections", label: "Sources" },
-  { to: "/jobs", label: "Jobs" },
-  { to: "/requests", label: "Requests" },
-  { to: "/approved", label: "Approved" },
-  { to: "/logs", label: "Logs" },
-];
-
 const TITLES = {
   "/recommendations": "AI Picks",
   "/saved": "Your Library",
@@ -127,7 +114,7 @@ export default function Layout({ children }) {
         style={{ backgroundImage: "var(--ambient-img, none)", filter: "blur(90px) saturate(135%) brightness(0.9)", opacity: 0.95, transition: "opacity 800ms ease" }}
       />
       <div aria-hidden className="ambient-scrim fixed inset-0 z-0 pointer-events-none" />
-      <div className="relative z-10 min-h-screen py-4 sm:py-7 lg:py-9 px-3 sm:px-5 pb-24 lg:pr-5">
+      <div className="relative z-10 min-h-screen py-4 sm:py-7 lg:py-9 px-3 sm:px-5 pb-6 lg:pr-5">
         {/* Floating app shell */}
         {/* The shell always fills the viewport so short tabs look like Home instead of ending mid-screen. */}
         <div className="glass-shell rounded-[26px] sm:rounded-[32px] w-full mx-auto p-3 sm:p-5 lg:p-7 relative overflow-hidden grain min-h-[calc(100vh-8rem)] lg:min-h-[calc(100vh-4.5rem)]">
@@ -145,31 +132,72 @@ export default function Layout({ children }) {
                 />
               </label>
             ) : (
-              <div className="w-full sm:w-auto sm:min-w-[220px]">
+              <div className="w-full sm:w-auto sm:min-w-[150px]">
                 <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#8C7F6D]">CineMind</div>
                 <div className="font-display text-lg font-bold leading-tight">{TITLES[location.pathname] || "CineMind"}</div>
               </div>
             )}
 
+            {/* Every destination lives here now. No overflow on this row: a scroll
+                container turns into a clipping box and eats the hover labels that
+                hang below the buttons, so it wraps instead. */}
             <div className="flex-1 min-w-0 order-3 lg:order-none w-full lg:w-auto">
-              <div className="flex items-center gap-1 overflow-x-auto scroll-thin -mx-1 px-1">
-                {TABS.map((t) => (
-                  <NavLink
-                    key={t.to}
-                    to={t.to}
-                    data-testid={`tab-${t.label.toLowerCase().replace(/\s+/g, "-")}`}
-                    className={({ isActive }) =>
-                      `shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                        isActive
-                          ? "bg-[rgba(255,246,232,0.10)] text-[#F6EFE4] shadow-[inset_0_1px_0_rgba(255,240,220,0.12)]"
-                          : "text-[#A5987F] hover:text-[#F6EFE4] hover:bg-white/[0.05]"
-                      }`
-                    }
-                  >
-                    {t.label}
-                  </NavLink>
-                ))}
-              </div>
+              <nav data-testid="icon-rail" className="flex flex-wrap items-center gap-1">
+                {RAIL.map((n) => {
+                  const showLabel = railHover === n.to;
+                  return (
+                    <NavLink
+                      key={n.to}
+                      to={n.to}
+                      data-testid={n.testid}
+                      onMouseEnter={() => setRailHover(n.to)}
+                      onMouseLeave={() => setRailHover((current) => (current === n.to ? null : current))}
+                      onFocus={() => setRailHover(n.to)}
+                      onBlur={() => setRailHover((current) => (current === n.to ? null : current))}
+                      style={{
+                        width: "min(var(--rail-icon, 40px), 38px)",
+                        height: "min(var(--rail-icon, 40px), 38px)",
+                      }}
+                      className={({ isActive }) =>
+                        `group relative shrink-0 rounded-full grid place-items-center transition-colors ${
+                          isActive
+                            ? "bg-[rgba(216,178,106,0.2)] text-[#EBD3A3]"
+                            : "text-[#A5987F] hover:text-[#F6EFE4] hover:bg-white/[0.06]"
+                        }`
+                      }
+                    >
+                      <n.icon style={{ width: "min(var(--rail-glyph, 18px), 18px)", height: "min(var(--rail-glyph, 18px), 18px)" }} />
+                      {/* Hangs below the button here, where there is room. Every visual
+                          property is inline so the theme layer cannot reach it. */}
+                      <span
+                        data-testid={`rail-label-${n.to.slice(1)}`}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 8px)",
+                          left: "50%",
+                          transform: `translateX(-50%) translateY(${showLabel ? "0" : "-4px"})`,
+                          ...(showLabel ? { opacity: 1 } : {}),
+                          pointerEvents: "none",
+                          whiteSpace: "nowrap",
+                          zIndex: 60,
+                          background: "#17130F",
+                          color: "#F6EFE4",
+                          border: "1px solid rgba(255,240,220,0.18)",
+                          borderRadius: "999px",
+                          padding: "6px 12px",
+                          fontSize: "12px",
+                          lineHeight: 1.2,
+                          boxShadow: "0 10px 30px rgba(0,0,0,0.55)",
+                          transition: "transform 180ms ease",
+                        }}
+                      >
+                        {n.label}
+                      </span>
+                    </NavLink>
+                  );
+                })}
+              </nav>
             </div>
 
             <div className="flex items-center gap-2.5 ml-auto relative" ref={popRef}>
@@ -242,71 +270,6 @@ export default function Layout({ children }) {
           <div className="relative z-10 mt-4 sm:mt-6">{children}</div>
         </div>
 
-        {/* Icon rail: spans the full working width along the bottom edge, its
-            side gutters matching the shell's so the two line up. */}
-        {/* Button and glyph size come from Sources. The rail wraps onto more rows
-            when a large size stops ten buttons fitting — it must never scroll,
-            because any overflow here turns the bar into a clipping box and eats
-            the hover labels that sit above it. */}
-        <nav data-testid="icon-rail" className="fixed bottom-3 left-3 right-3 sm:left-5 sm:right-5 z-40 glass-strong rounded-[1.9rem] px-2 py-2 flex flex-wrap items-center justify-around gap-1">
-          {RAIL.map((n) => {
-            const showLabel = railHover === n.to;
-            return (
-              <NavLink
-                key={n.to}
-                to={n.to}
-                data-testid={`${n.testid}-mobile`}
-                onMouseEnter={() => setRailHover(n.to)}
-                onMouseLeave={() => setRailHover((current) => (current === n.to ? null : current))}
-                onFocus={() => setRailHover(n.to)}
-                onBlur={() => setRailHover((current) => (current === n.to ? null : current))}
-                style={{ width: "var(--rail-icon, 40px)", height: "var(--rail-icon, 40px)" }}
-                className={({ isActive }) =>
-                  `group relative shrink-0 rounded-full grid place-items-center transition-colors ${
-                    isActive
-                      ? "bg-[rgba(216,178,106,0.2)] text-[#EBD3A3]"
-                      : "text-[#9C907E] hover:text-[#F6EFE4] hover:bg-white/[0.06]"
-                  }`
-                }
-              >
-                <n.icon style={{ width: "var(--rail-glyph, 18px)", height: "var(--rail-glyph, 18px)" }} />
-                {/* Every visual property is inline. The label floats outside the bar
-                    over poster art, and glass-strong is forced to a ~2% fill by the
-                    theme layer, so it carries its own surface colour instead. */}
-                <span
-                  data-testid={`rail-label-${n.to.slice(1)}`}
-                  /* Two independent paths to the same result. React state covers the
-                     normal case; the group-hover class covers the one it misses, where
-                     the pointer is already resting where the button re-renders and no
-                     enter event ever fires. Inline opacity is only set while hovered,
-                     so it never blocks the CSS path. */
-                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  style={{
-                    position: "absolute",
-                    bottom: "calc(var(--rail-icon, 40px) + 14px)",
-                    left: "50%",
-                    transform: `translateX(-50%) translateY(${showLabel ? "0" : "4px"})`,
-                    ...(showLabel ? { opacity: 1 } : {}),
-                    pointerEvents: "none",
-                    whiteSpace: "nowrap",
-                    zIndex: 60,
-                    background: "#17130F",
-                    color: "#F6EFE4",
-                    border: "1px solid rgba(255,240,220,0.18)",
-                    borderRadius: "999px",
-                    padding: "6px 12px",
-                    fontSize: "12px",
-                    lineHeight: 1.2,
-                    boxShadow: "0 10px 30px rgba(0,0,0,0.55)",
-                    transition: "transform 180ms ease",
-                  }}
-                >
-                  {n.label}
-                </span>
-              </NavLink>
-            );
-          })}
-        </nav>
       </div>
     </SearchContext.Provider>
   );
