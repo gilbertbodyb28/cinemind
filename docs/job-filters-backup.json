@@ -1,0 +1,118 @@
+{
+ "created_at": "2026-09-19T18:05:20.630192+00:00",
+ "reason": "Before setting min_rating 7.5 on all jobs",
+ "jobs": [
+  {
+   "id": "job_c4450362decb",
+   "name": "Anime & Donghua 2020\u20132026",
+   "filters": {
+    "include_genres": [
+     "animation"
+    ],
+    "exclude_genres": [],
+    "min_year": 2020,
+    "max_year": 2026,
+    "min_rating": null,
+    "min_vote_count": null,
+    "min_runtime": null,
+    "max_runtime": null,
+    "language": null,
+    "country": null,
+    "anime_format": null,
+    "anime_season": null,
+    "anime_status": null,
+    "studio": null,
+    "include_tags": [],
+    "min_episodes": null,
+    "max_episodes": null
+   }
+  },
+  {
+   "id": "job_770bc7e83581",
+   "name": "Anime & Donghua Upcoming 2027\u20132029",
+   "filters": {
+    "include_genres": [
+     "animation"
+    ],
+    "exclude_genres": [],
+    "min_year": 2027,
+    "max_year": 2029,
+    "min_rating": null,
+    "min_vote_count": 0,
+    "min_runtime": null,
+    "max_runtime": null,
+    "language": null,
+    "country": null,
+    "anime_format": null,
+    "anime_season": null,
+    "anime_status": null,
+    "studio": null,
+    "include_tags": [],
+    "min_episodes": null,
+    "max_episodes": null
+   }
+  },
+  {
+   "id": "job_0f4a6841bc0e",
+   "name": "Engelska TV-serier 2020\u20132026",
+   "filters": {
+    "include_genres": [
+     "fantasy",
+     "sci-fi",
+     "action",
+     "adventure",
+     "animation",
+     "romance"
+    ],
+    "exclude_genres": [],
+    "min_year": 2020,
+    "max_year": 2026,
+    "min_rating": null,
+    "min_vote_count": null,
+    "min_runtime": null,
+    "max_runtime": null,
+    "language": null,
+    "country": null,
+    "anime_format": null,
+    "anime_season": null,
+    "anime_status": null,
+    "studio": null,
+    "include_tags": [],
+    "min_episodes": null,
+    "max_episodes": null
+   }
+  },
+  {
+   "id": "job_83044dc93276",
+   "name": "Engelska TV-serier Upcoming 2027\u20132029",
+   "filters": {
+    "include_genres": [
+     "fantasy",
+     "sci-fi",
+     "action",
+     "adventure",
+     "animation",
+     "romance"
+    ],
+    "exclude_genres": [
+     "horror"
+    ],
+    "min_year": 2027,
+    "max_year": 2029,
+    "min_rating": 7,
+    "min_vote_count": 0,
+    "min_runtime": null,
+    "max_runtime": null,
+    "language": null,
+    "country": null,
+    "anime_format": null,
+    "anime_season": null,
+    "anime_status": null,
+    "studio": null,
+    "include_tags": [],
+    "min_episodes": null,
+    "max_episodes": null
+   }
+  }
+ ]
+}

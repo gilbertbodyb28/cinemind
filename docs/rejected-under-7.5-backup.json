@@ -1,0 +1,6478 @@
+{
+ "created_at": "2026-09-19T18:01:40.980155+00:00",
+ "reason": "Bulk reject of pending requests with 0 < rating < 7.5",
+ "count": 719,
+ "items": [
+  {
+   "id": "req_e0c05725c599",
+   "user_id": "user_6c57aa830e17",
+   "title": "From Old Country Bumpkin to Master Swordsman",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8afb8dd1-8edf-453e-a804-ac8759feaae6"
+  },
+  {
+   "id": "req_7365d255b4d2",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Lord of the Rings: The Rings of Power",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dd23759b-20dc-49d9-9ebe-74651ede07c7"
+  },
+  {
+   "id": "req_ea6ba326283e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Scarlet",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d65fa84-8079-4a56-b2b1-fbfa5aee8404"
+  },
+  {
+   "id": "req_a6c760944c49",
+   "user_id": "user_6c57aa830e17",
+   "title": "Percy Jackson and the Olympians",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e739a300-d440-4ea5-bb40-275ddb1d0b7d"
+  },
+  {
+   "id": "req_7fe2903ca753",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dune: Prophecy",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d3cea0f8-bb9b-4e06-ab6b-e88b390eb201"
+  },
+  {
+   "id": "req_ccb2f831c3a7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Snowpiercer",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4b8c9aee-3859-4699-a3fe-0fa66a703e30"
+  },
+  {
+   "id": "req_dc77b212d68e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Invasion",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "33a5b2dc-012f-416c-a2ce-e6ff1d35b680"
+  },
+  {
+   "id": "req_fa1d7d962535",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Hero Academia: You're Next",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "337237aa-f9d8-421b-8a20-bc115a0b62bb"
+  },
+  {
+   "id": "req_3e5090871f3d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ahsoka",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b4ecfab0-7b5a-4d26-a93f-e14f39a15743"
+  },
+  {
+   "id": "req_bfc6e63a79b2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Spartacus: House of Ashur",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "03ad4c7d-b2ce-4c41-b1a8-80161d2dbe34"
+  },
+  {
+   "id": "req_6448d6b06d1c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Go! Go! Loser Ranger!",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "235659c8-c25c-4768-9db8-526417b7a029"
+  },
+  {
+   "id": "req_971d770d3630",
+   "user_id": "user_6c57aa830e17",
+   "title": "My One-Hit Kill Sister",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "18a7b0ba-898e-4f37-9a62-e3f1e600ec41"
+  },
+  {
+   "id": "req_617fbb0a4f08",
+   "user_id": "user_6c57aa830e17",
+   "title": "Reincarnated as a Sword",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6a2e77a1-288d-4db0-8a3b-a08a6d4d187f"
+  },
+  {
+   "id": "req_42b0f9031d2f",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Frontier Lord Begins with Zero Subjects",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a0d5b178-1d65-41fa-a126-7458f5a413b2"
+  },
+  {
+   "id": "req_9d581ebaca62",
+   "user_id": "user_6c57aa830e17",
+   "title": "Murderbot",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "da4efd87-cf78-427d-aff0-04baa509be2a"
+  },
+  {
+   "id": "req_c09d4b5c9377",
+   "user_id": "user_6c57aa830e17",
+   "title": "Secret Level",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7a437d81-b525-4673-888e-314045c62b9c"
+  },
+  {
+   "id": "req_973de8ddaabc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Star Wars: Visions",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "adf998c2-489e-4e67-be3f-a3eece77d075"
+  },
+  {
+   "id": "req_c6492ee44a53",
+   "user_id": "user_6c57aa830e17",
+   "title": "Batman: Caped Crusader",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a630c3d7-a672-4121-850e-c6a6b7933b59"
+  },
+  {
+   "id": "req_7f70868bd8ff",
+   "user_id": "user_6c57aa830e17",
+   "title": "Monsters at Work",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8eebd3bb-c3a4-46f2-8827-bceee2d65739"
+  },
+  {
+   "id": "req_007fe034aa9d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mistress Kanan Is Devilishly Easy",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3f964f3e-47ec-4514-a76d-821f4411e4ba"
+  },
+  {
+   "id": "req_9e763e86244d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Seven Deadly Sins: Grudge of Edinburgh Part 2",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "888ac42e-6359-490d-bf47-a13bf58faaef"
+  },
+  {
+   "id": "req_db9269b4c414",
+   "user_id": "user_6c57aa830e17",
+   "title": "I Became a Legend After My 10 Year-Long Last Stand",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9265fe3c-7535-4f17-b10e-c6193ed5574b"
+  },
+  {
+   "id": "req_6c2beb765bb9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Digimon Adventure 02: The Beginning",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8d0e157e-ff47-4262-a6a0-554b87f378aa"
+  },
+  {
+   "id": "req_cd79ab281ade",
+   "user_id": "user_6c57aa830e17",
+   "title": "Pretty Guardian Sailor Moon Cosmos the Movie Part 1",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dd6bf1e5-68c3-42bc-b50d-d9bfd56dae12"
+  },
+  {
+   "id": "req_5d785630a465",
+   "user_id": "user_6c57aa830e17",
+   "title": "That Time I Got Reincarnated as a Slime the Movie: Scarlet Bond",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "07b54443-c8af-42a1-bbb4-f1a6488110e3"
+  },
+  {
+   "id": "req_8c92df33a198",
+   "user_id": "user_6c57aa830e17",
+   "title": "LIAR GAME",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "18043913-4d07-480e-99fa-9975f638fdf3"
+  },
+  {
+   "id": "req_9aa406e06487",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mary & George",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e13c42b9-e2fe-41de-a0e4-b885aecc493c"
+  },
+  {
+   "id": "req_cf5db3502614",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Rose of Versailles",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cedc1ab3-1b16-4a53-8581-1b1024e66b1e"
+  },
+  {
+   "id": "req_9ae84b506a39",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mononoke the Movie: Chapter II - The Ashes of Rage",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "aa920fd7-ec20-4e52-9004-2292241d13ff"
+  },
+  {
+   "id": "req_d1bc5cd83f46",
+   "user_id": "user_6c57aa830e17",
+   "title": "Yasuke",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "19230e46-83c3-4ada-8740-d1859a2e3742"
+  },
+  {
+   "id": "req_7efa5c319abe",
+   "user_id": "user_6c57aa830e17",
+   "title": "Unnamed Memory",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2de22e7a-af1c-4ede-b56f-de767808ed7b"
+  },
+  {
+   "id": "req_32dfd97bf5a3",
+   "user_id": "user_6c57aa830e17",
+   "title": "YAIBA: Samurai Legend",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f277d8f9-736a-4594-8224-56a0e67d36c6"
+  },
+  {
+   "id": "req_6597d3753e08",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Demon Sword Master of Excalibur Academy",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c8f2ccb5-2ff7-4fd9-a3c3-2a18cbcc76b4"
+  },
+  {
+   "id": "req_e0316242a748",
+   "user_id": "user_6c57aa830e17",
+   "title": "Vermeil in Gold",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ded69201-343e-4240-8dd1-5b70076a7cf0"
+  },
+  {
+   "id": "req_9f51ae35ab79",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Greatest Demon Lord Is Reborn as a Typical Nobody",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ff59956b-1c00-4da4-9f1a-586533030b48"
+  },
+  {
+   "id": "req_adf4580a59da",
+   "user_id": "user_6c57aa830e17",
+   "title": "Suicide Squad Isekai",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3c7e1363-94b8-4d3c-84b8-0c58a392b86c"
+  },
+  {
+   "id": "req_478d171e267b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Higurashi: When They Cry - NEW",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4aced2fb-edb0-4353-84a0-239a6af785c0"
+  },
+  {
+   "id": "req_385c4151209c",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Wild Last Boss Appeared!",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d2b123af-0202-407a-886e-f774426b9eb9"
+  },
+  {
+   "id": "req_fc0865a6bbfa",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ragna Crimson",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0f7e2635-0397-4991-b4d7-34f813029362"
+  },
+  {
+   "id": "req_cfb09fce0884",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Iceblade Sorcerer Shall Rule the World",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d46b5897-c350-4429-93e7-56cadef52d97"
+  },
+  {
+   "id": "req_6b82a9554baf",
+   "user_id": "user_6c57aa830e17",
+   "title": "Drifting Dragons",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9bbd37f0-3792-4b92-a484-ce7e0977535d"
+  },
+  {
+   "id": "req_3052c4232fbb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Soaring Sky! Precure",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6ae0c821-e1bf-450a-934b-c6bddaa79b9a"
+  },
+  {
+   "id": "req_144882391041",
+   "user_id": "user_6c57aa830e17",
+   "title": "Banished from the Hero's Party, I Decided to Live a Quiet Life in the Countryside",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "408ac9af-1893-4e74-b0db-696e9d2dd676"
+  },
+  {
+   "id": "req_e54d88d3322f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tales of Wedding Rings",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2f2cf09c-1512-4705-878e-4dea4aa14692"
+  },
+  {
+   "id": "req_bfcc8aa060d7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sugar Apple Fairy Tale",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b74cdd2b-d812-4d6e-a1ee-ccee4c2c2da3"
+  },
+  {
+   "id": "req_bde9f17263eb",
+   "user_id": "user_6c57aa830e17",
+   "title": "An Archdemon's Dilemma: How to Love Your Elf Bride",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "58f35b2b-964c-42ac-8c01-e2bb6ca9deaf"
+  },
+  {
+   "id": "req_a906057bd789",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ayakashi Triangle",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6b22e043-096a-46e7-8630-7c767e33b761"
+  },
+  {
+   "id": "req_4a35078658e5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Train to the End of the World",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3b056e79-2659-4e0d-86f0-d64a1abea5f7"
+  },
+  {
+   "id": "req_acf2bdec8513",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Fruit of Evolution: Before I Knew It, My Life Had It Made",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ce0b6028-18ac-405b-acab-adfd62bcc607"
+  },
+  {
+   "id": "req_75048ddea585",
+   "user_id": "user_6c57aa830e17",
+   "title": "takt op.Destiny",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b217c38f-4a84-4878-aa48-9654646086bd"
+  },
+  {
+   "id": "req_655d4579538b",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Heike Story",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c9584b36-9530-4b10-ba10-adcb901665ba"
+  },
+  {
+   "id": "req_86e3737c60b8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sword of the Demon Hunter",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a7d42496-dc6d-41ea-8428-b866acb22ce3"
+  },
+  {
+   "id": "req_1844f803ef42",
+   "user_id": "user_6c57aa830e17",
+   "title": "KOWLOON GENERIC ROMANCE",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5954bc42-3cb2-4a7e-9264-5eb575fdbd74"
+  },
+  {
+   "id": "req_47b882c073dc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ya Boy Kongming!",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "de79e8e3-4aba-4671-8186-158a3c3f7ccb"
+  },
+  {
+   "id": "req_5dcb07bcd692",
+   "user_id": "user_6c57aa830e17",
+   "title": "Parallel World Pharmacy",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "351e3ed3-b632-4090-9316-241b2a695635"
+  },
+  {
+   "id": "req_ac8ace6e0431",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fuuto PI",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "28e557f6-eec8-4f7d-ab57-207cf5fc3236"
+  },
+  {
+   "id": "req_f6275432a191",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Returner's Magic Should Be Special",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1f462f71-5b20-4ca2-b142-b3cd040b0c60"
+  },
+  {
+   "id": "req_8a9cd2b9f75e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tropical-Rouge! Precure",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "655d7185-951d-403c-ba6f-fc0892807819"
+  },
+  {
+   "id": "req_8249d01ece0d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Akiba Maid War",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e77b9c54-ed03-4e5f-82ad-eba4c2fc4a7c"
+  },
+  {
+   "id": "req_dc3b11da05cc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sakuna: Of Rice and Ruin",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "84e27bbc-c70f-4e84-8952-22443d781b41"
+  },
+  {
+   "id": "req_4b46c6588efc",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Magical Revolution of the Reincarnated Princess and the Genius Young Lady",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cac348ba-5394-4bc2-ba38-a7e30f13eace"
+  },
+  {
+   "id": "req_9b4323802f34",
+   "user_id": "user_6c57aa830e17",
+   "title": "Vampire in the Garden",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "60e56c66-a769-4aef-a6a3-13e743ff8da3"
+  },
+  {
+   "id": "req_59e6eb3798b9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Healin' Good Precure",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4859a51e-6b75-4260-8192-618ddc058579"
+  },
+  {
+   "id": "req_6e34086f5db4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kuma Kuma Kuma Bear",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6d722920-4826-4366-b5b8-49f281600706"
+  },
+  {
+   "id": "req_0e549f0f367b",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Brilliant Healer's New Life in the Shadows",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bb9dce9c-4ab8-4651-b4fc-0c411392d147"
+  },
+  {
+   "id": "req_ecae08a77bb9",
+   "user_id": "user_6c57aa830e17",
+   "title": "In the Land of Leadale",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8b753557-682a-49d2-a74d-b736600f62d6"
+  },
+  {
+   "id": "req_b84f8fbdceaf",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Condition Called Love",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "76fc4dad-9a1b-4c75-b8f6-7287a812edfb"
+  },
+  {
+   "id": "req_0991d07d8546",
+   "user_id": "user_6c57aa830e17",
+   "title": "From Bureaucrat to Villainess: Dad's Been Reincarnated!",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "02a16a85-e591-4a64-9151-63bdfbf1cd76"
+  },
+  {
+   "id": "req_619e7d2caeee",
+   "user_id": "user_6c57aa830e17",
+   "title": "Welcome to the Outcast's Restaurant!",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f6a7d551-8476-4fa3-b1b1-9ba353486175"
+  },
+  {
+   "id": "req_4b27ece07367",
+   "user_id": "user_6c57aa830e17",
+   "title": "Endo and Kobayashi Live! The Latest on Tsundere Villainess Lieselotte",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "48d01cce-6ccf-4498-80a9-d6d2a99306db"
+  },
+  {
+   "id": "req_5da9f72a5236",
+   "user_id": "user_6c57aa830e17",
+   "title": "Peach Boy Riverside",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "606f8fa2-da27-4da5-b53e-fd858f428849"
+  },
+  {
+   "id": "req_91f9cde32a2d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Moonrise",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "21b33db3-b61b-4256-95a9-088b0e2a49a8"
+  },
+  {
+   "id": "req_fe2257a97c87",
+   "user_id": "user_6c57aa830e17",
+   "title": "New Saga",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6b9fab21-8a7a-4bc3-a0a1-4322c04d42cf"
+  },
+  {
+   "id": "req_71b3298ca4b7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tokyo Override",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8ebb9c13-37e7-497b-b1ee-d62de39ca7cf"
+  },
+  {
+   "id": "req_c18de14a78d9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mashin Creator Wataru",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "73f6ea64-a35f-4fc3-844e-a5b00caf4b8b"
+  },
+  {
+   "id": "req_490e70776213",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Ribdiculous Reincarnation",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6c245d3b-b169-4455-b824-38bcb6213520"
+  },
+  {
+   "id": "req_c2b176e2620c",
+   "user_id": "user_6c57aa830e17",
+   "title": "I'm Quitting Heroing",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3107b59e-d89e-4ce7-adb0-3baa76b78e60"
+  },
+  {
+   "id": "req_51424c410b20",
+   "user_id": "user_6c57aa830e17",
+   "title": "Protocol: Rain",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5b76bf5a-8db1-4180-8c7b-c5933bf15f93"
+  },
+  {
+   "id": "req_d835ade5b458",
+   "user_id": "user_6c57aa830e17",
+   "title": "Love Is Indivisible by Twins",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c310d7fd-d8bb-49bb-808c-c70d8b487ec8"
+  },
+  {
+   "id": "req_8b2dad8c3569",
+   "user_id": "user_6c57aa830e17",
+   "title": "Cat Tales",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8449628f-24dc-4410-9afa-d39c50375bbc"
+  },
+  {
+   "id": "req_dcd7d24731cb",
+   "user_id": "user_6c57aa830e17",
+   "title": "KAOS",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "77495400-bde1-46b3-aa5e-3a125e60f151"
+  },
+  {
+   "id": "req_5c53975d4be0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Supacell",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ae613de5-fcdf-46a9-9dfd-1ae89f2b5325"
+  },
+  {
+   "id": "req_8500cdc275a8",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Lazarus Project",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c3053f67-b6fe-4b1b-a2db-496b8bff439b"
+  },
+  {
+   "id": "req_4f355f43070c",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Continental: From the World of John Wick",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "23729742-25f5-427a-bca0-b4c158b724c5"
+  },
+  {
+   "id": "req_67a5e04bb7c6",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Walking Dead: World Beyond",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e1bae525-59d3-4daa-ba97-6f807dbe5780"
+  },
+  {
+   "id": "req_d6eb99f78e71",
+   "user_id": "user_6c57aa830e17",
+   "title": "Red Eye",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fb9f5e22-f990-4698-94bc-1774fe399765"
+  },
+  {
+   "id": "req_b38c23b33b56",
+   "user_id": "user_6c57aa830e17",
+   "title": "On Call",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "df11829d-7732-4bd3-b074-37f3fa38d705"
+  },
+  {
+   "id": "req_f9307e3fa2dd",
+   "user_id": "user_6c57aa830e17",
+   "title": "Devs",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "86b7e3ec-7ffc-4ca5-a600-4488c1ca96a5"
+  },
+  {
+   "id": "req_13a85340024f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Turner & Hooch",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "62c6bad8-b964-4f37-bc96-92c409df100f"
+  },
+  {
+   "id": "req_30b78bd372a3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Constellation",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "14678889-7c90-4de2-83c6-c7c62b8384b2"
+  },
+  {
+   "id": "req_2ba7d1627fb4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tales from the Loop",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "53cd0e91-f626-402c-9ccc-4d15ded7ed27"
+  },
+  {
+   "id": "req_db1d1d9bd82f",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Irregulars",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b4871f1f-b6e2-450c-932f-ceaadf87ff0e"
+  },
+  {
+   "id": "req_97669b0ba07b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Calls",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "54b2457d-65e6-42c2-869b-312f26de8bff"
+  },
+  {
+   "id": "req_e75be7d24d83",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dracula",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e693fc25-95f3-4808-86e0-b40094d78453"
+  },
+  {
+   "id": "req_8f954f74b200",
+   "user_id": "user_6c57aa830e17",
+   "title": "Cursed",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7a0737bc-3d1b-4f5b-ae58-417f6b9b4d1c"
+  },
+  {
+   "id": "req_adff5aaa21d0",
+   "user_id": "user_6c57aa830e17",
+   "title": "LEGO Star Wars: Rebuild the Galaxy",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "421e1941-9866-4632-badd-938642cab70b"
+  },
+  {
+   "id": "req_8507aad90138",
+   "user_id": "user_6c57aa830e17",
+   "title": "Am I Actually the Strongest?",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d7ad515f-ea4e-4263-89b4-f58f8687589a"
+  },
+  {
+   "id": "req_a762ccb582f0",
+   "user_id": "user_6c57aa830e17",
+   "title": "BUCCHIGIRI?!",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d63fe1b6-07d9-483c-b1de-8a10664fcc4d"
+  },
+  {
+   "id": "req_6396ff150fa0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ningen Fushin: Adventurers Who Don't Believe in Humanity Will Save the World",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "72f9d9f0-7b5e-475d-b483-d5febf7133ca"
+  },
+  {
+   "id": "req_53d3b3136d98",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Grimm Variations",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "075000fc-456a-4d01-bd4b-209329930bed"
+  },
+  {
+   "id": "req_f269745cf6f9",
+   "user_id": "user_6c57aa830e17",
+   "title": "I'm in Love with the Villainess",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bf84832e-5636-47c1-8c79-958c5a9f1609"
+  },
+  {
+   "id": "req_10f3f8bc2b19",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Orbital Children",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f8676e88-d3ae-47c9-93a4-13a7afe3cf27"
+  },
+  {
+   "id": "req_8bdb82efa324",
+   "user_id": "user_6c57aa830e17",
+   "title": "Akuma Kun",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ede85d5d-6a81-4b47-bb36-30c74a9f302e"
+  },
+  {
+   "id": "req_6f2d11969147",
+   "user_id": "user_6c57aa830e17",
+   "title": "Smile Down the Runway",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d025d0d3-78d8-4ea5-96b0-64840c053ef5"
+  },
+  {
+   "id": "req_f6ff5fe8b5e8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Villainess Level 99: I May Be the Hidden Boss But I'm Not the Demon Lord",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "860ec22c-b69e-4bca-b89b-ae1b6ca4ff32"
+  },
+  {
+   "id": "req_d472a28ad1e2",
+   "user_id": "user_6c57aa830e17",
+   "title": "exception",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c14948ad-450b-4606-839c-3713dfc07747"
+  },
+  {
+   "id": "req_cb09b3d73691",
+   "user_id": "user_6c57aa830e17",
+   "title": "Li'l Miss Vampire Can't Suck Right",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ad6efcce-001e-471c-ad88-5924ba9c750e"
+  },
+  {
+   "id": "req_aaf9fa0fe3e5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Love of Kill",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9697dcf2-2722-4d58-a6f2-c2a4eb6e84f3"
+  },
+  {
+   "id": "req_f5beb2badc40",
+   "user_id": "user_6c57aa830e17",
+   "title": "Room Camp",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f123a8c1-18cd-4e29-9b11-75ab78142073"
+  },
+  {
+   "id": "req_f14e5f3d5827",
+   "user_id": "user_6c57aa830e17",
+   "title": "Garouden: The Way of the Lone Wolf",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7aaba299-80df-4106-ad06-bcb4f7990e1b"
+  },
+  {
+   "id": "req_0ec3b35f3902",
+   "user_id": "user_6c57aa830e17",
+   "title": "Star Wars: Tales of the Underworld",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "78774d7d-dd28-477a-9e8b-e23c73505229"
+  },
+  {
+   "id": "req_43bc8e7f2884",
+   "user_id": "user_6c57aa830e17",
+   "title": "Carol & the End of the World",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c1c30522-f469-4474-a40e-22a81076e62b"
+  },
+  {
+   "id": "req_1606c1606233",
+   "user_id": "user_6c57aa830e17",
+   "title": "NEXT",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f5d0b856-d74f-44f1-b9c6-689a7c8f2ce4"
+  },
+  {
+   "id": "req_c2b4f3f8a4e3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Class of '09",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "471d9f77-c33e-47ad-a77b-27951120777e"
+  },
+  {
+   "id": "req_ac6252568f36",
+   "user_id": "user_6c57aa830e17",
+   "title": "Extraordinary",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "073c1240-005b-45c1-bae8-bd87a78000d2"
+  },
+  {
+   "id": "req_fcea4664cb23",
+   "user_id": "user_6c57aa830e17",
+   "title": "Shantaram",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d54a55b6-db1b-456a-8280-c684aca80512"
+  },
+  {
+   "id": "req_5d9ad52da9ba",
+   "user_id": "user_6c57aa830e17",
+   "title": "Behind Her Eyes",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ad65bbd1-a5cd-4f79-99f9-04e0825bdad1"
+  },
+  {
+   "id": "req_e9ee97cf1398",
+   "user_id": "user_6c57aa830e17",
+   "title": "Archive 81",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "591c3445-54a9-4855-8c63-c20f459c0a78"
+  },
+  {
+   "id": "req_2550439105e4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Unicorn: Warriors Eternal",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "976e9fff-12ab-481b-8a86-5b4d1445ae86"
+  },
+  {
+   "id": "req_d4471d0a2df4",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Underground Railroad",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "089b62b8-3334-49bc-81a8-a0b20544d67e"
+  },
+  {
+   "id": "req_d000979ec671",
+   "user_id": "user_6c57aa830e17",
+   "title": "Teacup",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f36df5b1-f487-4378-b9f9-12f718e1ca16"
+  },
+  {
+   "id": "req_a35c87d657d1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Paper Girls",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a4be58b5-9baa-4dd6-9140-31ae22052838"
+  },
+  {
+   "id": "req_050cd50c2ec9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Olaf Presents",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2cef9a44-b75a-474c-b7fb-bdd211faaefa"
+  },
+  {
+   "id": "req_1f7eef2a363a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Almost Paradise",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7ad13f8a-480e-4b70-802a-2a9ab0466f7b"
+  },
+  {
+   "id": "req_a5da918a9e14",
+   "user_id": "user_6c57aa830e17",
+   "title": "Somali and the Forest Spirit",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0e62f6ad-07ae-431f-9808-0cde6d4ad702"
+  },
+  {
+   "id": "req_01d9037eb5c6",
+   "user_id": "user_6c57aa830e17",
+   "title": "CESTVS -The Roman Fighter-",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "14946ef7-001a-4d18-892b-cffce2b12c98"
+  },
+  {
+   "id": "req_dcfa687cedba",
+   "user_id": "user_6c57aa830e17",
+   "title": "LUPIN ZERO",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "533a4cfa-ef0d-43f9-8af0-767e73c34b92"
+  },
+  {
+   "id": "req_a7751c687ec9",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Faraway Paladin",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b7e93519-617a-44ec-b334-c0e60ebe5f30"
+  },
+  {
+   "id": "req_8959a03160b1",
+   "user_id": "user_6c57aa830e17",
+   "title": "BURN THE WITCH",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "74b2f0b0-3aca-41ad-8704-acd0834e8cb1"
+  },
+  {
+   "id": "req_37b3d0ffa602",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Journey Through Another World: Raising Kids While Adventuring",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "880a1160-fc98-4054-971a-969911cf2072"
+  },
+  {
+   "id": "req_77961f8a957e",
+   "user_id": "user_6c57aa830e17",
+   "title": "SUGAR SUGAR RUNE\u3000Les deux sorci\u00e8res",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9ef1bf47-96d4-461b-84f0-e7261092f11e"
+  },
+  {
+   "id": "req_cf57f96c667e",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Eternal Strife",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f886e1b0-d575-4ebe-beae-983139c35ee6"
+  },
+  {
+   "id": "req_f49ddac849cb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mad Demon Lord",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fef3e0c6-2b05-4695-915f-567392569801"
+  },
+  {
+   "id": "req_32edded81dd4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Backflip!!",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3a4b45fc-173d-423a-9eaa-65b3dcf497ff"
+  },
+  {
+   "id": "req_d515783550a9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Let's Go Karaoke!",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8ab1b801-7699-4a36-8fac-a93e64825a11"
+  },
+  {
+   "id": "req_76ce50d3a66c",
+   "user_id": "user_6c57aa830e17",
+   "title": "TsumaSho",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0ab29f84-ccc5-49bd-8548-1b3c2d517ee1"
+  },
+  {
+   "id": "req_38c2aba75d1c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hatena Illusion",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "24e4cd8a-7bb5-43b9-8888-89737ff29a6c"
+  },
+  {
+   "id": "req_e8e2c065c40f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Pok\u00e9mon: Hisuian Snow",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8ed75544-1bbe-4c99-bf08-cd83657b7c80"
+  },
+  {
+   "id": "req_e59f80cd730a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dragons of Wonderhatch",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e7babaf2-b091-44b0-9ae7-ea1ee720d8fb"
+  },
+  {
+   "id": "req_cab0b784af22",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dahlia in Bloom: Crafting a Fresh Start with Magical Tools",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "daca46d1-4f2f-4b36-be8c-304ddb6c5515"
+  },
+  {
+   "id": "req_08300056a4b7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mr Love: Queen's Choice",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bc9dae4e-3aeb-4d3d-8aa3-9617295ed2fd"
+  },
+  {
+   "id": "req_f7eb367e80c2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Panic",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "92d75e86-1291-477d-88fe-09434de5a181"
+  },
+  {
+   "id": "req_26528b9cb3b0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Who Is Erin Carter?",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bdc44bc0-14cc-4094-85d2-4663fc8dc4a7"
+  },
+  {
+   "id": "req_3ecc6a85f0a4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hotel Costiera",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ac8b34ab-d71e-4084-bd5e-a07d45280e55"
+  },
+  {
+   "id": "req_d025f539ff2c",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Ipcress File",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "05f3d5ab-c063-417e-8555-771a639d513f"
+  },
+  {
+   "id": "req_8e570fb3d55f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Let the Right One In",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4127dbfb-d873-4432-a2c2-8c33626092a8"
+  },
+  {
+   "id": "req_d530e6131e7f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Uzumaki",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8a1e44f6-783e-4f92-ab7c-3f4f332a8915"
+  },
+  {
+   "id": "req_5ec015333291",
+   "user_id": "user_6c57aa830e17",
+   "title": "I Woke Up a Vampire",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4fc4f016-fea7-4297-8432-fe44eccfa81e"
+  },
+  {
+   "id": "req_2337f3bade7d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Boo, Bitch",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c2f64181-6831-4333-8d00-e76f96e1a6a2"
+  },
+  {
+   "id": "req_1228b853c45f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Treasure & Dirt",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fbcbbd55-287e-4917-889f-08618af745b2"
+  },
+  {
+   "id": "req_9dacb39762c2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Trickster",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6a6714a0-0476-4381-85f2-10fd36a48649"
+  },
+  {
+   "id": "req_feb5fc1e2e16",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ultra Violet & Black Scorpion",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "63e61e10-0e9b-467a-8568-bcc1661ba720"
+  },
+  {
+   "id": "req_342cd24639e4",
+   "user_id": "user_6c57aa830e17",
+   "title": "ITCH",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4c0a66c9-e115-40dc-b271-c83996364edd"
+  },
+  {
+   "id": "req_a5e5ef161923",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mermicorno: Starfall",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9aa02336-a348-41ff-92b0-20b93ebb1572"
+  },
+  {
+   "id": "req_387ad47057dd",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kaguya-sama: Love Is War -Stairway to Adulthood-",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ebf1c56d-863f-48bc-a8a9-f8370664d669"
+  },
+  {
+   "id": "req_fe95eedcc264",
+   "user_id": "user_6c57aa830e17",
+   "title": "Murder Mystery of the Dead",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "89b6d069-7f35-4c89-9485-e3fe2b7ace4f"
+  },
+  {
+   "id": "req_fc9742622d99",
+   "user_id": "user_6c57aa830e17",
+   "title": "That is the Bottleneck",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "42a93e49-bf84-42eb-ba70-b53f50794265"
+  },
+  {
+   "id": "req_3d9ce5db6cbd",
+   "user_id": "user_6c57aa830e17",
+   "title": "Get Up! Get Live! #Geragera",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1eb3b45d-0240-4306-8bcf-ac37dbf8143d"
+  },
+  {
+   "id": "req_1da6982b5b9c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tabi Hani",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "177cc1c7-e4fc-4da3-b061-0ac7d9e3a5ae"
+  },
+  {
+   "id": "req_045d45613bff",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hai! Myakumyaku desu",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "68764a24-becd-4a21-b2a5-b4d9a27392af"
+  },
+  {
+   "id": "req_d74af1551b36",
+   "user_id": "user_6c57aa830e17",
+   "title": "\u540d\u63a2\u5075\u30b3\u30ca\u30f3 \u8b66\u5bdf\u5b66\u6821\u7de8 Wild Police Story",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d0f99654-e899-45c5-8f6d-bf7fc9e8a645"
+  },
+  {
+   "id": "req_5c17079208ba",
+   "user_id": "user_6c57aa830e17",
+   "title": "Nanashi Kaidan",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9c81c650-8692-43a0-8369-963d2177d218"
+  },
+  {
+   "id": "req_ddacff40f1da",
+   "user_id": "user_6c57aa830e17",
+   "title": "Space Idol",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fcda9cb8-d382-4486-ae31-0dfedc894a2b"
+  },
+  {
+   "id": "req_2d204fefac59",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Prince of Tennis II Hyotei vs. Rikkai Game of Future",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "94c77af7-5e55-4b8d-9063-481e398143b6"
+  },
+  {
+   "id": "req_dd64ad2013c8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Two Weeks to Live",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b05aa582-1746-4ba9-a38b-3e152417a2f3"
+  },
+  {
+   "id": "req_38deb1fdd529",
+   "user_id": "user_6c57aa830e17",
+   "title": "Wolf Like Me",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "927a1852-296a-4bb9-95d4-71164f5eef6e"
+  },
+  {
+   "id": "req_1d6dffb3a222",
+   "user_id": "user_6c57aa830e17",
+   "title": "Brand New Cherry Flavor",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1f2680b6-eefb-4559-8c01-27ff60144ec8"
+  },
+  {
+   "id": "req_e041e7404de1",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Liberator",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "10e78249-376a-4445-a6b7-8ec9e32e297f"
+  },
+  {
+   "id": "req_3aabba6f6df1",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Dead Lands",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9e445a9e-c7bd-41ba-b202-c8c725bb8a0f"
+  },
+  {
+   "id": "req_98a7926598f4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Utopia Falls",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c0ba1e0a-1319-4343-88dc-b59cd98f2530"
+  },
+  {
+   "id": "req_ca24489e9530",
+   "user_id": "user_6c57aa830e17",
+   "title": "Cleopatra in Space",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "686ace53-c255-4e6d-89b7-07885e372065"
+  },
+  {
+   "id": "req_252ee82256dc",
+   "user_id": "user_6c57aa830e17",
+   "title": "MaveriX",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5bc72c46-ad3e-4e26-929d-438612b80b21"
+  },
+  {
+   "id": "req_256186ce7288",
+   "user_id": "user_6c57aa830e17",
+   "title": "Aunty Donna's Big Ol House of Fun",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "85ecf402-7a48-426f-a7ef-d4c8d1b425a6"
+  },
+  {
+   "id": "req_834f0e3d1f55",
+   "user_id": "user_6c57aa830e17",
+   "title": "Pinocchio and Friends",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2491a720-c73d-4250-af25-75102b61affd"
+  },
+  {
+   "id": "req_abae3e77f33d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Back to the Frontier",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4ca5e666-3842-41a8-9580-455cbf9e0a4f"
+  },
+  {
+   "id": "req_43b4fcda3d6e",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Wayfinders",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a3c470dd-e342-46d4-9971-75d86ee13cfb"
+  },
+  {
+   "id": "req_0e51d634797d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hit Point",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5515bcb2-25a6-444b-9be4-bdfe22950337"
+  },
+  {
+   "id": "req_7729d37ebbad",
+   "user_id": "user_6c57aa830e17",
+   "title": "Endlings",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8e916863-7825-418b-985b-80f5cb8a522a"
+  },
+  {
+   "id": "req_e68e057f349a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Expedition Files",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "51b0e606-ef69-4baf-8c72-affb12a156d2"
+  },
+  {
+   "id": "req_ec7094cd6de6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Housing Complex C",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dfa5d056-bd12-40cb-8d60-2dd2707e922f"
+  },
+  {
+   "id": "req_d24f954368e0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fear the Walking Dead: Dead in the Water",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "638dbc6c-477d-4dd7-b25a-0e47172758c2"
+  },
+  {
+   "id": "req_fde2ebe0a931",
+   "user_id": "user_6c57aa830e17",
+   "title": "DC Metal Force",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8856d990-c3f1-4f66-b06c-241ffadd31c8"
+  },
+  {
+   "id": "req_e8080ece905d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Orlando Bloom: To the Edge",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "49355ea5-ba22-4cf7-be68-accaa1815132"
+  },
+  {
+   "id": "req_13a2b029352e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Discovering Canary Islands",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b22afb61-8f52-4e8c-9233-40536fe2713a"
+  },
+  {
+   "id": "req_d5ab8ccb8b82",
+   "user_id": "user_6c57aa830e17",
+   "title": "Thunderbirds: The Anniversary Episodes",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "37d0fbe8-37ed-444f-976b-b1efd3f8e92f"
+  },
+  {
+   "id": "req_ed4f36fc4749",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sigmar's Toll",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7df3b6bf-8502-4990-9ad7-4ef0f41bf968"
+  },
+  {
+   "id": "req_2504ccecf6bb",
+   "user_id": "user_6c57aa830e17",
+   "title": "100% Wolf: The Book of Hath",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "782b8f0d-64ad-4990-8706-8a1c8add662d"
+  },
+  {
+   "id": "req_7ae911305beb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Satina",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3e7cd7c3-fa6b-4b4c-a925-8bf4b72b55f4"
+  },
+  {
+   "id": "req_48201e6e38a4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Liam and Michael",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f83bc816-3542-4703-a208-8430d1ae41b3"
+  },
+  {
+   "id": "req_a1da1e71168f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Gaim Gaiden: Kamen Rider Gridon VS Kamen Rider Bravo",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "34074ccb-a13d-4d45-8de6-53937b7361c6"
+  },
+  {
+   "id": "req_c425aadfea60",
+   "user_id": "user_6c57aa830e17",
+   "title": "Expedition from Hell: The Lost Tapes",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "81eebf76-6db9-4cde-b4ad-0e16acf412e2"
+  },
+  {
+   "id": "req_17f1632ecf09",
+   "user_id": "user_6c57aa830e17",
+   "title": "Atlas and the Stars",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f67b90d5-8946-47bc-81c6-1be4dc834859"
+  },
+  {
+   "id": "req_f3404c89e47b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Half as Interesting\u2019s Crime Spree",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "97bcd530-defe-4b3e-b762-a91affe09ce6"
+  },
+  {
+   "id": "req_59ffb406f40f",
+   "user_id": "user_6c57aa830e17",
+   "title": "African Folktales Reimagined",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "879e993c-6f71-484a-9486-6f74a670aea7"
+  },
+  {
+   "id": "req_13bd9a843409",
+   "user_id": "user_6c57aa830e17",
+   "title": "MeatCanyon: Melvins Macabre",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "aa074b98-5c4c-48da-b631-0c41ae960e29"
+  },
+  {
+   "id": "req_f4889b3931cc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Chikn Nuggit",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a0d2b415-0d2e-4cb5-ab89-87b2ffa4c9d4"
+  },
+  {
+   "id": "req_82505ba9a144",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Hamlet Factory",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a0f22f23-64d1-48d8-88cf-c49342643c28"
+  },
+  {
+   "id": "req_c803628dd87c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Road to Unbound",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f9466d49-e766-4876-b122-d9ed121d4cc0"
+  },
+  {
+   "id": "req_923239df4395",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mighty Little Bheem: Festival of Colors",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "62be93e3-df77-418a-9e8e-8ef005a5cfe0"
+  },
+  {
+   "id": "req_054f680af4ca",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Lux Show FT MrCyaLUX",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f93939d2-2d84-41ae-9f79-a36015350ec1"
+  },
+  {
+   "id": "req_e15aa419b3bb",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Paper Girls Show",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "98cc9c2d-cdda-4c26-af04-65faae4194b1"
+  },
+  {
+   "id": "req_f069481c6c39",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bruce And Friends",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "20b81048-69c5-42a9-8229-ec379db0207a"
+  },
+  {
+   "id": "req_18332d9df66e",
+   "user_id": "user_6c57aa830e17",
+   "title": "TNT Overdrive",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6212826d-ae2c-4e5e-a96b-3cba024ccc0a"
+  },
+  {
+   "id": "req_8ca79e6e6be9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dollface",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "536f2d87-7d6e-4ed8-a311-a53d676ab2f7"
+  },
+  {
+   "id": "req_06ecff88b70d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Family Sized",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "52419778-7c5a-4227-bcbe-fe5810da498d"
+  },
+  {
+   "id": "req_20352505a09c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mickey and Minnie's Christmas Carols",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b1226314-7a4a-4385-ba66-144b52ed9d98"
+  },
+  {
+   "id": "req_ee6993f4af9a",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Broken Day",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "36ee24f9-0194-41b6-904d-4f467ca01b3e"
+  },
+  {
+   "id": "req_1bbab158f4a8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dragonflight Legacies: Animated Shorts",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b3dca094-4cb1-4db0-b631-bf487e8f1be5"
+  },
+  {
+   "id": "req_c16adcd84a92",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bahubali Friends: Rise of Aparshatru",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "161da6b1-ab41-4582-9960-f99e859d30a1"
+  },
+  {
+   "id": "req_5fadfaf73c55",
+   "user_id": "user_6c57aa830e17",
+   "title": "Scary World Tingz The Unexplainable Vol.1",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3856890c-51c0-4e77-8bf3-99943c50f730"
+  },
+  {
+   "id": "req_8342bdd629b5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Miraculous World: Paris, Tales of Shadybug and Claw Noir",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0f2a32dc-e369-48eb-9975-c705551d6273"
+  },
+  {
+   "id": "req_0fb6fdd45ffb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Shershaah",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "19ac6bad-08f7-4f7a-bc7c-3a05fa4f5707"
+  },
+  {
+   "id": "req_f699e4dfb0e9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Riddle of Fire",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4441a55-4caf-4004-8941-8a8632505678"
+  },
+  {
+   "id": "req_f23eebe3ff4f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hell Dogs",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4d5f0dae-5c05-49f8-88a8-d0461d362e86"
+  },
+  {
+   "id": "req_7bbccfa3ef78",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Favourite Cake",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2701ec47-3460-4806-af99-011c24ef8820"
+  },
+  {
+   "id": "req_6b97e5ed4e26",
+   "user_id": "user_6c57aa830e17",
+   "title": "Pinball: The Man Who Saved the Game",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e846496a-959e-4664-b697-1d7dabc67809"
+  },
+  {
+   "id": "req_8cbef5d5dfd5",
+   "user_id": "user_6c57aa830e17",
+   "title": "M",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c4f86842-dc81-470b-b1d2-d41a5c826c40"
+  },
+  {
+   "id": "req_3c17cab997c8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Goodbye, Don Glees!",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "65410dc6-aad2-4291-b522-1f4a781d3364"
+  },
+  {
+   "id": "req_e4ce597a87a5",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Happy Marriage",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d8ed646-2b54-4e2c-b6c7-f3e0c951b2ff"
+  },
+  {
+   "id": "req_3c6ac0414f3e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hitman: Agent Jun",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "efea45e4-e708-42ae-8a47-0a0cfaf47188"
+  },
+  {
+   "id": "req_8a0f4c39af21",
+   "user_id": "user_6c57aa830e17",
+   "title": "Joyland",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7769cccf-70c7-44d5-838c-28457726cc7a"
+  },
+  {
+   "id": "req_183f0acfada4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Two of Us",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b983da7e-2b92-49d6-b296-b3565c575eba"
+  },
+  {
+   "id": "req_d18e980ea88a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Wonderland",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "57610dcc-bc65-4260-9c86-bc2841ed6843"
+  },
+  {
+   "id": "req_2e118c64fadc",
+   "user_id": "user_6c57aa830e17",
+   "title": "South Park: Post COVID: The Return of COVID",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e0320a01-d62e-4802-883d-e274c04a46ec"
+  },
+  {
+   "id": "req_74105bc9396e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Jump!",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9fe40475-5fca-4f12-b5d4-a96a1f9ee7f6"
+  },
+  {
+   "id": "req_5c26cb39cc06",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fist of the Condor",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b142a781-a3c3-4c95-a787-f1c011a203f3"
+  },
+  {
+   "id": "req_6280517b6e8f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Battle Through the Heaven",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "69d09d3f-c037-4efd-8214-70a6fa8518fd"
+  },
+  {
+   "id": "req_5113057e456a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mickey and Minnie Wish Upon a Christmas",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "976f6be7-f3e4-4db7-ab69-900d27fa1777"
+  },
+  {
+   "id": "req_da36c8196d0b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Failure Frame: I Became the Strongest and Annihilated Everything with Low-Level Spells",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f79504f8-64cd-4173-bdcc-f6b60910dd7f"
+  },
+  {
+   "id": "req_de22de1846e0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Crossword Mysteries: Terminal Descent",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "76b7d632-e3a3-473a-91ff-c81a53979dea"
+  },
+  {
+   "id": "req_13ac0c907e35",
+   "user_id": "user_6c57aa830e17",
+   "title": "Eismayer",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c2b8155d-23a0-4568-ad24-53a07d46e79e"
+  },
+  {
+   "id": "req_aecfb2f44405",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fate/Grand Order the Movie: Divine Realm of the Round Table: Camelot 1 Wandering; Agateram",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fea56ffb-d47d-4d8b-8acf-1254421f1f34"
+  },
+  {
+   "id": "req_f63fa14c8950",
+   "user_id": "user_6c57aa830e17",
+   "title": "Jiang Ziya",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "618c57d5-e041-4af7-a979-56a638351a52"
+  },
+  {
+   "id": "req_72118f6e8bc6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Monsters 103 Mercies Dragon Damnation",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d100e782-d15a-40d9-b75b-407aafa850cc"
+  },
+  {
+   "id": "req_afe341f50592",
+   "user_id": "user_6c57aa830e17",
+   "title": "Deep Sea",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a83e6a31-44ea-4b6d-80bc-c95549d9b608"
+  },
+  {
+   "id": "req_2352b1b15ace",
+   "user_id": "user_6c57aa830e17",
+   "title": "Spycies",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c31b36f6-093e-4ab9-9042-e2affe94392c"
+  },
+  {
+   "id": "req_0c53594135d1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mantra Warrior: The Legend of The Eight Moons",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "498bd504-dcbb-4aa9-801b-3447cfa19ffd"
+  },
+  {
+   "id": "req_9475694704ed",
+   "user_id": "user_6c57aa830e17",
+   "title": "Finnick",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ecb1f7a9-5b41-4c8e-a031-55a82b53391b"
+  },
+  {
+   "id": "req_e326b90a1033",
+   "user_id": "user_6c57aa830e17",
+   "title": "Skeleton Knight in Another World",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ebcbc12e-14d9-4bda-a8fb-22c780db7367"
+  },
+  {
+   "id": "req_d2578d410dbe",
+   "user_id": "user_6c57aa830e17",
+   "title": "Deathstroke: Knights & Dragons - The Movie",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b074f343-2b53-4a94-ab3d-ff310616dde1"
+  },
+  {
+   "id": "req_371e430e4ea2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mahavatar Narsimha",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "13eb3b77-ccec-4587-b84a-596fae1e2f97"
+  },
+  {
+   "id": "req_4cd01e49576b",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Monkey King: Reborn",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79b6f8b1-0c2c-4ecb-b682-ee00d6520b8a"
+  },
+  {
+   "id": "req_0c1a3f1d5d98",
+   "user_id": "user_6c57aa830e17",
+   "title": "Babylon 5: The Road Home",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8bbb7501-b47e-4aa4-86a7-9abea9ed873a"
+  },
+  {
+   "id": "req_35f5ad7344a5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Drifting Home",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "92dc7b9b-ec63-4c4a-89ac-7c87f5ef8008"
+  },
+  {
+   "id": "req_ee2920e6d4d1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ainbo: Spirit of the Amazon",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "966a0ff4-f7db-4458-a3d2-51bb570fa418"
+  },
+  {
+   "id": "req_a485255d5cb2",
+   "user_id": "user_6c57aa830e17",
+   "title": "No Time to Spy: A Loud House Movie",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a478dff6-bb08-446e-8574-35b728fbfbab"
+  },
+  {
+   "id": "req_ed7f17f2d4c6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Justice League x RWBY: Super Heroes & Huntsmen, Part One",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "89736321-6a11-4ea5-b3c3-5dfb083308f9"
+  },
+  {
+   "id": "req_28155a365269",
+   "user_id": "user_6c57aa830e17",
+   "title": "Doraemon: Nobita's New Dinosaur",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "76cf38e8-cb63-48de-bd92-c22cd9b0749c"
+  },
+  {
+   "id": "req_4a73befc8863",
+   "user_id": "user_6c57aa830e17",
+   "title": "I Am What I Am",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "75d5126b-6940-4f54-a769-2b7f7a1d993a"
+  },
+  {
+   "id": "req_76b42aa17891",
+   "user_id": "user_6c57aa830e17",
+   "title": "Inu-Oh",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2e9422df-1b45-4960-8450-f9a93c49c56b"
+  },
+  {
+   "id": "req_753557ab6175",
+   "user_id": "user_6c57aa830e17",
+   "title": "Summer Ghost",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1f6902d8-0c03-4122-aae3-83c8de055620"
+  },
+  {
+   "id": "req_386c91616988",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mobile Suit Gundam GQuuuuuuX",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "59e0f92e-8549-4a51-9342-87a0d1866c29"
+  },
+  {
+   "id": "req_f0ea6ce3ffa1",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Venture Bros.: Radiant Is the Blood of the Baboon Heart",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "36f8ac7f-7e48-406b-b1ef-f9130fb0cbd2"
+  },
+  {
+   "id": "req_c2fd2d363754",
+   "user_id": "user_6c57aa830e17",
+   "title": "Lamp Life",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "08ebfffb-05db-47e6-8cc5-f70e1d20b4ef"
+  },
+  {
+   "id": "req_ee0edabeae7b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Harem in the Labyrinth of Another World",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "46242fb1-d92d-4e41-88a1-01a70859d18b"
+  },
+  {
+   "id": "req_77e4b7eefcd6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Monster Pets: A Hotel Transylvania Short",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b14fe0e5-f8e2-4046-b65b-c87344fc4553"
+  },
+  {
+   "id": "req_97c97ac8fbea",
+   "user_id": "user_6c57aa830e17",
+   "title": "Godzilla Singular Point",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fd0e7bc5-fbf2-4cff-b3b8-b18fc22db678"
+  },
+  {
+   "id": "req_8077838a109b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Under the Boardwalk",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "df2dc681-db63-4a4f-a890-558f2b387296"
+  },
+  {
+   "id": "req_a871c406581f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Secret Magic Control Agency",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c12ea0bf-39d6-4224-aa1c-80846454b00c"
+  },
+  {
+   "id": "req_aaf5ade52b0e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Blue's Big City Adventure",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d6d9748b-7244-4019-b4e3-c5b52a5fe528"
+  },
+  {
+   "id": "req_a03ba4d5efb0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Trolls Holiday in Harmony",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "47f8ee08-65d0-461e-b9bb-ad6c257bc40b"
+  },
+  {
+   "id": "req_842722a6d9ae",
+   "user_id": "user_6c57aa830e17",
+   "title": "Superman: Red Son",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c57df3da-2aad-4376-a4e6-9c571f7227e4"
+  },
+  {
+   "id": "req_ca4dbb073910",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Oni Girl",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "651d3528-a99c-4ce2-b5a4-0de34278489f"
+  },
+  {
+   "id": "req_ad57cdfef142",
+   "user_id": "user_6c57aa830e17",
+   "title": "Apollo 10\u00bd: A Space Age Childhood",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "93ffeba2-93cd-4b1e-90e8-40be03f70f57"
+  },
+  {
+   "id": "req_2847c741e585",
+   "user_id": "user_6c57aa830e17",
+   "title": "Superman: Man of Tomorrow",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "de90c2c2-9f06-4cd2-a0d5-9850e160ab8e"
+  },
+  {
+   "id": "req_2e848cb49836",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Dungeon of Black Company",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d758eeef-363a-4b17-813e-00c014651cc7"
+  },
+  {
+   "id": "req_2658a2ff44df",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Unique Skill Makes Me OP Even at Level 1",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3f66e719-d468-422f-9afd-f26d1add7081"
+  },
+  {
+   "id": "req_90f3a7000369",
+   "user_id": "user_6c57aa830e17",
+   "title": "Suppose a Kid from the Last Dungeon Boonies Moved to a Starter Town?",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "496f99e1-21e9-498b-b564-56d40fd9eeb5"
+  },
+  {
+   "id": "req_6f0981f89446",
+   "user_id": "user_6c57aa830e17",
+   "title": "Robin Robin",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7de22e09-c813-40e0-95b6-45b6c6c4e30d"
+  },
+  {
+   "id": "req_cdbac362bd42",
+   "user_id": "user_6c57aa830e17",
+   "title": "I May Be a Guild Receptionist, but I'll Solo Any Boss to Clock Out on Time",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9b8cd006-b48e-480b-8c80-8404da4f4a03"
+  },
+  {
+   "id": "req_8a34d4f5dc45",
+   "user_id": "user_6c57aa830e17",
+   "title": "Turu, the Wacky Hen",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "64b4c8ab-fe26-49a9-8770-d337170e9133"
+  },
+  {
+   "id": "req_fa4acea37bf1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Scooby-Doo! and Krypto, Too!",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6c3119b0-0008-4b16-94f7-01da3719c063"
+  },
+  {
+   "id": "req_0d28a0c5c149",
+   "user_id": "user_6c57aa830e17",
+   "title": "Watchmen: Chapter I",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7ac610fa-28bf-4adf-b24e-0ec12885cb78"
+  },
+  {
+   "id": "req_1f24f53b5d70",
+   "user_id": "user_6c57aa830e17",
+   "title": "Lost in Starlight",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79ce3e87-3580-4ca1-ad46-7d8619daa57f"
+  },
+  {
+   "id": "req_85cb9555684c",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Reincarnation of the Strongest Exorcist in Another World",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e477ac5c-4466-4b5a-ac61-279017d377c7"
+  },
+  {
+   "id": "req_ab26a24a8e0f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Josep",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ac8c7c23-fcb9-4b21-83e4-1822d2a19a6a"
+  },
+  {
+   "id": "req_70edc06b5d6f",
+   "user_id": "user_6c57aa830e17",
+   "title": "No Dogs or Italians Allowed",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0268da41-0949-4b4a-be36-2a481a2a2e94"
+  },
+  {
+   "id": "req_44498b0a26c3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dug Days",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1921a4d4-2e3e-4506-9151-c51bec18a704"
+  },
+  {
+   "id": "req_f557f7d46ea0",
+   "user_id": "user_6c57aa830e17",
+   "title": "No Longer Allowed in Another World",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "99720fa3-09e7-46c3-9861-c8187c02ee82"
+  },
+  {
+   "id": "req_98b9880f682d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Spider Within: A Spider-Verse Story",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "373ecd89-fdfd-443b-b7f2-311dde695050"
+  },
+  {
+   "id": "req_70905cb20699",
+   "user_id": "user_6c57aa830e17",
+   "title": "Twenty Something",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8f608714-d0bb-4c29-bead-c99b68cab3b0"
+  },
+  {
+   "id": "req_8c55a7542f6f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Pompo the Cinephile",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "63096aab-5668-47bf-9ab8-e9c3705cbe23"
+  },
+  {
+   "id": "req_3e574915934f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Maggie Simpson in \"Playdate with Destiny\"",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cd4a3f74-9ba5-4950-a60a-a4e08abd2431"
+  },
+  {
+   "id": "req_2e4276a03b3a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fortune Favors Lady Nikuko",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d44074f8-af08-4e14-a7fa-24021a34d954"
+  },
+  {
+   "id": "req_abd8919ce08f",
+   "user_id": "user_6c57aa830e17",
+   "title": "South Park: Post COVID",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b40fc609-517c-4110-b686-d88f40526511"
+  },
+  {
+   "id": "req_793fe0e99941",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ice Age: Scrat Tales",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "774b601c-368c-4a63-908f-7fc00029f568"
+  },
+  {
+   "id": "req_cb0192a87f65",
+   "user_id": "user_6c57aa830e17",
+   "title": "Burrow",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f3c8ded1-a7c3-4578-b1a3-d813fdcc079c"
+  },
+  {
+   "id": "req_7c132156fd12",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Status as an Assassin Obviously Exceeds the Hero's",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d79e15a9-b0fc-46f4-ae44-c4cb506af1fb"
+  },
+  {
+   "id": "req_3f63b52defb5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Magnum Opus",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ddbe431d-ab1b-4a39-9904-8e272e6ee199"
+  },
+  {
+   "id": "req_09b2444f257e",
+   "user_id": "user_6c57aa830e17",
+   "title": "South Park (Not Suitable for Children)",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "57d3a081-5e71-42fa-b117-611a6e76e626"
+  },
+  {
+   "id": "req_6e19c693d457",
+   "user_id": "user_6c57aa830e17",
+   "title": "Pixar Popcorn",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e45d9fcd-db83-444a-89bb-b51b536648b0"
+  },
+  {
+   "id": "req_7dd7cf3b8778",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tom and Jerry in New York",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "687995d2-9937-441d-9a5e-5de37e785f05"
+  },
+  {
+   "id": "req_db20bc8aab79",
+   "user_id": "user_6c57aa830e17",
+   "title": "South Park the Streaming Wars",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7f99fadf-3459-4dad-b2fa-3e61d765716e"
+  },
+  {
+   "id": "req_ce75316ca6a5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Minnal Murali",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bf383ff5-3ef7-4d25-85bc-d32f7b8bd71a"
+  },
+  {
+   "id": "req_a0e9261a5709",
+   "user_id": "user_6c57aa830e17",
+   "title": "Just Another Christmas",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0a12f73c-f16d-4dc8-a84c-3840c9a227de"
+  },
+  {
+   "id": "req_bc83a8af28ab",
+   "user_id": "user_6c57aa830e17",
+   "title": "House of Ninjas",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3bf65d0b-8c1c-46b4-941d-3fcc5ac7a6d0"
+  },
+  {
+   "id": "req_d40428489771",
+   "user_id": "user_6c57aa830e17",
+   "title": "Butterfly",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dbcca50f-9228-4aca-9bc0-8991c304f10d"
+  },
+  {
+   "id": "req_8f8b85629513",
+   "user_id": "user_6c57aa830e17",
+   "title": "Around the World in 80 Days",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9b7916ca-b105-4331-bc03-3b55242cf141"
+  },
+  {
+   "id": "req_d9b76e2d7ac5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Unfamiliar",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bcbca8a0-df32-4de5-a9c3-6a5c1442ce99"
+  },
+  {
+   "id": "req_84da776bfe2b",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Croods: Family Tree",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ce6b437c-5c77-42e6-ba2a-eb83439af305"
+  },
+  {
+   "id": "req_5379609e3d57",
+   "user_id": "user_6c57aa830e17",
+   "title": "Time to Hunt",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e1ea773e-aa2b-4c7b-afb9-c3d3493cbd2a"
+  },
+  {
+   "id": "req_42d790d27194",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Bondsman",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2b4d5884-4eea-4ad0-af91-9a9dff013736"
+  },
+  {
+   "id": "req_8b7db41f8791",
+   "user_id": "user_6c57aa830e17",
+   "title": "Knuckles",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4b344bc1-71cd-4169-adfc-ffeee416a4e4"
+  },
+  {
+   "id": "req_d504b3cb25ce",
+   "user_id": "user_6c57aa830e17",
+   "title": "Cars on the Road",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9175a3b9-0229-4075-9cfb-5c3df03c0970"
+  },
+  {
+   "id": "req_e2e5557e4fdc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Obi-Wan Kenobi",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f9a42664-ca16-4458-8476-813b7613899d"
+  },
+  {
+   "id": "req_dc66d4285278",
+   "user_id": "user_6c57aa830e17",
+   "title": "Amazing Stories",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ca81cac7-b3d6-43fe-b704-f82b94a93bb7"
+  },
+  {
+   "id": "req_c744844ce827",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Boys Presents: Diabolical",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ff65e866-5018-4c57-a6ae-4ddf5cc6ffba"
+  },
+  {
+   "id": "req_ecbcdfa93874",
+   "user_id": "user_6c57aa830e17",
+   "title": "NCIS: Sydney",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4c51c7e-b48b-4746-9233-80cbf4e007d2"
+  },
+  {
+   "id": "req_862a258a629e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Man on Fire",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8fa466e8-8326-49ca-970e-7e7c7cfc0bb6"
+  },
+  {
+   "id": "req_5cd6263bad70",
+   "user_id": "user_6c57aa830e17",
+   "title": "Chillin' in Another World with Level 2 Super Cheat Powers",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "58a734a3-2c9d-4502-a547-fa4bfa94f8da"
+  },
+  {
+   "id": "req_89facd766440",
+   "user_id": "user_6c57aa830e17",
+   "title": "Star Wars: Tales of the Empire",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8b05b087-fb5c-47ae-a501-d01b066c165e"
+  },
+  {
+   "id": "req_fb6eaf79cb27",
+   "user_id": "user_6c57aa830e17",
+   "title": "Blade Runner: Black Lotus",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "99ba3cf7-c935-4fec-8173-789eca028a43"
+  },
+  {
+   "id": "req_8698eb228abc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Renegade Nell",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "deca0738-60d0-40a2-b3a6-97a34a850383"
+  },
+  {
+   "id": "req_afaa3ff3d593",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hellbound",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2adc556a-0679-4549-8a73-4a3bd432af3f"
+  },
+  {
+   "id": "req_f969e854545c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Superheroes",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c994d2eb-19a5-42ef-899d-b2079e102a6f"
+  },
+  {
+   "id": "req_e8bb67db214d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Blue Period",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7e9342c4-cd03-4e88-82a3-b658b7fc478a"
+  },
+  {
+   "id": "req_259ed27603b0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Junji Ito Maniac: Japanese Tales of the Macabre",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c5b22865-124c-423c-a0ee-ba21063b6c9b"
+  },
+  {
+   "id": "req_cd4c305e85cf",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Senpai Is Annoying",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1d40168f-b936-40e7-9cc4-a6a1930639cb"
+  },
+  {
+   "id": "req_6e5f8d6d6326",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kamp Koral: SpongeBob's Under Years",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "73572c0f-46b2-4778-aae2-682db43722db"
+  },
+  {
+   "id": "req_4f19296a75f2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Traces of Love",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c788f80a-9112-4909-8fbd-448f12f64042"
+  },
+  {
+   "id": "req_7aa8efcc34d1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Super Crooks",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "edaae9ec-5656-4ddf-926c-479257ae57e8"
+  },
+  {
+   "id": "req_9b0b240faf57",
+   "user_id": "user_6c57aa830e17",
+   "title": "You Can Live Forever",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b6debefb-c026-4c70-bde4-05681f0389a5"
+  },
+  {
+   "id": "req_8311fe4060d5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Scarlet Nexus",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79b5aa0a-a04c-4276-a30f-eed6323876ac"
+  },
+  {
+   "id": "req_ae8abdc1a795",
+   "user_id": "user_6c57aa830e17",
+   "title": "This Is Christmas",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b074122a-33a9-46a0-8471-da6e90e9019b"
+  },
+  {
+   "id": "req_b55d1132bee7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Beyond the Infinite Two Minutes",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b8232a4f-54ae-4c51-b335-3c88a64b3cb6"
+  },
+  {
+   "id": "req_9ebd25f41333",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Promised Neverland",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "98254419-c102-465a-9a44-85a44608efba"
+  },
+  {
+   "id": "req_a88c4323ec41",
+   "user_id": "user_6c57aa830e17",
+   "title": "Barbarians",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6a60a0fd-c342-4085-ae26-83fb5049c0fd"
+  },
+  {
+   "id": "req_60b86d9dce61",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hi, Mom",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0b9f028a-f2f6-4090-b12f-fe67d5f6fdd2"
+  },
+  {
+   "id": "req_6b7e9475a675",
+   "user_id": "user_6c57aa830e17",
+   "title": "Heels",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "95b1184e-58db-4aba-a636-cdb61ddd3a34"
+  },
+  {
+   "id": "req_fda253d8ccce",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Legend of El Cid",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "da517b4a-889e-4c57-a63e-8ec2228d03f5"
+  },
+  {
+   "id": "req_827dc8cff43d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Welcome to Eden",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7625fee8-c095-4ad1-b296-65a144126594"
+  },
+  {
+   "id": "req_96913d99a257",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kleo",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "96b4c4f5-e72c-4f71-bd77-78591216d6a8"
+  },
+  {
+   "id": "req_820b2209fc25",
+   "user_id": "user_6c57aa830e17",
+   "title": "Boundless",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b459bfd2-5352-48cc-8b53-43e38f0054e9"
+  },
+  {
+   "id": "req_daf84c39d343",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Smoke Master",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2c9422d1-de95-465e-bfb2-3d744b6d284b"
+  },
+  {
+   "id": "req_e30ca9d4061f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Limbo",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "451e54b7-1114-4998-815f-2504063784bb"
+  },
+  {
+   "id": "req_8249f04eb431",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Warrior Princess",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7517ad5f-f16f-431c-b642-f68b494dda3c"
+  },
+  {
+   "id": "req_d20a0ff51354",
+   "user_id": "user_6c57aa830e17",
+   "title": "MexZombies",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "92dead55-d7ea-4c02-be17-595357617177"
+  },
+  {
+   "id": "req_fcfef57ab816",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Fable: The Killer Who Doesn't Kill",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1cae66eb-4ffa-43e6-8dfc-6c037fe3f9e5"
+  },
+  {
+   "id": "req_dce1c872dabb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Cashero",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2ddb8da4-115c-4b75-8475-bbd757f594e1"
+  },
+  {
+   "id": "req_1653eeb9b6a2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Blood Coast",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5365f505-9236-49a0-95b5-e52ff5908181"
+  },
+  {
+   "id": "req_9dda6a496e39",
+   "user_id": "user_6c57aa830e17",
+   "title": "ID: INVADED",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6db30ba8-6cd2-4eac-b86a-b63909fdb61d"
+  },
+  {
+   "id": "req_1a3528d372a8",
+   "user_id": "user_6c57aa830e17",
+   "title": "King & Conqueror",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4bc2076-aa54-4149-ba12-abdfb3eab57c"
+  },
+  {
+   "id": "req_bc9136a1e49f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Crooks",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3e618691-cd21-4a20-bf8b-f80def1900d7"
+  },
+  {
+   "id": "req_8fca9d37adb7",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Tyrant",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "18f423a3-01f2-419f-9881-8b249a250730"
+  },
+  {
+   "id": "req_260ba55c4f60",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tekken: Bloodline",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7176bf43-d760-4e79-a29c-f3a76c59f4d5"
+  },
+  {
+   "id": "req_6c4435886ef7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Zootopia+",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b051b1e2-29bf-48a3-9cfc-d85b22049995"
+  },
+  {
+   "id": "req_8a79d63507e3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bandidos",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "16001a13-ceec-464d-8e3c-c18ad8a45839"
+  },
+  {
+   "id": "req_e662f4833ee5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Furies",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "aeb98089-1369-4e32-9a81-b0900a84abf9"
+  },
+  {
+   "id": "req_adddfb59af0b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Major",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d05f2038-67a5-427a-88ff-9e45c3794995"
+  },
+  {
+   "id": "req_14adca2b052e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Skull Island",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6ae5d0a2-91fd-48b7-8f93-c1092baa3e9c"
+  },
+  {
+   "id": "req_c88e139ca441",
+   "user_id": "user_6c57aa830e17",
+   "title": "He-Man and the Masters of the Universe",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fadf0a5b-b748-46e4-9804-293b7d98c929"
+  },
+  {
+   "id": "req_d6c869a36634",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Aristocrat's Otherworldly Adventure: Serving Gods Who Go Too Far",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "05538e85-492e-444e-8519-5340a8d21bf2"
+  },
+  {
+   "id": "req_4942c29630dc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sonic Drone Home",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "53da94ff-fda5-4785-b085-ba024e48e3bf"
+  },
+  {
+   "id": "req_ddf3b79865cc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Invisible City",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4a6a021-d22a-42c1-8e07-b5633ebc9f81"
+  },
+  {
+   "id": "req_68f80d3fb8c4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dr. Brain",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b08a3732-d623-4e6d-a530-3c155a1536b8"
+  },
+  {
+   "id": "req_67ce23904665",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sell Your Haunted House",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "64e142fa-1577-4650-a139-fcafdd3a952e"
+  },
+  {
+   "id": "req_a051989cba47",
+   "user_id": "user_6c57aa830e17",
+   "title": "SSSS.DYNAZENON",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d94066f-3bb8-41d8-b781-6d351b153020"
+  },
+  {
+   "id": "req_fefa5cb7b6a8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fena: Pirate Princess",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2fc02422-d4eb-41c3-a1c3-a342e3358a2a"
+  },
+  {
+   "id": "req_cba8e5fdfddf",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Boss Baby: Back in the Crib",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1efdd43a-550d-431b-b932-51f8da0f2e80"
+  },
+  {
+   "id": "req_4cd107c1057a",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Royal Runaway Romance",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "98d2dbb2-ca29-4c77-947a-a54069678cdf"
+  },
+  {
+   "id": "req_78bed89d4d83",
+   "user_id": "user_6c57aa830e17",
+   "title": "Loner Life in Another World",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4342d3df-e261-4c13-8faf-f8ecade3359a"
+  },
+  {
+   "id": "req_29b48ff4ceec",
+   "user_id": "user_6c57aa830e17",
+   "title": "Crazy About Her",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0ec9031c-2003-4f3e-a4d0-931486ead4ce"
+  },
+  {
+   "id": "req_43d3483d4aff",
+   "user_id": "user_6c57aa830e17",
+   "title": "Gibiate",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3b37bdc1-a18b-4a0a-837e-fbacad722125"
+  },
+  {
+   "id": "req_9517976c8fff",
+   "user_id": "user_6c57aa830e17",
+   "title": "Aharen-san wa Hakarenai",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d76b0177-b266-4b72-bc9d-92b6197f53d3"
+  },
+  {
+   "id": "req_2dad0df67fb6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hero Dog: The Journey Home",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e05328c2-a2d9-4fc1-8de1-022fb4dbe536"
+  },
+  {
+   "id": "req_d268e5c4caf5",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Academy of Magic",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "676241e1-836c-42c7-ab8d-ec48d484aecd"
+  },
+  {
+   "id": "req_f4920c66db35",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Biltmore Christmas",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4dabfb6-2455-44ed-8eae-27abb0682a62"
+  },
+  {
+   "id": "req_2e8afeb45812",
+   "user_id": "user_6c57aa830e17",
+   "title": "Into the Night",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "95f9a454-c7e8-457e-97d8-a8c7196b5081"
+  },
+  {
+   "id": "req_3fab65ce60c0",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Sea Beast",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1bde68d8-e414-4324-8fa8-2e50da6c3225"
+  },
+  {
+   "id": "req_7d2a8a56c694",
+   "user_id": "user_6c57aa830e17",
+   "title": "Moana 2",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "51f1e45e-2cc0-4702-8e57-ecb580f0db59"
+  },
+  {
+   "id": "req_491f693d0cd4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kung Fu Panda 4",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9c445985-db8d-484e-b30b-518618bb1e62"
+  },
+  {
+   "id": "req_68464477b0b7",
+   "user_id": "user_6c57aa830e17",
+   "title": "PAW Patrol: The Movie",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a09461c7-dca9-4062-8b5b-9a6b1d261773"
+  },
+  {
+   "id": "req_929e50627c17",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Croods: A New Age",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ebb18254-187f-4f2f-9462-cd41fb947a28"
+  },
+  {
+   "id": "req_c4be79dbe779",
+   "user_id": "user_6c57aa830e17",
+   "title": "Trolls World Tour",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6bad7b9f-f07c-4103-a813-bf4ffaeb4020"
+  },
+  {
+   "id": "req_af3853f19bb6",
+   "user_id": "user_6c57aa830e17",
+   "title": "DC League of Super-Pets",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8d386d3d-72a3-4e0e-93de-72f8070d5d0d"
+  },
+  {
+   "id": "req_ea9ed25e4c73",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hotel Transylvania: Transformania",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3aba19c9-f9b8-4f70-ad12-8b9593b581e3"
+  },
+  {
+   "id": "req_2e886f0b80f0",
+   "user_id": "user_6c57aa830e17",
+   "title": "The SpongeBob Movie: Sponge on the Run",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a86e0e10-c022-45cf-93ad-5cd7e9303ba7"
+  },
+  {
+   "id": "req_398f321b09a0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Trolls Band Together",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "df44ea01-4582-460c-bb9c-071d347063ab"
+  },
+  {
+   "id": "req_b25526926fed",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dog Man",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a1a32849-f44d-4717-b97f-11bdbcd74834"
+  },
+  {
+   "id": "req_e92f551a36e7",
+   "user_id": "user_6c57aa830e17",
+   "title": "That Christmas",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a57db86e-01b1-4ceb-9f1e-8f42bd190b26"
+  },
+  {
+   "id": "req_56115ff787af",
+   "user_id": "user_6c57aa830e17",
+   "title": "Despicable Me 4",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0336652d-60c9-4460-b957-b151f99cf734"
+  },
+  {
+   "id": "req_124e37bc6040",
+   "user_id": "user_6c57aa830e17",
+   "title": "Migration",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "298d89f6-15ba-4e9b-b417-26100110f151"
+  },
+  {
+   "id": "req_759052441b4d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Turning Red",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d72efb96-8f66-4d6e-9338-47cc462520bf"
+  },
+  {
+   "id": "req_4573a0e7dc17",
+   "user_id": "user_6c57aa830e17",
+   "title": "Teenage Mutant Ninja Turtles: Mutant Mayhem",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "69fcafc2-8863-4611-9fa7-a20b25390305"
+  },
+  {
+   "id": "req_fd6a165c41ac",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Boss Baby: Family Business",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "075d9998-f628-44c9-adef-d374d85472cd"
+  },
+  {
+   "id": "req_d78f9cdd0906",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Garfield Movie",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "29895489-295c-424a-9aaf-33f351e8b911"
+  },
+  {
+   "id": "req_8b556834f276",
+   "user_id": "user_6c57aa830e17",
+   "title": "Out",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "17f7de1e-52b6-44fc-b720-5e86cd1dc0ad"
+  },
+  {
+   "id": "req_81f49b7d401d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Chip 'n Dale: Rescue Rangers",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "22145e67-5103-48ee-b615-0b76515a3ae6"
+  },
+  {
+   "id": "req_39a196b0353d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mufasa: The Lion King",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b4de4a1d-b060-497f-8c53-ec8c15081aee"
+  },
+  {
+   "id": "req_8ea54321fe03",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ruby Gillman, Teenage Kraken",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "64e6d829-6b6c-41d9-96a9-5ba144f1896c"
+  },
+  {
+   "id": "req_1e55f4327216",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sing: Thriller",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "24e51803-ea6c-4b98-849e-cd210e6a57b4"
+  },
+  {
+   "id": "req_4ad110da1e0d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Marvel Zombies",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "adb9096a-6b3a-4ecf-a419-4958e1d21b9d"
+  },
+  {
+   "id": "req_464e673f74eb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Terminator Zero",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "57f6376f-327f-452f-b665-2fb178649b53"
+  },
+  {
+   "id": "req_7ca721a774f9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Minions: The Rise of Gru",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "47377787-41b9-4d1b-ba88-79d5d9c5275e"
+  },
+  {
+   "id": "req_5ec3260538de",
+   "user_id": "user_6c57aa830e17",
+   "title": "Spirit Untamed",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5b3a1f1e-2a91-431d-b508-16540b79d88b"
+  },
+  {
+   "id": "req_ea623194b3e6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Justice League: Crisis on Infinite Earths Part One",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1aaf9154-9fb0-4cb5-a580-8993a2a7c683"
+  },
+  {
+   "id": "req_f9353d6044a0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Justice League: Crisis on Infinite Earths Part Three",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9647b998-d13f-45e2-a8d1-de4f73ea5d3d"
+  },
+  {
+   "id": "req_eb58a1e0a4cc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Scoob!",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "15fbdd26-47c8-48dd-b391-bba1128ef63e"
+  },
+  {
+   "id": "req_a8bb97a49a08",
+   "user_id": "user_6c57aa830e17",
+   "title": "Leo",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f3c62034-d072-4156-8938-788b022abf90"
+  },
+  {
+   "id": "req_ffbc014c2374",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Tiger's Apprentice",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0be1172f-aa69-46ec-b326-3023c46c94a0"
+  },
+  {
+   "id": "req_032b64340ccc",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Smurfs",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8f93217c-3651-48fa-ba11-58329d3de542"
+  },
+  {
+   "id": "req_9324c06442a1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Centaurworld",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dc99a113-ac34-4345-b3e7-8dcefdaa2abd"
+  },
+  {
+   "id": "req_c1c168171cfe",
+   "user_id": "user_6c57aa830e17",
+   "title": "Carl's Date",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3aa40490-ef76-4e72-aa40-10967c6aace5"
+  },
+  {
+   "id": "req_065c6c082092",
+   "user_id": "user_6c57aa830e17",
+   "title": "Snoopy Presents: For Auld Lang Syne",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1e24ed38-5c64-4b18-8f0e-08c895c243db"
+  },
+  {
+   "id": "req_92e5a6c22864",
+   "user_id": "user_6c57aa830e17",
+   "title": "Phineas and Ferb the Movie: Candace Against the Universe",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2cac8a3c-fa71-470d-af25-60d20cd8d31e"
+  },
+  {
+   "id": "req_2d8703bbca0f",
+   "user_id": "user_6c57aa830e17",
+   "title": "On-Gaku: Our Sound",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cb3ca582-1f27-4e8e-b426-fdb4f1bd4cbd"
+  },
+  {
+   "id": "req_07b02fd5ec59",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Simpsons: O C'mon All Ye Faithful",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e03ca8ab-82c0-4f65-9cf1-d719d8df0b8c"
+  },
+  {
+   "id": "req_b32798b19768",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sonny Boy",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fd733b21-abb8-44eb-91bc-0fea5a0fc833"
+  },
+  {
+   "id": "req_79c96854e8b1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Arte",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1f0f99bd-c846-434f-9e75-0d810377dd99"
+  },
+  {
+   "id": "req_2ae8eae94ee0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Remake Our Life!",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "539b45aa-0ab8-4c27-b4ae-427720b38021"
+  },
+  {
+   "id": "req_fbc8f797fb5c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Star Trek: Prodigy",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5611f432-a7c8-4877-9c3c-6f207f279a19"
+  },
+  {
+   "id": "req_4cd23cc32ab1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Madagascar: A Little Wild",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1e63d1c2-bbc6-475b-9d3c-1cd70f01cb61"
+  },
+  {
+   "id": "req_3cb96b424587",
+   "user_id": "user_6c57aa830e17",
+   "title": "\u014coku: The Inner Chambers",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d3d4b113-78ab-4aeb-b3c1-947e3c5f6a64"
+  },
+  {
+   "id": "req_d3880dc3b671",
+   "user_id": "user_6c57aa830e17",
+   "title": "Girlfriend, Girlfriend",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4c095827-dfc0-48cf-b0af-983c3c7ea796"
+  },
+  {
+   "id": "req_cac8c2ab57a2",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Couple of Cuckoos",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a4d4ddf2-8e96-4ea8-b646-92ea823045c1"
+  },
+  {
+   "id": "req_280866bc4e74",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Caf\u00e9 Terrace and Its Goddesses",
+   "rating": 7.3,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a3d72314-5266-46a3-93f2-b1eb2863b291"
+  },
+  {
+   "id": "req_df06b153e2bd",
+   "user_id": "user_6c57aa830e17",
+   "title": "KAKEGURUI TWIN",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "aabee990-cc74-4dee-9c6d-55b6fd44b665"
+  },
+  {
+   "id": "req_d0f9ee7f2ebd",
+   "user_id": "user_6c57aa830e17",
+   "title": "Handyman Saitou in Another World",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6d64de66-928e-418f-8396-c1adb4f1fa74"
+  },
+  {
+   "id": "req_74e741bee642",
+   "user_id": "user_6c57aa830e17",
+   "title": "Love After World Domination",
+   "rating": 7.4,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c03d90a2-cadf-4b37-8e87-6580cb25bdea"
+  },
+  {
+   "id": "req_bc0fd57825c7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Our Dating Story: The Experienced You and the Inexperienced Me",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "980f784f-47c8-49be-8859-9fb4eebddcfe"
+  },
+  {
+   "id": "req_0c06b79dc4b3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mother of the Goddess' Dormitory",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bc5d1ab2-32bf-4b7c-9e8f-782c06c5c91e"
+  },
+  {
+   "id": "req_4e96b8dc90a0",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Great Jahy Will Not Be Defeated!",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1de0697a-0f5c-4cad-8cfb-d30f35383139"
+  },
+  {
+   "id": "req_2e8531e48acd",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Windshield Wiper",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "03c6ae9c-3dd4-4cba-a0a2-ec9a64fa6a3e"
+  },
+  {
+   "id": "req_f555ff150fae",
+   "user_id": "user_6c57aa830e17",
+   "title": "Larva Pendant",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9fdba772-5c38-4fbe-9a13-e8a26387ce3a"
+  },
+  {
+   "id": "req_d9e3fe04dc9a",
+   "user_id": "user_6c57aa830e17",
+   "title": "An Ostrich Told Me the World Is Fake and I Think I Believe It",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c8528d55-44d8-43a8-9230-fbca9700cd71"
+  },
+  {
+   "id": "req_ba1beb26618e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Berserk of Gluttony",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b3df46e6-3312-49e2-9c6f-5a28935e77b0"
+  },
+  {
+   "id": "req_ec25dab1dfee",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Home Hero",
+   "rating": 7.2,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a2adb65f-41bd-4319-aa4d-0acd4045dc70"
+  },
+  {
+   "id": "req_8401f9e5833d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Millionaire Detective \u2013 Balance: UNLIMITED",
+   "rating": 7.0,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6c516aba-eb52-4c9c-b63a-4ff9220dfac7"
+  },
+  {
+   "id": "req_088b4f335fec",
+   "user_id": "user_6c57aa830e17",
+   "title": "Super Me",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1abc433c-d05a-4852-b1ac-da903143d2cd"
+  },
+  {
+   "id": "req_ff576bfb4ad9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Maaveeran",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79720b7a-821d-4af8-bca4-bee6424c8d36"
+  },
+  {
+   "id": "req_3d88f62ba545",
+   "user_id": "user_6c57aa830e17",
+   "title": "Inspector Koo",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2588dd02-0704-42fa-86af-d1602cc76e75"
+  },
+  {
+   "id": "req_35e39b363bc7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Malik",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "eb147137-923a-4482-881d-18a3b4e5c04e"
+  },
+  {
+   "id": "req_3fd0c2722005",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Last Time We Were Children",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "47ae51d7-8eb0-4847-a197-109ce6a88774"
+  },
+  {
+   "id": "req_2f86565a2f59",
+   "user_id": "user_6c57aa830e17",
+   "title": "Biohackers",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6c3823fd-47a3-4e87-b90a-f9d434d8e0ba"
+  },
+  {
+   "id": "req_ba1d0b9908d3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Black Knight",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6b19a14c-fbe6-4c60-af74-2804ade099fc"
+  },
+  {
+   "id": "req_b337b88a4050",
+   "user_id": "user_6c57aa830e17",
+   "title": "Zorro",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0735b6f1-26e8-439e-92e5-ed7a9c7d316f"
+  },
+  {
+   "id": "req_a9c70a6e72ee",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Thousand Fangs",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7b8c24cd-530b-4baf-ad3c-e7f25ef7bf92"
+  },
+  {
+   "id": "req_3a42ec648e8d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sisyphus",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d97567cf-c790-432c-b284-ca22f083c694"
+  },
+  {
+   "id": "req_4b7f295298cc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Malang",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "96c05326-d9d0-41a3-83bd-785276c6b504"
+  },
+  {
+   "id": "req_239d76d3f8d9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Minas de Pasi\u00f3n",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "95a5d34f-5a5e-4916-b18d-f38deee9ec73"
+  },
+  {
+   "id": "req_66969a0710f3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Twelve",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2ad6bdcb-c17f-4e3d-b2b1-a8fffcddea3c"
+  },
+  {
+   "id": "req_ab996e728a60",
+   "user_id": "user_6c57aa830e17",
+   "title": "That Dirty Black Bag",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "56d58359-02d6-416b-9837-a4639b3e480f"
+  },
+  {
+   "id": "req_83dd56e1b214",
+   "user_id": "user_6c57aa830e17",
+   "title": "Karnan",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ca682b72-805f-4b21-8fc4-69a105e130f9"
+  },
+  {
+   "id": "req_3c2eb6f97167",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Bastard Son & the Devil Himself",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c95823bb-0636-4dd0-ae83-02c3c23e77db"
+  },
+  {
+   "id": "req_dcbbd1db7eb3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ganglands",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "03399311-d553-4c4e-92e5-ec5daf2beaf9"
+  },
+  {
+   "id": "req_5f7316e4382d",
+   "user_id": "user_6c57aa830e17",
+   "title": "47 Bombs",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b335b05b-4bd2-4c05-9d96-c9678cd84c38"
+  },
+  {
+   "id": "req_d768bf54916f",
+   "user_id": "user_6c57aa830e17",
+   "title": "S.O.Z: Soldiers or Zombies",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bc89c52f-d8c9-4d40-b425-bee7561a340c"
+  },
+  {
+   "id": "req_ec8dd5a31ec3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Equinox",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4edb58fe-2796-41b4-863a-dd53fc97308b"
+  },
+  {
+   "id": "req_1f6f2700fe25",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Barrier",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c455852d-c612-4a5a-93ee-bc986af4ddca"
+  },
+  {
+   "id": "req_ba56d6ee3fb7",
+   "user_id": "user_6c57aa830e17",
+   "title": "The School Nurse Files",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2f4fefbb-5b41-475b-845f-9141b364a263"
+  },
+  {
+   "id": "req_577a15900b84",
+   "user_id": "user_6c57aa830e17",
+   "title": "When the Stars Gossip",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dfe76e75-348f-457e-8270-a4ff88432f10"
+  },
+  {
+   "id": "req_3ae6605c26b8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hello, Me!",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "401844fc-2749-4db3-9e32-6e5257c8006b"
+  },
+  {
+   "id": "req_656b388d99dd",
+   "user_id": "user_6c57aa830e17",
+   "title": "Thiruchitrambalam",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c96a2342-3573-48c7-9b6d-7319fc46b769"
+  },
+  {
+   "id": "req_8b6de4359e2d",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Perfect Fit",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5db41ff0-e811-4c8a-a2f7-cf7b863555b9"
+  },
+  {
+   "id": "req_5ead85bf2754",
+   "user_id": "user_6c57aa830e17",
+   "title": "It's a Summer Film!",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2d349b2d-d392-4412-9761-5c2c8415664b"
+  },
+  {
+   "id": "req_271f508b986c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dead Mountain: The Dyatlov Pass Incident",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "62dbbb89-a122-4c45-96c6-e0dc08fa411e"
+  },
+  {
+   "id": "req_0f863d3546a0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Not Like Dad",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "57570327-cc9c-45f4-9f72-903e7e044f2e"
+  },
+  {
+   "id": "req_17518b1d6aaa",
+   "user_id": "user_6c57aa830e17",
+   "title": "Saturday Night's Main Event XXXVII",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ccbadd96-6fcd-47fd-a06a-46c5849d807f"
+  },
+  {
+   "id": "req_7a633465733d",
+   "user_id": "user_6c57aa830e17",
+   "title": "400 Bullets",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "954e697a-b212-43be-a071-ebb56ce2c1f5"
+  },
+  {
+   "id": "req_b3cf6a7254e9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Khuda Haafiz",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dad91d89-477f-40bd-a62a-2694538ecca4"
+  },
+  {
+   "id": "req_24de2d319879",
+   "user_id": "user_6c57aa830e17",
+   "title": "Unhappily Ever After",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "239bd73f-3649-42d8-8190-c5fe9a4d9703"
+  },
+  {
+   "id": "req_65abc14ff51e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Testament: The Story of Moses",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3703adc6-5c0e-4056-8d71-23de37063950"
+  },
+  {
+   "id": "req_d98bdca3bb46",
+   "user_id": "user_6c57aa830e17",
+   "title": "Creature",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b9e74cb6-c1f8-46d0-a9fd-faebfb8b39a6"
+  },
+  {
+   "id": "req_671fc10514cf",
+   "user_id": "user_6c57aa830e17",
+   "title": "Infiniti",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e8963d6b-dbe6-4aba-89d7-0c23c84c9935"
+  },
+  {
+   "id": "req_8765d0eff3fe",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Edge of Sleep",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fcaecd4f-45e3-4c45-94ab-8fce51543615"
+  },
+  {
+   "id": "req_3c5efda8c8e1",
+   "user_id": "user_6c57aa830e17",
+   "title": "(re)kindle",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fbd511d9-c5e5-4030-9f18-c459b56818e0"
+  },
+  {
+   "id": "req_9f706dd7c855",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Tender Matador",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e3c86d93-fc22-4e25-b20a-43a99277fd25"
+  },
+  {
+   "id": "req_8dfdc50d6184",
+   "user_id": "user_6c57aa830e17",
+   "title": "Star",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a0bee2fb-25bd-4503-bad6-b58c2d297bde"
+  },
+  {
+   "id": "req_d583f1294bff",
+   "user_id": "user_6c57aa830e17",
+   "title": "El verano que vivimos",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9f65fa33-51c7-492d-b881-22f244b5c2a4"
+  },
+  {
+   "id": "req_8fd93920c758",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hridayam",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8c59161d-14d7-4a98-b983-e9f04a313461"
+  },
+  {
+   "id": "req_d0269da47674",
+   "user_id": "user_6c57aa830e17",
+   "title": "Trese",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1eb66eb9-3277-4f72-9739-e28475110e80"
+  },
+  {
+   "id": "req_80e50028980a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Cassandra",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "70eab123-11e1-481c-aaec-66ec7e92073f"
+  },
+  {
+   "id": "req_b57868f03814",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Willoughbys",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2c6f334b-0d34-410d-bcb2-ee55f0cd06dd"
+  },
+  {
+   "id": "req_eb93aa5c0814",
+   "user_id": "user_6c57aa830e17",
+   "title": "Chickenhare and the Hamster of Darkness",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "da1b264b-e62c-4ee0-893e-fb43572788df"
+  },
+  {
+   "id": "req_76607f2175e9",
+   "user_id": "user_6c57aa830e17",
+   "title": "The House",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e824dfd0-517a-48b4-8657-7079f89cfc41"
+  },
+  {
+   "id": "req_7e8c6567b257",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Witcher: Nightmare of the Wolf",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c04a5d6f-fa25-45a1-8c3c-22f8693aee7a"
+  },
+  {
+   "id": "req_685d273f51fa",
+   "user_id": "user_6c57aa830e17",
+   "title": "New Gods: Yang Jian",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "99afef12-9e3e-4057-917d-297b36c70c40"
+  },
+  {
+   "id": "req_5806ffbc9b2b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Over the Moon",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1317124c-d291-4cb4-8b53-b4b7d1f73085"
+  },
+  {
+   "id": "req_960346144a7b",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Father's Dragon",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8cc08dc5-174f-4f1d-85af-33c9ae0e2665"
+  },
+  {
+   "id": "req_3233a91d6e97",
+   "user_id": "user_6c57aa830e17",
+   "title": "Injustice",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "14cf9846-e67c-48c5-9cd9-8cd693b820ed"
+  },
+  {
+   "id": "req_ad66b3289b66",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mavka: The Forest Song",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3a13cd9e-cb34-4793-8ac6-ee0cb0c18c67"
+  },
+  {
+   "id": "req_e7983dc77db4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ciao Alberto",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a774a7cd-a244-4bc5-a17a-0c15d8e49731"
+  },
+  {
+   "id": "req_0c97da99da10",
+   "user_id": "user_6c57aa830e17",
+   "title": "Rise of the Teenage Mutant Ninja Turtles: The Movie",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "add2410e-078f-4ab9-8ea3-d28ebd513b41"
+  },
+  {
+   "id": "req_0a66a4689fa2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fireheart",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3bb28923-e133-4925-929d-218685307662"
+  },
+  {
+   "id": "req_4cd8efa5e970",
+   "user_id": "user_6c57aa830e17",
+   "title": "22 vs. Earth",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0d57440e-a0be-406c-a93e-562d41b1ec9e"
+  },
+  {
+   "id": "req_9537c2ddc830",
+   "user_id": "user_6c57aa830e17",
+   "title": "LEGO DC: Shazam! Magic and Monsters",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5678f466-5e28-46e5-8852-565071e0faad"
+  },
+  {
+   "id": "req_e10642a2a153",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Loud House Movie",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "60c26991-3c9f-43e6-88d9-a20cdeba9f67"
+  },
+  {
+   "id": "req_935f26a3a9e3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Batman: The Long Halloween, Part One",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "59220cec-e06c-4e64-8eda-9a94ab7ee282"
+  },
+  {
+   "id": "req_860a563ad086",
+   "user_id": "user_6c57aa830e17",
+   "title": "An Almost Christmas Story",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "577bdd1c-2d41-457d-810d-433fcc5706eb"
+  },
+  {
+   "id": "req_5254951c2f6d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Noah's Ark",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8a515644-852d-4ef3-8f7d-b78b1d24a02e"
+  },
+  {
+   "id": "req_1dbd6705dcf4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Batman: The Long Halloween, Part Two",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "463a9630-0f5e-46f7-9522-1128ef98e279"
+  },
+  {
+   "id": "req_c5dd1fee9b21",
+   "user_id": "user_6c57aa830e17",
+   "title": "DC Showcase - Batman: Death in the Family",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b7bfb844-1866-42e9-8a26-5b88e91788cc"
+  },
+  {
+   "id": "req_c3e034576093",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kensuke's Kingdom",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "73e265f5-73f5-44e2-9fbc-3fb556204faf"
+  },
+  {
+   "id": "req_c9c6151ea95f",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Girl Who Cried Pearls",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4f3e5441-d9f5-4ace-bf2e-4d8103c85c60"
+  },
+  {
+   "id": "req_f8e48b53bf30",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bigfoot Family",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8bd7d3d7-94a0-4f55-aca0-706f85a48894"
+  },
+  {
+   "id": "req_b2e9ffa375e2",
+   "user_id": "user_6c57aa830e17",
+   "title": "Panda Bear in Africa",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8bd1663e-06a2-4578-8a6b-c75ed385500b"
+  },
+  {
+   "id": "req_2e3ac2ea1973",
+   "user_id": "user_6c57aa830e17",
+   "title": "Pets on a Train",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7412ff7a-3983-49f6-af90-532908eb097c"
+  },
+  {
+   "id": "req_1185638b1318",
+   "user_id": "user_6c57aa830e17",
+   "title": "Stitch Head",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b1ff9fa7-ed96-4bfd-85ae-a3a1a23ff444"
+  },
+  {
+   "id": "req_c2bff7fafbbd",
+   "user_id": "user_6c57aa830e17",
+   "title": "Grand Prix of Europe",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1ae7ade8-fc21-4c7c-855b-fb6fbe070b8b"
+  },
+  {
+   "id": "req_d0eb06d44ea4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Watchmen: Chapter II",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "207e10b1-98e0-4a45-9759-048fc4553a63"
+  },
+  {
+   "id": "req_f477032f04d7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Vivo",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "94c29620-8cda-4b01-9062-53f270f8f0d4"
+  },
+  {
+   "id": "req_409fd40202ce",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Good, the Bart, and the Loki",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9320e7f2-057f-40fa-8147-3706f30cc1b4"
+  },
+  {
+   "id": "req_e15a22235dac",
+   "user_id": "user_6c57aa830e17",
+   "title": "South Park: The End of Obesity",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e1baab43-dc47-482d-b5e6-488f2890dc4b"
+  },
+  {
+   "id": "req_fbd11d98572e",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Little Guy",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c00e288c-8c50-4799-849a-e0270f55c396"
+  },
+  {
+   "id": "req_d918e5a9b65e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Groot Takes a Bath",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "87649426-9276-438d-ae6f-a296b050d138"
+  },
+  {
+   "id": "req_04083378ba76",
+   "user_id": "user_6c57aa830e17",
+   "title": "Groot's First Steps",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b1c447ba-f41b-4df3-bef8-06dd58e27e9b"
+  },
+  {
+   "id": "req_b5b1cdd4b585",
+   "user_id": "user_6c57aa830e17",
+   "title": "SpongeBob SquarePants: Kreepaway Kamp",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "905ca257-a51c-4309-9d9c-2b98ec3c006b"
+  },
+  {
+   "id": "req_1df0271b4bed",
+   "user_id": "user_6c57aa830e17",
+   "title": "Justice Society: World War II",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fe72920c-8207-4fa5-825d-fd53167b985f"
+  },
+  {
+   "id": "req_9cf43316a7ac",
+   "user_id": "user_6c57aa830e17",
+   "title": "WondLa",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "587472c7-54e9-40cc-95f4-f87d5cfbeb9b"
+  },
+  {
+   "id": "req_5f7453ef12bb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Piece by Piece",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d109ca0f-02d7-45aa-a2f7-6cd9fa8a5dee"
+  },
+  {
+   "id": "req_34533290b830",
+   "user_id": "user_6c57aa830e17",
+   "title": "PAW Patrol: Jet to the Rescue",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dd21238f-d004-473b-9c88-af1a6a215002"
+  },
+  {
+   "id": "req_a17598eacaec",
+   "user_id": "user_6c57aa830e17",
+   "title": "Extreme Makeover: Homer Edition",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9e0d37c1-fc1e-4680-af76-a78c8d853359"
+  },
+  {
+   "id": "req_693961b3f054",
+   "user_id": "user_6c57aa830e17",
+   "title": "Snoopy Presents: It's the Small Things, Charlie Brown",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f3edbdd6-ab39-400c-8dc4-e61d520a497a"
+  },
+  {
+   "id": "req_3de1ef6e6dbe",
+   "user_id": "user_6c57aa830e17",
+   "title": "Resident Evil",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d71021c5-b06d-4a1b-99c0-25f35f0d45e7"
+  },
+  {
+   "id": "req_0af3a5103c36",
+   "user_id": "user_6c57aa830e17",
+   "title": "Moana",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e91f0b42-88e5-4a22-9c95-fe2b4ff89479"
+  },
+  {
+   "id": "req_fc875f034052",
+   "user_id": "user_6c57aa830e17",
+   "title": "Red One",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cd16e797-5b65-4533-91ae-ccfa1dfac2e4"
+  },
+  {
+   "id": "req_854f73c3a233",
+   "user_id": "user_6c57aa830e17",
+   "title": "Doctor Strange in the Multiverse of Madness",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "066d67c7-e66f-4040-8b49-aab79beb46d6"
+  },
+  {
+   "id": "req_87dd9bfed454",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Suicide Squad",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3f713fa2-77ca-40a7-8b6b-3f9c13daf6b7"
+  },
+  {
+   "id": "req_fc8a4fd75a70",
+   "user_id": "user_6c57aa830e17",
+   "title": "Masters of the Universe",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f7f040cf-244b-47b8-9b26-5ffd54b1a712"
+  },
+  {
+   "id": "req_d43314b29908",
+   "user_id": "user_6c57aa830e17",
+   "title": "Superman",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "05476d63-db80-4b30-a025-ac1c03cbfe38"
+  },
+  {
+   "id": "req_a905c503a6ba",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mission: Impossible - The Final Reckoning",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1375b5fa-0cc8-4c3a-a70a-3d1d9536c042"
+  },
+  {
+   "id": "req_e4fa3461c208",
+   "user_id": "user_6c57aa830e17",
+   "title": "Thunderbolts*",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bade0425-6f84-48dd-b11b-5d8ca479d42b"
+  },
+  {
+   "id": "req_e3d522de75ff",
+   "user_id": "user_6c57aa830e17",
+   "title": "Furiosa: A Mad Max Saga",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6f204003-49c3-4e0a-9bf0-b60448ca258c"
+  },
+  {
+   "id": "req_acd89d515aa0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Black Panther: Wakanda Forever",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "889a6557-286a-4a48-998c-b33ba205684f"
+  },
+  {
+   "id": "req_f49b7eefa377",
+   "user_id": "user_6c57aa830e17",
+   "title": "Black Widow",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "14b84993-7b01-4f1e-886e-c82ef1afd80f"
+  },
+  {
+   "id": "req_ed62598a1b29",
+   "user_id": "user_6c57aa830e17",
+   "title": "No Time to Die",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6004ba68-1ebb-425a-8586-6497a7e05053"
+  },
+  {
+   "id": "req_d653bb580e85",
+   "user_id": "user_6c57aa830e17",
+   "title": "Transformers: Rise of the Beasts",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2327395f-5304-4f3c-b0b0-54a5e5935cb8"
+  },
+  {
+   "id": "req_eb1d52554a90",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kingdom of the Planet of the Apes",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b8f51d39-3e5e-41e6-8a79-cc852d00d61d"
+  },
+  {
+   "id": "req_cc16391d6164",
+   "user_id": "user_6c57aa830e17",
+   "title": "Godzilla x Kong: The New Empire",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "57e403ca-1d7f-432c-b68f-dbf82678afa7"
+  },
+  {
+   "id": "req_084ca71923b8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hope",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0b674698-d2b8-4e81-b7d3-7bd2154793e6"
+  },
+  {
+   "id": "req_3f47ae21ed7b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bullet Train",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "66044375-1152-453a-b1a0-9aca667968e0"
+  },
+  {
+   "id": "req_99ed55c9d2b8",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Wrecking Crew",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "28b53091-196f-4129-b0be-659e7d1d965c"
+  },
+  {
+   "id": "req_f232d3775a9b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fast X",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a68e9d80-295d-4ae6-9cc6-f0d7b701d58e"
+  },
+  {
+   "id": "req_356f813e845c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ballerina",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4f18411-1c35-44a6-a6f0-12a34f67476b"
+  },
+  {
+   "id": "req_6cadf8437e0f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Backrooms",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cafd2186-46f7-49b5-a94a-99da874e6572"
+  },
+  {
+   "id": "req_04abe255852b",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Beekeeper",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2d434fb7-0558-41de-8d9e-017d732f5b68"
+  },
+  {
+   "id": "req_6942ae20aeb8",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Equalizer 3",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "70279510-5658-4c89-a3f5-6fdedb6a69cc"
+  },
+  {
+   "id": "req_dd823023b12e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Has Fallen",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d5ef0b1-7eb5-45c1-bc2f-e2a4008cb7bd"
+  },
+  {
+   "id": "req_1bfc27280cc8",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Invite",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "defdfc24-b74e-47a7-a2f6-7b2ffc6137ff"
+  },
+  {
+   "id": "req_4129bf277c19",
+   "user_id": "user_6c57aa830e17",
+   "title": "Lilo & Stitch",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a2e20197-40f2-48a5-b531-2e9d7fb4af83"
+  },
+  {
+   "id": "req_5267ee76b1b0",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Substance",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ebe3aad3-91fe-4423-86df-ad0569ee1596"
+  },
+  {
+   "id": "req_1541365810ba",
+   "user_id": "user_6c57aa830e17",
+   "title": "Song of the Bandits",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "55f8a4c3-33e4-4b77-a7c8-94f41865efc1"
+  },
+  {
+   "id": "req_13540e5d1410",
+   "user_id": "user_6c57aa830e17",
+   "title": "Go Ahead, Brother",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "47a8b6c8-af4c-4cca-b746-46745527d7b1"
+  },
+  {
+   "id": "req_de4616d82f58",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sky High: The Series",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "07ab51f3-63ac-4aa8-b965-881f2dd1747f"
+  },
+  {
+   "id": "req_b521d4f9eca3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Alien: Romulus",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "99ea3837-1172-472d-88c3-072e59a04d90"
+  },
+  {
+   "id": "req_d8e99a7e0029",
+   "user_id": "user_6c57aa830e17",
+   "title": "Caminantes",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "156631ab-bfe9-48d2-93d3-5510d2a98228"
+  },
+  {
+   "id": "req_28e4600e47dc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Your Heart Will Be Broken",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "838d4cb5-16e8-4a20-b9c3-36944cf95fae"
+  },
+  {
+   "id": "req_3faaf7f94ff9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Chuck Billy and The Marvelous Guava Tree",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d34548f9-5de4-44c4-bbe5-c1bd3e376df9"
+  },
+  {
+   "id": "req_13b5135851d3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Vampires",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fc0e0ea2-7335-469e-ae77-6678e3404a94"
+  },
+  {
+   "id": "req_d926668c2354",
+   "user_id": "user_6c57aa830e17",
+   "title": "Paranormal",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "526c7585-d7ae-4190-8b51-53723741e7da"
+  },
+  {
+   "id": "req_99244dff7604",
+   "user_id": "user_6c57aa830e17",
+   "title": "Soulm8te",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f480ffb9-092b-4cc8-b16f-8015ebf2faf7"
+  },
+  {
+   "id": "req_2e3069b309b4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Spice Up Our Love",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "49a37354-d066-494b-9922-0c4a34656f1b"
+  },
+  {
+   "id": "req_901d62fc5037",
+   "user_id": "user_6c57aa830e17",
+   "title": "Miles and Lies",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "aa51bdd0-625a-4b42-89fe-7f593f2e600a"
+  },
+  {
+   "id": "req_e7f54220f04a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Zero",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0f2aad67-f77f-45c9-9f1f-61098aa38d88"
+  },
+  {
+   "id": "req_2f42ea0f578d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Karma\u2019s World",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "57275ae3-9064-448e-8cdd-15b961dcfffa"
+  },
+  {
+   "id": "req_83b0e75fa8e2",
+   "user_id": "user_6c57aa830e17",
+   "title": "UFOs",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ec23758d-10a4-494c-9d9e-f5dd2afec4db"
+  },
+  {
+   "id": "req_73d02ea8e535",
+   "user_id": "user_6c57aa830e17",
+   "title": "Gundam: Requiem for Vengeance",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6f933b2b-f1e0-4bfa-82fc-abb41dc7527c"
+  },
+  {
+   "id": "req_5213b7753ccf",
+   "user_id": "user_6c57aa830e17",
+   "title": "Biblia Koshodou no Jiken Techou",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "969cb6a4-0e08-450b-bef9-79f6795a6965"
+  },
+  {
+   "id": "req_bfe0885fc25a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Groot's Pursuit",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a7acde04-f32f-4ae3-be00-e75e3eb103fa"
+  },
+  {
+   "id": "req_efdc6b9484d6",
+   "user_id": "user_6c57aa830e17",
+   "title": "South Park the Streaming Wars Part 2",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f1e98c1c-62dc-44c5-89e5-0fa2ae75d8a4"
+  },
+  {
+   "id": "req_a77cc81c31fe",
+   "user_id": "user_6c57aa830e17",
+   "title": "Shaun the Sheep: The Flight Before Christmas",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "97fcf96c-205d-47a6-9335-7723a5e6ae94"
+  },
+  {
+   "id": "req_d5cd0c7931cb",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sing a Bit of Harmony",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1f8d24bd-91a7-452c-9600-ec8358614e86"
+  },
+  {
+   "id": "req_1f9f1a0c119f",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Larva Island Movie",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5fb85cbc-d6da-47d3-8de0-81b241c9c858"
+  },
+  {
+   "id": "req_fe83a7c5da6e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mickey Saves Christmas",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "915f84d7-d35c-4992-b321-3e83e09269a0"
+  },
+  {
+   "id": "req_a3d609a13458",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Casagrandes Movie",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a27149b1-cd02-4b52-80e2-8eaddbebfe91"
+  },
+  {
+   "id": "req_7d7f53dbfdef",
+   "user_id": "user_6c57aa830e17",
+   "title": "Koati",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fc05d4b1-352a-4603-8804-00778dcd3ccd"
+  },
+  {
+   "id": "req_e56f7098e79d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Captain Avispa",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b06d60a0-3172-4559-bee5-b38831782667"
+  },
+  {
+   "id": "req_075cd5549913",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sweet Reincarnation",
+   "rating": 7.1,
+   "type": "anime",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2d80aed8-b7fb-4198-9f86-61163fe47f7c"
+  },
+  {
+   "id": "req_dbeef3498788",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mortal Kombat",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ab6e278c-f72a-4bc4-8f18-787cf3383c5b"
+  },
+  {
+   "id": "req_2734f2c3fca1",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Northman",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "89488faf-cb40-44fb-a952-c700709533de"
+  },
+  {
+   "id": "req_9b6f4f24f627",
+   "user_id": "user_6c57aa830e17",
+   "title": "Damsel",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8b5bae5c-21eb-4779-a971-c1ab7da231be"
+  },
+  {
+   "id": "req_265a4743b495",
+   "user_id": "user_6c57aa830e17",
+   "title": "Karate Kid: Legends",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6d9be6df-a52b-4e0d-bafa-eb662c0ad581"
+  },
+  {
+   "id": "req_075956506fcc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sonic the Hedgehog 2",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2590507d-927e-4c04-8698-09f429920991"
+  },
+  {
+   "id": "req_23a44034d61d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Family Plan",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "418d0f17-5ae2-478d-b0ba-9bb32ddbb9ba"
+  },
+  {
+   "id": "req_3b8c541d1e46",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ghostbusters: Afterlife",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "077d5532-8ab1-4147-b1e0-ad070b0994a9"
+  },
+  {
+   "id": "req_ae70a3d1cb32",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dungeons & Dragons: Honor Among Thieves",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9cf669ce-e68f-4b63-a7b7-acec02904542"
+  },
+  {
+   "id": "req_a5720323e0b8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Jungle Cruise",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1d67316c-b7fd-4124-b925-6232c3ef8228"
+  },
+  {
+   "id": "req_85867bf5f05f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Violent Night",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8b88ee08-52c7-44f4-9462-c512a0e36189"
+  },
+  {
+   "id": "req_e6a8c44bb772",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Creator",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2c76b3ae-71b0-429c-96b9-b54b6233ec32"
+  },
+  {
+   "id": "req_001b6d6ec0fe",
+   "user_id": "user_6c57aa830e17",
+   "title": "Obliterated",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d4ea85c1-8fa9-4215-a8ec-c21ab5589764"
+  },
+  {
+   "id": "req_089ae29d6355",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sonic the Hedgehog",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "93c84ab4-24f0-4378-8a39-55eb30b8ff2e"
+  },
+  {
+   "id": "req_652d81395963",
+   "user_id": "user_6c57aa830e17",
+   "title": "Free Guy",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "35882378-e849-4df1-958c-69f3de725f19"
+  },
+  {
+   "id": "req_766b9a050be1",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Fall Guy",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9962336e-412a-4109-91bb-8204f43039da"
+  },
+  {
+   "id": "req_6c4ca2ce4406",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bad Boys: Ride or Die",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "96f3436a-2b58-4c75-9276-12c18fc39fd9"
+  },
+  {
+   "id": "req_c666e1f91124",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Ministry of Ungentlemanly Warfare",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3ffef359-7f2e-4421-86bf-e15c067165f5"
+  },
+  {
+   "id": "req_56be9d61faf8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hunting Season",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b99ad944-ffd4-45e8-9423-109eede869ab"
+  },
+  {
+   "id": "req_0110bacec7e5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Good Luck, Have Fun, Don't Die",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "037cdadd-9007-4f75-94b9-c3c3932bdbb3"
+  },
+  {
+   "id": "req_f9d1dbbdd5d8",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Old Man",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0b46d833-4ca3-4ed7-83a4-467d26127acb"
+  },
+  {
+   "id": "req_bf11e2a4ae96",
+   "user_id": "user_6c57aa830e17",
+   "title": "Wonka",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "831752d6-fb04-44f0-8699-f85958e17f7e"
+  },
+  {
+   "id": "req_2702f254d67d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Tank",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2e2053f1-bbb2-45db-97fa-398e833c6592"
+  },
+  {
+   "id": "req_d5506432a82f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Tenet",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ab9667d2-cb7f-4ad0-a725-56a278a72fee"
+  },
+  {
+   "id": "req_de6d8ffffed1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Anora",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "807eafd9-53c3-452c-b4c3-ab8354aeed14"
+  },
+  {
+   "id": "req_373ec29f4e26",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Rip",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "938881cd-010d-45d2-9b0f-03c3f614de6f"
+  },
+  {
+   "id": "req_11c3e9d880cf",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Idea of You",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "583986a4-c245-41d3-85d7-81fc92f9010f"
+  },
+  {
+   "id": "req_439064109b32",
+   "user_id": "user_6c57aa830e17",
+   "title": "Don't Look Up",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e6f5fcfa-2773-4af1-af3b-8f5731e87d51"
+  },
+  {
+   "id": "req_b8c3ca75e281",
+   "user_id": "user_6c57aa830e17",
+   "title": "Extraction 2",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "18002601-bb93-44e0-9df2-718667a42b2e"
+  },
+  {
+   "id": "req_8a6b0224165d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Hunger Games: The Ballad of Songbirds & Snakes",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "372248f3-8e2f-4d07-acbc-cda490feb79e"
+  },
+  {
+   "id": "req_cbef4151cc75",
+   "user_id": "user_6c57aa830e17",
+   "title": "Greenland",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "34e7e6d4-5c1a-4319-a203-7389051a6fc6"
+  },
+  {
+   "id": "req_ed72ae14fbd4",
+   "user_id": "user_6c57aa830e17",
+   "title": "M3GAN 2.0",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "59cb516b-dd63-463a-a848-be6b484406cd"
+  },
+  {
+   "id": "req_50b51fc9c254",
+   "user_id": "user_6c57aa830e17",
+   "title": "Extraction",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9fff2015-4ffb-4929-aa78-8976790d7bde"
+  },
+  {
+   "id": "req_d48827b9e865",
+   "user_id": "user_6c57aa830e17",
+   "title": "Warfare",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2d699c30-38c7-433b-a343-69df3c5daaf6"
+  },
+  {
+   "id": "req_01b84f0b7dab",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bad Boys for Life",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "556f0645-fc1a-4d9e-bbeb-3e22f3476b34"
+  },
+  {
+   "id": "req_2949e5b133d9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dracula",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "93cd26cd-4bf0-41bf-b5a6-64926e21ecb5"
+  },
+  {
+   "id": "req_18c41f96d29b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sisu: Road to Revenge",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "06c64517-384b-4598-899a-fa198d2a58de"
+  },
+  {
+   "id": "req_6fdc94d029fd",
+   "user_id": "user_6c57aa830e17",
+   "title": "Your Fault",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1373dbee-955e-424c-bbaa-ce40952e7095"
+  },
+  {
+   "id": "req_c6aff1e02807",
+   "user_id": "user_6c57aa830e17",
+   "title": "Normal",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7f177223-7f9d-4473-bd33-40cd6a594cfb"
+  },
+  {
+   "id": "req_98e06ddb715a",
+   "user_id": "user_6c57aa830e17",
+   "title": "It Ends with Us",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "11c0970b-f6c0-4d56-bd71-5c0cdee4e703"
+  },
+  {
+   "id": "req_601aec7a16e6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Fuze",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f9d110f4-7f1a-4749-8786-97d2034dee77"
+  },
+  {
+   "id": "req_d44d3e8525f7",
+   "user_id": "user_6c57aa830e17",
+   "title": "After We Fell",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6eada6d0-3534-4558-bc26-1fa55ded3fb0"
+  },
+  {
+   "id": "req_b3e1e98dfa4a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Our Fault",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c9baa56c-7636-4b85-9200-2af7ccbe4a40"
+  },
+  {
+   "id": "req_a732d6754e51",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bugonia",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d68c4c3c-b251-4a80-8c70-357dfdbbe43c"
+  },
+  {
+   "id": "req_c8126dc3b377",
+   "user_id": "user_6c57aa830e17",
+   "title": "Red Queen",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a7ca33f7-8f3a-4381-982e-05c690a673f7"
+  },
+  {
+   "id": "req_4a5e3510c810",
+   "user_id": "user_6c57aa830e17",
+   "title": "Beast Race",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b2f46098-9011-4a53-a72f-1e35769f45a5"
+  },
+  {
+   "id": "req_ee625dc6a8e5",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Fault: London",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "54fe6929-d7ca-4750-a4fe-3cc347c03ceb"
+  },
+  {
+   "id": "req_f590565bc90d",
+   "user_id": "user_6c57aa830e17",
+   "title": "Regretting You",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "226b6b6a-ac57-4a1b-b1ce-d5674d58ec54"
+  },
+  {
+   "id": "req_7b7f32eb6fec",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mayfair Witches",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6e6e2567-25cc-41dc-9aa3-496341d3a4a0"
+  },
+  {
+   "id": "req_eeebb9e77c62",
+   "user_id": "user_6c57aa830e17",
+   "title": "Your Fault: London",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "43c92484-0ea0-4220-b037-89ba0c3d6ce8"
+  },
+  {
+   "id": "req_886338af6755",
+   "user_id": "user_6c57aa830e17",
+   "title": "Debris",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "47dbbf5c-c36b-4138-b08f-f95487fcada9"
+  },
+  {
+   "id": "req_e39f18efa9d0",
+   "user_id": "user_6c57aa830e17",
+   "title": "28 Years Later: The Bone Temple",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0b6f843d-fd08-4796-9ed0-e12553e55b96"
+  },
+  {
+   "id": "req_9fa149716b1e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Mercy",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "147f95ee-992f-4a23-8282-f19a4a9de06e"
+  },
+  {
+   "id": "req_c8f1fc5e4f3b",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Big Game",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9640b7e6-1afe-4654-9046-a8e4bf04a738"
+  },
+  {
+   "id": "req_6a4f00b9c951",
+   "user_id": "user_6c57aa830e17",
+   "title": "Companion",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d539e2d-6c54-4ed4-966c-d86daa04e11f"
+  },
+  {
+   "id": "req_4c8f06cadcaa",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Quiet Place Part II",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bbd56127-809f-43e5-957a-644110466f8a"
+  },
+  {
+   "id": "req_69122de9fddc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Kissing Is the Easy Part",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "273e097e-3fa1-4749-bfa5-b7e9f0d81136"
+  },
+  {
+   "id": "req_b648e28cbc44",
+   "user_id": "user_6c57aa830e17",
+   "title": "Owned Sci-Fi",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7d857cb8-9e6e-4a51-abd1-aa7f4c7fb29a"
+  },
+  {
+   "id": "req_b11d0e0f10a4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Love and Monsters",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c182af06-0bce-47e8-b426-61cb606dfa84"
+  },
+  {
+   "id": "req_3f6f872a063d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The School for Good and Evil",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "58f5d2b5-7a85-40dc-9c8b-2c84c1f1f167"
+  },
+  {
+   "id": "req_54463b7dbbfb",
+   "user_id": "user_6c57aa830e17",
+   "title": "F9",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "71439043-adef-4df9-9e08-1f9fcaf42524"
+  },
+  {
+   "id": "req_02a99b92d96a",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Old Guard",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c34ed0af-0dcd-4e6c-926c-f145b046009a"
+  },
+  {
+   "id": "req_ce062ea041a8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Werewolf by Night",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4d5e2738-8267-44c3-b259-de20931e94e5"
+  },
+  {
+   "id": "req_e251aa4490c0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Greyhound",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fe504208-f4c0-46bf-a2b9-a5f46a6e2644"
+  },
+  {
+   "id": "req_82c881eb9a1e",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Wandering Earth II",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6ce74f2b-e44e-4648-9997-3a23c2bf1102"
+  },
+  {
+   "id": "req_f43e88bd481f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Creed III",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "09237404-cb0e-40ad-9dd0-0cbddb9fbb42"
+  },
+  {
+   "id": "req_213e1c5bf62a",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Life of Chuck",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4efa2ca7-bda5-48e1-9469-3e155468c5f1"
+  },
+  {
+   "id": "req_7a305bb25885",
+   "user_id": "user_6c57aa830e17",
+   "title": "All of Us Strangers",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "738b6cf5-9717-4f1c-840b-6d384194a5c2"
+  },
+  {
+   "id": "req_7a9255f6f602",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Adam Project",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "91b93276-cf39-41b6-8754-64764961a1b0"
+  },
+  {
+   "id": "req_6a9fff4b8ba6",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Guardians of the Galaxy Holiday Special",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ff01de05-49b3-418a-8ab3-3cdeeac0dcbf"
+  },
+  {
+   "id": "req_f97228205183",
+   "user_id": "user_6c57aa830e17",
+   "title": "Humint",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "45edbd4b-57ae-469b-90e0-141b059c6f92"
+  },
+  {
+   "id": "req_01d9b4b2f043",
+   "user_id": "user_6c57aa830e17",
+   "title": "Hocus Pocus 2",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4bddf76f-b8d5-492b-9b06-ad07d86d48af"
+  },
+  {
+   "id": "req_469faf1e0ad0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Strays",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1d0c1652-b383-49a6-9546-6bab264e9951"
+  },
+  {
+   "id": "req_5c27c2cf4dee",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Worst Person in the World",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6194a2b0-1f99-407b-aea3-94e8db1c5795"
+  },
+  {
+   "id": "req_736cac0296dc",
+   "user_id": "user_6c57aa830e17",
+   "title": "Peter Rabbit 2: The Runaway",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3157ef01-25b8-4649-9804-b9586fdb69bd"
+  },
+  {
+   "id": "req_a212fd89c205",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sisu",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2ac31f09-93c5-4ec1-bbf8-cadcdfad4491"
+  },
+  {
+   "id": "req_a5b2420f0ef4",
+   "user_id": "user_6c57aa830e17",
+   "title": "Land of Bad",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7277eadc-c384-4818-96fb-f2445343f983"
+  },
+  {
+   "id": "req_80e6057f79aa",
+   "user_id": "user_6c57aa830e17",
+   "title": "Enola Holmes 2",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5a60a91d-6ae6-408c-93d4-5d2ccc907440"
+  },
+  {
+   "id": "req_e319f279b089",
+   "user_id": "user_6c57aa830e17",
+   "title": "Enola Holmes",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "079cd17c-4931-4121-92d3-dee5622adc42"
+  },
+  {
+   "id": "req_05e4842463fa",
+   "user_id": "user_6c57aa830e17",
+   "title": "Eternity",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "050a4e4d-c6f9-49e7-8648-3a5235afa7d7"
+  },
+  {
+   "id": "req_51bf5cb1259e",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Roundup: No Way Out",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c3968f0b-284d-4732-bead-49122f3e58aa"
+  },
+  {
+   "id": "req_bd985a7ce4e0",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Witch: Part 2. The Other One",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b5f522e6-26d5-4627-b677-3bf2ed049543"
+  },
+  {
+   "id": "req_f21271183857",
+   "user_id": "user_6c57aa830e17",
+   "title": "We Live in Time",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "aa00a15a-746e-488f-a095-ea58c8cf7e8c"
+  },
+  {
+   "id": "req_a0c1acf35e5a",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Roundup",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d7441213-3491-4780-9c89-df10270648ab"
+  },
+  {
+   "id": "req_3c65b667d2f5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Bones and All",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2fcd5d4d-54c4-47f9-b997-744940813ca6"
+  },
+  {
+   "id": "req_2df380bc212e",
+   "user_id": "user_6c57aa830e17",
+   "title": "After We Collided",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1e6108df-924b-4a15-820b-4bca15635650"
+  },
+  {
+   "id": "req_533de0193f69",
+   "user_id": "user_6c57aa830e17",
+   "title": "Palm Springs",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ddf654ff-a582-4c7d-8384-4ff97e1b29f8"
+  },
+  {
+   "id": "req_cdc38695ef79",
+   "user_id": "user_6c57aa830e17",
+   "title": "Swan Song",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7ba72cd5-4dc7-4b66-8def-15435a2c25ed"
+  },
+  {
+   "id": "req_e88fa8175585",
+   "user_id": "user_6c57aa830e17",
+   "title": "Upgraded",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "634a8f0e-3c71-4657-ac61-2e9b96a23518"
+  },
+  {
+   "id": "req_5bb2879020da",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Invisible Man",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3367d748-e5e9-493f-baa4-bcb7e49fd4f2"
+  },
+  {
+   "id": "req_ec429529d7af",
+   "user_id": "user_6c57aa830e17",
+   "title": "M3GAN",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6ee7f975-dcf4-43a5-88ed-177b33952793"
+  },
+  {
+   "id": "req_b4d69504163e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Decision to Leave",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1aac3f65-9ad4-4ba5-a384-8d1a63fc5d28"
+  },
+  {
+   "id": "req_5320f6df705d",
+   "user_id": "user_6c57aa830e17",
+   "title": "You, Me & Tuscany",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c24713a8-6028-4c23-b914-08516fea559e"
+  },
+  {
+   "id": "req_21142fa343a6",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Boroughs",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3b77e616-e743-4eb4-b0ae-b6fa41c82816"
+  },
+  {
+   "id": "req_07a6051da6ab",
+   "user_id": "user_6c57aa830e17",
+   "title": "Human Vapor",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "175c3d61-31e9-4326-818d-2ed2ab13ca33"
+  },
+  {
+   "id": "req_308a67b9b6c5",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Wonderful Story of Henry Sugar",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "02d58a6f-bc9d-4749-aaa2-75260690d065"
+  },
+  {
+   "id": "req_0ac94876ac6a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Omniscient Reader: The Prophecy",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "eab0feac-1b68-4c58-8909-c70174564f09"
+  },
+  {
+   "id": "req_a4e8aa114571",
+   "user_id": "user_6c57aa830e17",
+   "title": "Clifford the Big Red Dog",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cdebb38c-cf78-45a5-bf54-4784fd930f71"
+  },
+  {
+   "id": "req_4cce75164aa4",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Last Kingdom: Seven Kings Must Die",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "291d4a12-e2fc-4ca0-8d2f-5ebb0a1b6a1b"
+  },
+  {
+   "id": "req_4a7708f6131e",
+   "user_id": "user_6c57aa830e17",
+   "title": "Rebel Ridge",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b85dea96-246f-45ab-9811-5ee3e17dfeca"
+  },
+  {
+   "id": "req_598c4d529d08",
+   "user_id": "user_6c57aa830e17",
+   "title": "La Chimera",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1e997cbb-69a0-45f3-a249-86aa480f91a3"
+  },
+  {
+   "id": "req_f886e608a399",
+   "user_id": "user_6c57aa830e17",
+   "title": "Creation of the Gods I: Kingdom of Storms",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "515b9eda-a2d3-491f-abbd-e80bacf7320e"
+  },
+  {
+   "id": "req_3b2fa0b790b5",
+   "user_id": "user_6c57aa830e17",
+   "title": "Relay",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3322b621-3f24-4ccc-a236-5d48615ba308"
+  },
+  {
+   "id": "req_26ed7502d0d2",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Prosecutor",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "795f7c7c-ad0c-49d3-93be-f6075198fa91"
+  },
+  {
+   "id": "req_82ccf7299aa0",
+   "user_id": "user_6c57aa830e17",
+   "title": "Through My Window",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "321cffd2-3ff9-4dac-9cdd-63689cebd396"
+  },
+  {
+   "id": "req_b475477834c9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Emma.",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fda153d8-005d-4f34-9efa-ba0532b118c6"
+  },
+  {
+   "id": "req_3ed6b006e97b",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Hating Game",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b932a687-cde9-4627-afa7-3e746fe7c6b5"
+  },
+  {
+   "id": "req_0ee76c3b2b81",
+   "user_id": "user_6c57aa830e17",
+   "title": "Humanist Vampire Seeking Consenting Suicidal Person",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3c32d670-c7a3-45cd-9e5c-299ae178347c"
+  },
+  {
+   "id": "req_c4672e1e7b28",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Life List",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a3e02329-b6f2-4654-939f-2da537aab82f"
+  },
+  {
+   "id": "req_091ed91f17f1",
+   "user_id": "user_6c57aa830e17",
+   "title": "The High Note",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8f78d837-2e0a-4567-bc59-27c09270affd"
+  },
+  {
+   "id": "req_67dfd08e2677",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dhurandhar",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "05808185-3f1c-4569-9c4f-dd57ee3325d3"
+  },
+  {
+   "id": "req_4e2727bb2725",
+   "user_id": "user_6c57aa830e17",
+   "title": "Twilight of the Warriors: Walled In",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9469927c-76d9-4468-98a0-7b99b1594438"
+  },
+  {
+   "id": "req_744fe7428cf0",
+   "user_id": "user_6c57aa830e17",
+   "title": "365 Days",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ead12e8c-580c-4880-bb22-c4e06312386b"
+  },
+  {
+   "id": "req_5b87e91f3384",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Shadow Strays",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a00350ad-c48f-4206-8a91-b00a61d53bd0"
+  },
+  {
+   "id": "req_62b61b04960c",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Roundup: Punishment",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f149374e-219a-4aad-8087-c3279f082865"
+  },
+  {
+   "id": "req_fb28264b1968",
+   "user_id": "user_6c57aa830e17",
+   "title": "Jawan",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1894b2f6-040b-444f-a650-46651b439af1"
+  },
+  {
+   "id": "req_87bfb6a124f8",
+   "user_id": "user_6c57aa830e17",
+   "title": "She Rides Shotgun",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a0f091c3-f630-4f7e-8ec3-b9fb4ac56653"
+  },
+  {
+   "id": "req_1664114c6e8c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Dhurandhar: The Revenge",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "935a63c8-e252-4d79-8fe7-cd75f631d8cc"
+  },
+  {
+   "id": "req_83060b601e9b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Good Luck to You, Leo Grande",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e80b832c-3f5d-4d62-aa37-d39a105d8089"
+  },
+  {
+   "id": "req_37bfc7071501",
+   "user_id": "user_6c57aa830e17",
+   "title": "2 Hearts",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "63b59968-b6eb-4c3a-a233-2c1a73afeaec"
+  },
+  {
+   "id": "req_6df23a598ec1",
+   "user_id": "user_6c57aa830e17",
+   "title": "Song Sung Blue",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b0eca4fc-451d-4967-86c6-e63b808a4938"
+  },
+  {
+   "id": "req_562ac6191ae6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Heartstopper Forever",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fb38ceea-36bb-4cbe-99a7-8665b8aaafb2"
+  },
+  {
+   "id": "req_b6a606c68892",
+   "user_id": "user_6c57aa830e17",
+   "title": "People We Meet on Vacation",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "71fecd5a-e4cf-42cb-9f23-e5057f81cdf1"
+  },
+  {
+   "id": "req_8e68377d9cab",
+   "user_id": "user_6c57aa830e17",
+   "title": "Prom Pact",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7a9205a5-3e59-47de-8da8-a6fc7147a255"
+  },
+  {
+   "id": "req_e27fade2b08f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Rye Lane",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "115311a0-32d3-41b5-9327-a0fa31eb43d0"
+  },
+  {
+   "id": "req_c90e3bde1ffc",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Man Who Fell to Earth",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "40558642-3b41-4c62-ad2c-25978562260c"
+  },
+  {
+   "id": "req_74638c9c5411",
+   "user_id": "user_6c57aa830e17",
+   "title": "A Writer's Odyssey",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "17dc8d91-c87e-4f6a-bc28-f83faed18f47"
+  },
+  {
+   "id": "req_cb0677b3fc5c",
+   "user_id": "user_6c57aa830e17",
+   "title": "Slumberland",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ed8887ea-725d-48a3-a98c-0191f8ed3145"
+  },
+  {
+   "id": "req_2d20aba34956",
+   "user_id": "user_6c57aa830e17",
+   "title": "Code 3",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "061054c3-9857-4d12-a813-c7693211ae6e"
+  },
+  {
+   "id": "req_ea8341006b9d",
+   "user_id": "user_6c57aa830e17",
+   "title": "The King's Daughter",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "70ce3219-cdad-4364-a196-e21e5e3cb714"
+  },
+  {
+   "id": "req_83f8e89f5a6b",
+   "user_id": "user_6c57aa830e17",
+   "title": "Space Sweepers",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "081a3fdf-3631-46d5-a73c-8c4ced2ddbba"
+  },
+  {
+   "id": "req_734696f3d1e9",
+   "user_id": "user_6c57aa830e17",
+   "title": "Emergency Declaration",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5e798fc1-e371-41da-a1c9-8f22103627e3"
+  },
+  {
+   "id": "req_89b719e159a0",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Enforcer",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "acb2e1a2-8749-4fc7-9337-6da141a6a3ac"
+  },
+  {
+   "id": "req_dabce7c3cc13",
+   "user_id": "user_6c57aa830e17",
+   "title": "Knox Goes Away",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "62206502-f672-4380-8822-469b56ef491d"
+  },
+  {
+   "id": "req_1ee686dd37a6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Warriors of Future",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "83755018-8cbd-4594-8339-110a83c9004d"
+  },
+  {
+   "id": "req_e75abdb91edf",
+   "user_id": "user_6c57aa830e17",
+   "title": "Diablo",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79c3e4bc-1ab5-436f-aaba-48a6e7a99217"
+  },
+  {
+   "id": "req_4a3f76314bc9",
+   "user_id": "user_6c57aa830e17",
+   "title": "#Alive",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "868f97b8-bbf7-4477-b8e9-017d9e5b2800"
+  },
+  {
+   "id": "req_a162c7c056c3",
+   "user_id": "user_6c57aa830e17",
+   "title": "My Oxford Year",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7734a73a-7f59-493e-83ce-84326964c118"
+  },
+  {
+   "id": "req_f733b672d45a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Ballerina",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7803f373-9b5f-41c8-b94e-a2e4d8131a87"
+  },
+  {
+   "id": "req_cdf0ed744433",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Other Zoey",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c18830fc-4bae-4b2e-95bf-47dd462484ed"
+  },
+  {
+   "id": "req_9c38c145b96f",
+   "user_id": "user_6c57aa830e17",
+   "title": "Cha Cha Real Smooth",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c217de8e-aaca-45eb-b3b1-7c1fdf224831"
+  },
+  {
+   "id": "req_63011576b6b6",
+   "user_id": "user_6c57aa830e17",
+   "title": "Prisoner of War",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4e0c0f6c-c672-4e76-955a-ae5f88c1f651"
+  },
+  {
+   "id": "req_33365a3e9af9",
+   "user_id": "user_6c57aa830e17",
+   "title": "In the Heights",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b7bec95d-ae4c-4800-b0c5-134f72abd944"
+  },
+  {
+   "id": "req_e56f96dd3324",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Last Letter from Your Lover",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "867497d2-70e3-4ee6-a148-4d36d25eb9ec"
+  },
+  {
+   "id": "req_bf356c6c6993",
+   "user_id": "user_6c57aa830e17",
+   "title": "Downton Abbey: A New Era",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "750eb14e-c051-4d51-a01c-a12e311f95d7"
+  },
+  {
+   "id": "req_e442696168ac",
+   "user_id": "user_6c57aa830e17",
+   "title": "Happiest Season",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1cac4fa0-0965-47a1-9942-194136eb75af"
+  },
+  {
+   "id": "req_dfd11d7edb30",
+   "user_id": "user_6c57aa830e17",
+   "title": "The Taste of Things",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "21d5289b-c89a-4c30-aa65-46cc9b48f2d1"
+  },
+  {
+   "id": "req_3dd16d790be8",
+   "user_id": "user_6c57aa830e17",
+   "title": "Downton Abbey: The Grand Finale",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fa78165d-f16a-4ae8-81b6-ebd93a47c64b"
+  },
+  {
+   "id": "req_7f6529a2698a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Resurrection",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9f96a202-0808-4322-bb79-49931c8cab34"
+  },
+  {
+   "id": "req_7bd4bf3d87b3",
+   "user_id": "user_6c57aa830e17",
+   "title": "Sidelined 2: Intercepted",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a8b8235d-6d01-4dda-a770-0a0df28b7eb9"
+  },
+  {
+   "id": "req_b1fd0fae52f7",
+   "user_id": "user_6c57aa830e17",
+   "title": "Caddo Lake",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "877a6331-3e20-48ad-9b4f-31155aa2cab6"
+  },
+  {
+   "id": "req_2553c714cd9a",
+   "user_id": "user_6c57aa830e17",
+   "title": "Follow My Voice",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "67698f29-20cc-4dcc-aa66-97253987020e"
+  }
+ ]
+}
