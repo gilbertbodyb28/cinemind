@@ -48,6 +48,7 @@ from providers.anilist import (
 )
 
 ROOT_DIR = Path(__file__).parent
+_BUILD_DIR_FOR_VERSION = ROOT_DIR.parent / "frontend" / "build"
 load_dotenv(ROOT_DIR / '.env')
 
 mongo_url = os.environ['MONGO_URL']
@@ -1774,6 +1775,24 @@ async def list_requests(user: User = Depends(get_current_user)):
         {"_id": 0, "user_id": 0},
     ).sort("updated_at", -1).to_list(REQUEST_LIST_CAP)
     return await attach_request_match_scores(user.user_id, pending_rows + other_rows)
+
+
+@api.get("/build")
+async def build_version():
+    """Which frontend build this server is serving.
+
+    Safari in particular holds on to the app shell hard, so a deployed change
+    could sit on disk for hours while the open tab kept running the previous
+    bundle. The page compares this to the script it actually loaded and reloads
+    itself when they differ, instead of waiting for someone to know the right
+    cache-bypass shortcut.
+    """
+    bundle = ""
+    js_dir = _BUILD_DIR_FOR_VERSION / "static" / "js"
+    if js_dir.is_dir():
+        names = sorted(item.name for item in js_dir.glob("main.*.js"))
+        bundle = names[-1] if names else ""
+    return {"bundle": bundle}
 
 
 @api.get("/requests/version")

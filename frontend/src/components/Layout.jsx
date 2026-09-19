@@ -65,6 +65,33 @@ export default function Layout({ children }) {
   // Every tab gets Home's gradient wash, not just Home.
   useEffect(() => { ensureAmbient(); }, []);
 
+  // Pick up a new build without anyone having to know the cache-bypass shortcut.
+  // Safari holds the app shell hard enough that a deployed change could sit on
+  // disk for hours while the open tab kept running the previous bundle.
+  useEffect(() => {
+    const loaded = document.querySelector('script[src*="/static/js/main."]')?.src.split("/").pop();
+    if (!loaded) return undefined;
+    let stop = false;
+    const check = async () => {
+      if (stop || document.hidden) return;
+      try {
+        const r = await fetch("/api/build", { cache: "no-store" });
+        const served = (await r.json())?.bundle;
+        if (served && served !== loaded) window.location.reload();
+      } catch {
+        // Offline or restarting; the next tick tries again.
+      }
+    };
+    check();
+    const timer = setInterval(check, 15000);
+    window.addEventListener("focus", check);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", check);
+    };
+  }, []);
+
   useEffect(() => {
     const close = (e) => { if (!popRef.current?.contains(e.target)) { setBell(false); setMenu(false); } };
     window.addEventListener("mousedown", close);
