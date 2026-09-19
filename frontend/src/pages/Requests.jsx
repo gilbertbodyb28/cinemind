@@ -168,9 +168,9 @@ export default function Requests() {
     return [...found].sort((a, b) => a.localeCompare(b));
   }, [queued]);
 
-  // A number means the whole band it heads: 7 is 7.0 through 7.9. So "to 7"
-  // stops below 8, and picking 7 at both ends keeps every seven-point-something.
-  const RATING_OPTIONS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+  // Tenths, the precision TMDb actually scores in. Whole steps could only ask
+  // for a band; 7.0 to 7.9 now says that outright, and 7.4 to 7.4 asks for 7.4.
+  const RATING_OPTIONS = Array.from({ length: 101 }, (_, i) => ((100 - i) / 10).toFixed(1));
 
   const yearOptions = useMemo(() => {
     const found = new Set();
@@ -186,9 +186,10 @@ export default function Requests() {
     const needle = query.trim().toLowerCase();
     const from = fromYear === "any" ? null : Number(fromYear);
     const to = toYear === "any" ? null : Number(toYear);
-    const ratingFrom = fromRating === "any" ? null : Number(fromRating);
-    // Exclusive: "to 7" runs up to but not including 8.
-    const ratingBelow = toRating === "any" ? null : Number(toRating) + 1;
+    // Compared in tenths, so 7.1 never loses to a float that is really 7.09999.
+    const tenths = (value) => Math.round(Number(value) * 10);
+    const ratingFrom = fromRating === "any" ? null : tenths(fromRating);
+    const ratingTo = toRating === "any" ? null : tenths(toRating);
     const rows = queued.filter((row) => {
       if (needle && !String(row.title || "").toLowerCase().includes(needle)) return false;
       if (!matchesChecks(typeBucket(row), types)) return false;
@@ -196,8 +197,8 @@ export default function Requests() {
       if (genre !== "all" && !(row.genres || []).some((g) => g === genre)) return false;
       if (from != null && (row.year == null || Number(row.year) < from)) return false;
       if (to != null && (row.year == null || Number(row.year) > to)) return false;
-      if (ratingFrom != null && (row.rating == null || Number(row.rating) < ratingFrom)) return false;
-      if (ratingBelow != null && (row.rating == null || Number(row.rating) >= ratingBelow)) return false;
+      if (ratingFrom != null && (row.rating == null || tenths(row.rating) < ratingFrom)) return false;
+      if (ratingTo != null && (row.rating == null || tenths(row.rating) > ratingTo)) return false;
       return true;
     });
     const sorted = [...rows];
