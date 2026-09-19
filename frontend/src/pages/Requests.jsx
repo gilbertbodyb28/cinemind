@@ -82,6 +82,8 @@ export default function Requests() {
   const [genre, setGenre] = useState("all");
   const [fromYear, setFromYear] = useState("any");
   const [toYear, setToYear] = useState("any");
+  const [fromRating, setFromRating] = useState("any");
+  const [toRating, setToRating] = useState("any");
   const [sort, setSort] = useState("added_desc");
   // One dialog drives both single and bulk sends, so the options are identical.
   const [dialogItems, setDialogItems] = useState([]);
@@ -166,6 +168,10 @@ export default function Requests() {
     return [...found].sort((a, b) => a.localeCompare(b));
   }, [queued]);
 
+  // Whole steps. Setting both ends to the same number asks for that rating and
+  // nothing else: 7 to 7 keeps 7.0 and drops 6.9 and 7.1 alike.
+  const RATING_OPTIONS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+
   const yearOptions = useMemo(() => {
     const found = new Set();
     queued.forEach((row) => { if (row.year != null) found.add(Number(row.year)); });
@@ -180,6 +186,8 @@ export default function Requests() {
     const needle = query.trim().toLowerCase();
     const from = fromYear === "any" ? null : Number(fromYear);
     const to = toYear === "any" ? null : Number(toYear);
+    const ratingFrom = fromRating === "any" ? null : Number(fromRating);
+    const ratingTo = toRating === "any" ? null : Number(toRating);
     const rows = queued.filter((row) => {
       if (needle && !String(row.title || "").toLowerCase().includes(needle)) return false;
       if (!matchesChecks(typeBucket(row), types)) return false;
@@ -187,6 +195,8 @@ export default function Requests() {
       if (genre !== "all" && !(row.genres || []).some((g) => g === genre)) return false;
       if (from != null && (row.year == null || Number(row.year) < from)) return false;
       if (to != null && (row.year == null || Number(row.year) > to)) return false;
+      if (ratingFrom != null && (row.rating == null || Number(row.rating) < ratingFrom)) return false;
+      if (ratingTo != null && (row.rating == null || Number(row.rating) > ratingTo)) return false;
       return true;
     });
     const sorted = [...rows];
@@ -203,9 +213,9 @@ export default function Requests() {
     else if (sort === "match_desc") sorted.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
     else sorted.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     return sorted;
-  }, [queued, query, types, release, genre, fromYear, toYear, sort]);
+  }, [queued, query, types, release, genre, fromYear, toYear, fromRating, toRating, sort]);
 
-  useEffect(() => { setLimit(PAGE); }, [query, types, release, genre, fromYear, toYear, sort]);
+  useEffect(() => { setLimit(PAGE); }, [query, types, release, genre, fromYear, toYear, fromRating, toRating, sort]);
 
   const resetFilters = () => {
     setQuery("");
@@ -214,11 +224,14 @@ export default function Requests() {
     setGenre("all");
     setFromYear("any");
     setToYear("any");
+    setFromRating("any");
+    setToRating("any");
     setSort("added_desc");
   };
 
   const filtersActive =
-    query.trim() !== "" || types.size > 0 || release.size > 0 || genre !== "all" || fromYear !== "any" || toYear !== "any";
+    query.trim() !== "" || types.size > 0 || release.size > 0 || genre !== "all" || fromYear !== "any" ||
+    toYear !== "any" || fromRating !== "any" || toRating !== "any";
 
   useEffect(() => { workingRef.current = Boolean(busyId) || bulkBusy; }, [busyId, bulkBusy]);
 
@@ -481,6 +494,34 @@ export default function Requests() {
               <option value="any">To any year</option>
               {yearOptions.map((year) => (
                 <option key={year} value={year}>To {year}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className={FIELD}>
+            <select
+              data-testid="request-from-rating"
+              value={fromRating}
+              onChange={(event) => setFromRating(event.target.value)}
+              className={SELECT}
+            >
+              <option value="any">From any rating</option>
+              {RATING_OPTIONS.map((value) => (
+                <option key={value} value={value}>From {value}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className={FIELD}>
+            <select
+              data-testid="request-to-rating"
+              value={toRating}
+              onChange={(event) => setToRating(event.target.value)}
+              className={SELECT}
+            >
+              <option value="any">To any rating</option>
+              {RATING_OPTIONS.map((value) => (
+                <option key={value} value={value}>To {value}</option>
               ))}
             </select>
           </label>
