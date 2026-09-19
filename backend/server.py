@@ -2250,15 +2250,29 @@ if _BUILD_DIR.is_dir():
     from starlette.types import Scope
 
     class SPAStaticFiles(StaticFiles):
-        """Unknown paths fall back to index.html so client-side routes work."""
+        """Unknown paths fall back to index.html so client-side routes work.
+
+        index.html is served no-cache. It names the hashed bundle, so a cached
+        shell keeps loading the previous build and every frontend change stays
+        invisible until someone hard-reloads. The hashed files under /static/
+        never change contents, so those are safe to keep for a year.
+        """
+
+        @staticmethod
+        def _cache(response, path: str):
+            if path.startswith("static/"):
+                response.headers["cache-control"] = "public, max-age=31536000, immutable"
+            else:
+                response.headers["cache-control"] = "no-cache"
+            return response
 
         async def get_response(self, path: str, scope: Scope):
             try:
-                return await super().get_response(path, scope)
+                return self._cache(await super().get_response(path, scope), path)
             except StarletteHTTPException as exc:
                 if exc.status_code != 404:
                     raise
-                return FileResponse(_BUILD_DIR / "index.html")
+                return self._cache(FileResponse(_BUILD_DIR / "index.html"), "index.html")
 
     app.mount("/", SPAStaticFiles(directory=str(_BUILD_DIR), html=True), name="frontend")
     logger.info("Serving frontend build from %s", _BUILD_DIR)
