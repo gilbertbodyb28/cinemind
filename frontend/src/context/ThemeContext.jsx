@@ -10,9 +10,9 @@ export const WALLPAPER_STORAGE_KEY = "cinemind-wallpaper";
 export const WALLPAPERS = ["poster", "midnight", "ember", "dusk", "mocha", "aurora", "graphite"];
 export const DEFAULT_GLASS_INTENSITY = 78;
 export const ICON_SIZE_STORAGE_KEY = "cinemind-sidebar-icon-size";
-/** Icon rail button size in px. 40 is the original rail; 98 is the ceiling. */
+/** Header icon button size in px. 40 is the original rail; 16 to 98 is the range. */
 export const DEFAULT_ICON_SIZE = 40;
-export const MIN_ICON_SIZE = 28;
+export const MIN_ICON_SIZE = 16;
 export const MAX_ICON_SIZE = 98;
 
 export function normalizeTheme(value) {

@@ -114,7 +114,10 @@ export default function Layout({ children }) {
         {/* Floating app shell */}
         {/* The shell always fills the viewport so short tabs look like Home instead of ending mid-screen. */}
         <div className="glass-shell rounded-[26px] sm:rounded-[32px] w-full mx-auto p-3 sm:p-5 lg:p-7 relative overflow-hidden grain min-h-[calc(100vh-8rem)] lg:min-h-[calc(100vh-4.5rem)]">
-          <header className="relative z-20 flex flex-wrap items-center gap-3 lg:gap-5">
+          <header
+            className="relative z-20 flex flex-wrap items-center gap-3 lg:gap-5"
+            style={{ minHeight: "var(--rail-icon, 40px)" }}
+          >
             {showSearch ? (
               <label className="flex items-center gap-2.5 glass rounded-full px-4 py-2.5 w-full sm:w-[260px] lg:w-[300px] focus-within:border-[rgba(216,178,106,0.5)] transition-colors">
                 <Search className="w-4 h-4 text-[#8C7F6D] shrink-0" />
@@ -137,8 +140,10 @@ export default function Layout({ children }) {
             {/* Every destination lives here now. No overflow on this row: a scroll
                 container turns into a clipping box and eats the hover labels that
                 hang below the buttons, so it wraps instead. */}
-            <div className="flex-1 min-w-0 order-3 lg:order-none w-full lg:w-auto">
-              <nav data-testid="icon-rail" className="flex flex-wrap items-center gap-1">
+            {/* w-max so the row measures itself, not the half-width an absolute
+                box would otherwise have to wrap inside. */}
+            <div className="absolute left-1/2 top-1/2 w-max -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <nav data-testid="icon-rail" className="pointer-events-auto flex flex-nowrap items-center justify-center gap-1">
                 {RAIL.map((n) => (
                     <NavLink
                       key={n.to}
@@ -146,8 +151,8 @@ export default function Layout({ children }) {
                       data-testid={n.testid}
                       title={n.label}
                       style={{
-                        width: "min(var(--rail-icon, 40px), 38px)",
-                        height: "min(var(--rail-icon, 40px), 38px)",
+                        width: "var(--rail-icon, 40px)",
+                        height: "var(--rail-icon, 40px)",
                       }}
                       className={({ isActive }) =>
                         `relative shrink-0 rounded-full grid place-items-center transition-colors ${
@@ -157,7 +162,7 @@ export default function Layout({ children }) {
                         }`
                       }
                     >
-                      <n.icon style={{ width: "min(var(--rail-glyph, 18px), 18px)", height: "min(var(--rail-glyph, 18px), 18px)" }} />
+                      <n.icon style={{ width: "var(--rail-glyph, 18px)", height: "var(--rail-glyph, 18px)" }} />
                   </NavLink>
                 ))}
               </nav>
