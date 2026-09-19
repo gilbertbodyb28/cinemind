@@ -97,3 +97,40 @@ def test_a_cursor_inside_the_range_is_used_as_is():
         asyncio.run(tmdb_discover(job, "tv", api_key="k", start_page=7))
 
     assert asked[0] == 7
+
+
+def test_an_anime_satisfies_an_animation_genre_filter():
+    """AniList never tags a title "Animation" - everything there is anime already.
+
+    A "coming anime" job filtering on animation therefore rejected every anime it
+    was handed, which is the exact opposite of what the filter was for.
+    """
+    naruto = {"title": "Naruto", "year": 2002, "type": "anime", "genres": ["Action", "Adventure"]}
+    assert apply_filters(naruto, {"include_genres": ["animation"]}) == (True, None)
+    assert apply_filters(naruto, {"include_genres": ["anime"]}) == (True, None)
+
+
+def test_a_live_action_drama_still_fails_an_animation_filter():
+    bear = {"title": "The Bear", "year": 2022, "type": "show", "genres": ["Drama", "Comedy"]}
+    assert apply_filters(bear, {"include_genres": ["animation"]}) == (False, "rejected_genre")
+
+
+def test_a_zero_vote_floor_is_no_requirement():
+    """0 used to mean "must report a count", so sources without vote counts died."""
+    row = {"title": "Dandadan 3rd Season", "year": _next_year(), "type": "anime", "genres": ["Action"]}
+    assert apply_filters(row, {"min_vote_count": 0}) == (True, None)
+    assert apply_filters(row, {"min_vote_count": None}) == (True, None)
+
+
+def test_a_real_vote_floor_still_bites():
+    thin = {"title": "Obscure", "year": 2015, "type": "movie", "genres": ["Drama"], "vote_count": 3, "tmdb_rating": 6.0}
+    assert apply_filters(thin, {"min_vote_count": 50}) == (False, "rejected_vote_count")
+
+
+def test_upcoming_anime_is_kept_inside_the_job_window():
+    from providers.anilist import parse_recommendation_media
+
+    inside = parse_recommendation_media({"id": 1, "seasonYear": 2027, "genres": ["Action"], "title": {"romaji": "Soon"}})
+    assert inside["type"] == "anime"
+    # The window check lives in fetch_upcoming; this is the row shape it filters on.
+    assert inside["year"] == 2027

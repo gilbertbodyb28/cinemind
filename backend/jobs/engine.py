@@ -720,7 +720,9 @@ async def execute_job(
                         raise
         linked_wanted = sources & {"trakt", "simkl", "anilist"}
         if linked_wanted:
-            linked, linked_warnings = await fetch_linked_provider_candidates(user_id, sources, required)
+            linked, linked_warnings = await fetch_linked_provider_candidates(
+                user_id, sources, required, job=job
+            )
             extra.extend(linked)
             warnings.extend(linked_warnings)
         result = run_pipeline(job, catalog=catalog or [], extra_candidates=extra, **inputs)
@@ -833,6 +835,7 @@ async def fetch_linked_provider_candidates(
     user_id: str,
     sources: set,
     required: Optional[set] = None,
+    job: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
     """Pull live recommendation feeds only when the user already has tokens."""
     required = required or set()
@@ -917,13 +920,23 @@ async def fetch_linked_provider_candidates(
             await _required_or_warn("anilist", "anilist_not_connected")
         else:
             try:
-                from providers.anilist import fetch_recommendations
+                from providers.anilist import fetch_recommendations, fetch_upcoming
+                from providers.tmdb import _window_is_upcoming
 
                 history = await db.history.find(
                     {"user_id": user_id, "source": "anilist"},
                     {"_id": 0, "anilist_id": 1, "source": 1, "title": 1},
                 ).sort("watched_at", -1).to_list(40)
                 extra.extend(await fetch_recommendations(conn["anilist_access_token"], history))
+                filters = (job or {}).get("filters") or {}
+                if _window_is_upcoming(filters):
+                    # Recommendations are built from titles that already aired, so a
+                    # job asking for future years got nothing it could ever accept.
+                    extra.extend(await fetch_upcoming(
+                        conn["anilist_access_token"],
+                        min_year=filters.get("min_year"),
+                        max_year=filters.get("max_year"),
+                    ))
             except ValueError:
                 raise
             except Exception as exc:

@@ -331,3 +331,72 @@ async def fetch_media_list(access_token: str, user_name: Optional[str] = None) -
         message = (payload["errors"][0] or {}).get("message") or "unknown error"
         raise RuntimeError(f"AniList list error: {message}")
     return parse_media_list_collection(payload)
+
+
+UPCOMING_QUERY = """
+query ($page: Int) {
+  Page(page: $page, perPage: 50) {
+    pageInfo { hasNextPage }
+    media(type: ANIME, status: NOT_YET_RELEASED, sort: POPULARITY_DESC) {
+      id
+      seasonYear
+      startDate { year month day }
+      genres
+      averageScore
+      format
+      countryOfOrigin
+      title { english romaji }
+    }
+  }
+}
+"""
+
+
+async def fetch_upcoming(
+    access_token: Optional[str] = None,
+    min_year: Optional[int] = None,
+    max_year: Optional[int] = None,
+    limit: int = 80,
+    max_pages: int = 5,
+) -> List[Dict[str, Any]]:
+    """Announced anime that has not aired yet.
+
+    TMDb carries about a hundred upcoming animation titles in total and almost
+    none of them are anime, so a "coming anime" job ran dry the moment it had
+    requested that handful. AniList tracks announced seasons years ahead, which
+    is where titles like a third Frieren season actually live.
+    """
+    rows: List[Dict[str, Any]] = []
+    headers = {"Authorization": f"Bearer {access_token}"} if access_token else {}
+    try:
+        async with httpx.AsyncClient(timeout=25) as client:
+            for page in range(1, max_pages + 1):
+                response = await client.post(
+                    ANILIST_GRAPHQL,
+                    json={"query": UPCOMING_QUERY, "variables": {"page": page}},
+                    headers=headers,
+                )
+                if response.status_code != 200:
+                    break
+                payload = ((response.json().get("data") or {}).get("Page")) or {}
+                for media in payload.get("media") or []:
+                    parsed = parse_recommendation_media(media)
+                    if not parsed:
+                        continue
+                    year = parsed.get("year")
+                    # A title with no announced year cannot be placed in a window.
+                    if min_year is not None and (year is None or int(year) < int(min_year)):
+                        continue
+                    if max_year is not None and (year is None or int(year) > int(max_year)):
+                        continue
+                    origin = "Donghua" if media.get("countryOfOrigin") == "CN" else "Anime"
+                    parsed["original_language"] = "zh" if media.get("countryOfOrigin") == "CN" else "ja"
+                    parsed["why"] = f"{origin} announced for {year}, not aired yet."
+                    rows.append(parsed)
+                    if len(rows) >= limit:
+                        return rows
+                if not ((payload.get("pageInfo") or {}).get("hasNextPage")):
+                    break
+    except Exception as exc:
+        logging.warning("AniList upcoming failed: %s", exc)
+    return rows

@@ -92,6 +92,22 @@ def _media_bucket(candidate: Dict[str, Any]) -> str:
     return media
 
 
+ANIMATION_GENRES = {"animation", "anime"}
+
+
+def _anime_covers_animation(candidate: Dict[str, Any], include: set) -> bool:
+    """An anime is animated whether or not its source says so.
+
+    AniList never tags a title "Animation" - everything there is anime already,
+    so its genres are Action, Fantasy and the like. A job asking for animation
+    therefore rejected every single anime it was handed, which is the exact
+    opposite of what the filter was for.
+    """
+    if not (include & ANIMATION_GENRES):
+        return False
+    return _media_bucket(candidate) == "anime"
+
+
 def _merge_media_filters(filters: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, Any]:
     by_media = filters.get("by_media_type") or {}
     if not isinstance(by_media, dict) or not by_media:
@@ -147,7 +163,12 @@ def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) 
     keyword_tags = {str(item).casefold() for item in (filters.get("keywords") or [])}
     candidate_tags = {str(item).casefold() for item in (candidate.get("tags") or [])}
     # A keyword hit (e.g. lgbt) counts as an include on its own, next to the genres.
-    if include and not (genres & include) and not (keyword_tags and (candidate_tags & keyword_tags)):
+    if (
+        include
+        and not (genres & include)
+        and not (keyword_tags and (candidate_tags & keyword_tags))
+        and not _anime_covers_animation(candidate, include)
+    ):
         return False, "rejected_genre"
     effective_exclude = _effective_exclude(include, exclude, genres)
     if effective_exclude and (genres & effective_exclude):
@@ -175,7 +196,15 @@ def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) 
         and (rating is None or float(rating) < float(filters["min_rating"]))
     ):
         return False, "rejected_rating"
-    if filters.get("min_vote_count") is not None and (votes is None or int(votes) < int(filters["min_vote_count"])):
+    # A floor of 0 is no requirement at all, but the old "is not None" check turned
+    # it into "must report a count", which rejected every source that does not
+    # publish vote counts - AniList among them.
+    min_votes = filters.get("min_vote_count") or 0
+    if (
+        int(min_votes) > 0
+        and not _never_rated_yet(candidate, rating, votes)
+        and (votes is None or int(votes) < int(min_votes))
+    ):
         return False, "rejected_vote_count"
 
     runtime = candidate.get("runtime")
