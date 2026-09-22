@@ -60,6 +60,7 @@ __pycache__/
 *pyc*
 venv/
 .venv/
+.runtime/
 .ruff_cache/
 .pytest_cache/
 

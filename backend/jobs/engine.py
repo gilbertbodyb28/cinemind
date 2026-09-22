@@ -389,8 +389,13 @@ async def load_pipeline_inputs(user_id: str) -> Dict[str, List[Dict[str, Any]]]:
     ).to_list(5000)
     blacklist = await db.blacklist.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(500)
     feedback = await db.recommendation_feedback.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(500)
+    # Personal ratings live in media_history, raw watch events in history. v1 read
+    # one or the other, so a user with a full history never had their own ratings
+    # reach the taste profile at all.
+    personal = await db.media_history.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(20000)
     return {
         "history": history,
+        "personal_history": personal,
         "library": library,
         "recommended": recommended,
         "requested": requested,
@@ -399,8 +404,36 @@ async def load_pipeline_inputs(user_id: str) -> Dict[str, List[Dict[str, Any]]]:
     }
 
 
-# Keep Ollama prompts bounded — large job runs otherwise time out / return junk JSON.
-RERANK_CANDIDATE_CAP = 40
+# Keep Ollama prompts bounded - large job runs otherwise time out / return junk
+# JSON. Benchmarked on this user's own history (evaluation/model_bench.py):
+# 12 scored NDCG@5 0.572 / P@5 0.520 with zero invented IDs, against 0.514 /
+# 0.440 at 24 and 0.484 / 0.400 at 20. A 7B model ranks a short list well and
+# a long one carelessly, and the deterministic order behind it is now strong,
+# so there is nothing to gain from handing over more.
+RERANK_CANDIDATE_CAP = 12
+# Below this share of the list the answer says more about the model running out
+# of patience than about the ranking, so the deterministic order is kept.
+RERANK_MIN_COVERAGE = 0.5
+def rerank_schema(count: int) -> Dict[str, Any]:
+    """Constrain decoding to the answer shape, and to a complete answer.
+
+    Without a schema the model sometimes starts explaining its reasoning in
+    prose and the whole rerank is discarded. Without the length bound it
+    sometimes stops after one or two IDs and the rest silently keep their
+    deterministic order.
+    """
+    return {
+        "type": "object",
+        "properties": {
+            "ids": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": count,
+                "maxItems": count,
+            }
+        },
+        "required": ["ids"],
+    }
 
 
 async def rerank_verified_candidates(
@@ -408,35 +441,64 @@ async def rerank_verified_candidates(
     taste: Dict[str, Any],
     candidates: List[Dict[str, Any]],
     model_override: Optional[str] = None,
-) -> tuple[Optional[List[str]], str, str]:
+) -> Tuple[Optional[List[str]], str, str]:
     if not candidates:
         return None, "fallback", "deterministic"
     conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
     rerank_pool = candidates[:RERANK_CANDIDATE_CAP]
-    allowed = [str(row.get("candidate_id") or row.get("tmdb_id") or row["title"]) for row in candidates]
-    lines = [
-        f"{row.get('candidate_id')}: {row.get('title')} ({row.get('year')}) genres={','.join(row.get('genres') or [])}"
-        for row in rerank_pool
-    ]
+    # Short opaque handles, not the candidate slugs. The slugs are long, accented
+    # and full of spaces ("pokemon horizons the series:2023"); asked to echo a
+    # dozen of them back exactly, a 7B model gave up after the first one and the
+    # whole re-rank was discarded on every run.
+    handles = {"r%02d" % index: row for index, row in enumerate(rerank_pool, start=1)}
+    lines = []
+    for handle, row in handles.items():
+        detail = [
+            "%s (%s)" % (row.get("title"), row.get("year")),
+            row.get("media_type") or row.get("type") or "",
+            "genres=%s" % ",".join(row.get("genres") or []) if row.get("genres") else "",
+        ]
+        similar = [item.get("title") for item in (row.get("similar_to") or [])[:2] if item.get("title")]
+        if similar:
+            detail.append("resembles=%s" % "; ".join(similar))
+        if row.get("original_language"):
+            detail.append("lang=%s" % row["original_language"])
+        lines.append("%s | %s" % (handle, " | ".join(part for part in detail if part)))
     system = (
-        "You only reorder verified candidate IDs. Never invent titles or IDs. "
-        'Return JSON {"ids": ["id1", "id2"]}.'
+        "You re-rank a verified candidate list for one viewer. Use only the given "
+        "handles, never invent one, never drop one, never repeat one. Put the titles "
+        "this viewer is most likely to genuinely enjoy first. Popularity is not the "
+        'goal; fit to the stated taste is. Reply with JSON only: {"ids": ["<handle>", ...]}.'
     )
     prompt = (
         compact_taste_prompt(taste)
-        + "\nVerified candidates:\n"
+        + "\n\nVerified candidates (%d):\n" % len(lines)
         + "\n".join(lines)
-        + "\nReturn only those IDs, best first."
+        + "\n\nReturn all %d handles above, ordered best first for this viewer." % len(lines)
     )
     parsed, provider, model = await generate_with_llm(
-        conn, "rerank", system, prompt, user_id=user_id, action="rerank", model_override=model_override
+        conn, "rerank", system, prompt, user_id=user_id, action="rerank",
+        model_override=model_override, response_schema=rerank_schema(len(lines)),
     )
     if not isinstance(parsed, dict):
         return None, provider, model
-    raw_ids = parsed.get("ids") or parsed.get("candidate_ids") or []
-    allowed_set = set(allowed)
-    ordered = [str(item) for item in raw_ids if str(item) in allowed_set]
-    return (ordered or None), provider, model
+    raw_ids = parsed.get("ids") or parsed.get("candidate_ids") or parsed.get("ranking") or []
+    ordered: List[str] = []
+    seen_handles = set()
+    for item in raw_ids:
+        handle = str(item).strip()
+        row = handles.get(handle)
+        if row is None or handle in seen_handles:
+            continue
+        seen_handles.add(handle)
+        ordered.append(str(row.get("candidate_id") or row.get("tmdb_id") or row["title"]))
+    if len(ordered) < max(1, int(len(lines) * RERANK_MIN_COVERAGE)):
+        logging.warning(
+            "Ollama rerank returned %s of %s handles; keeping deterministic order",
+            len(ordered), len(lines),
+        )
+        return None, provider, model
+    return ordered, provider, model
 
 
 async def persist_run_results(
@@ -464,9 +526,12 @@ async def persist_run_results(
         tvdb_api_key=resolve_tvdb_api_key(conn),
     )
     rows = []
-    for item in identified:
+    for position, item in enumerate(identified, start=1):
         rows.append({
             **item,
+            # Explicit rank. Reading the list back by created_at reversed it,
+            # so the weakest pick was the one shown first on Home.
+            "rank": position,
             "id": str(uuid.uuid4()),
             "user_id": user_id,
             "saved": False,
@@ -670,6 +735,7 @@ async def execute_job(
     job: Dict[str, Any],
     trigger: str,
     catalog: Optional[List[Dict[str, Any]]] = None,
+    model_override: Optional[str] = None,
 ) -> Dict[str, Any]:
     owner = await acquire_job_lock(job["id"])
     if not owner:
@@ -680,6 +746,17 @@ async def execute_job(
     try:
         inputs = await load_pipeline_inputs(user_id)
         warnings.extend(await required_history_warnings(user_id, job))
+        # Build the profile before generating candidates: the similarity and
+        # discover lanes are seeded from the titles the user actually rated.
+        from recommendation.taste_engine import build_taste_snapshot
+
+        taste = build_taste_snapshot(
+            inputs["history"],
+            feedback=inputs.get("feedback"),
+            provider_weights=job.get("provider_weights"),
+            taste_sources=job.get("taste_sources"),
+            personal_history=inputs.get("personal_history"),
+        )
         extra: List[Dict[str, Any]] = []
         sources = set(job.get("candidate_sources") or [])
         required = _required_sources(job)
@@ -704,7 +781,7 @@ async def execute_job(
                 start_page = max(1, int(job.get("tmdb_page_cursor") or 1))
                 try:
                     extra = await fetch_job_candidates(
-                        job, inputs["history"], api_key=tmdb_key, start_page=start_page
+                        job, inputs["history"], api_key=tmdb_key, start_page=start_page, taste=taste
                     )
                     if trigger != "preview":
                         next_page = start_page + span
@@ -725,16 +802,19 @@ async def execute_job(
             )
             extra.extend(linked)
             warnings.extend(linked_warnings)
-        result = run_pipeline(job, catalog=catalog or [], extra_candidates=extra, **inputs)
+        result = run_pipeline(job, catalog=catalog or [], extra_candidates=extra, taste=taste, **inputs)
         ranked = result.get("ranked") or result["accepted"]
         provider = "pipeline"
         model = "deterministic"
         ai_reranked = False
         if job.get("ai_enabled") and ranked:
-            ordered, provider, model = await rerank_verified_candidates(user_id, result["taste"], ranked)
+            ordered, provider, model = await rerank_verified_candidates(
+                user_id, result["taste"], ranked, model_override=model_override
+            )
             if ordered:
                 ranked = apply_rerank(ranked, ordered)
                 ai_reranked = provider == "ollama"
+                result["ranked"] = ranked
             else:
                 if provider == "ollama":
                     warnings.append({
@@ -746,7 +826,10 @@ async def execute_job(
                 provider = "pipeline"
                 model = "deterministic"
         limit = int((result.get("job") or job).get("final_recommendation_limit") or 8)
-        result["accepted"] = ranked[:limit]
+        if ai_reranked:
+            from recommendation.ranking_engine import apply_diversity
+
+            result["accepted"] = apply_diversity(ranked, limit)
         warnings.extend(empty_result_warnings(job, result, extra))
         result["ai_reranked"] = ai_reranked
         action_warnings = await persist_run_results(
@@ -775,6 +858,8 @@ async def execute_job(
             "rejected_count": len(result["rejected"]),
             "action_mode": job.get("action_mode"),
             "ai_reranked": ai_reranked,
+            "provider": provider,
+            "model": model,
             "warnings": warnings,
             "results": result["accepted"] if trigger == "preview" else [{"id": row.get("title"), "title": row.get("title")} for row in result["accepted"]],
         }

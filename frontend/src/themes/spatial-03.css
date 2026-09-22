@@ -1,0 +1,280 @@
+/* Spatial 03 — Screening Room.
+   Reference: the Vision Pro streaming concept shot in a warm lit room. One
+   wide light-grey pane, the hero as an inset card, a landscape shelf under it,
+   and the whole navigation gathered into a pill at the bottom of the window. */
+
+html[data-theme="spatial-03"] {
+  --bg: #1c1917;
+  --surface: #2a2521;
+  --gold: #e5483c;
+  --gold-soft: #ff7a6b;
+  --text: #f7f4f1;
+  --muted: #c6bdb5;
+  --subtle: #9a9089;
+
+  --s3-gap: clamp(20px, 3.4vw, 76px);
+  --s3-pad: clamp(18px, 2vw, 34px);
+  --s3-radius: 34px;
+  --s3-pane: rgba(63, 58, 54, 0.52);
+  --s3-line: rgba(255, 255, 255, 0.2);
+  --s3-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --s3-navh: 92px;
+
+  background: #6b5c4e !important;
+  color-scheme: dark;
+}
+
+/* :root outranks html[data-wallpaper=…] from wallpapers.css, so the
+   theme's own room wins over the wallpaper picker in this theme. */
+html[data-theme="spatial-03"]:root body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif !important;
+  background:
+    radial-gradient(1200px 900px at 12% 10%, rgba(255, 236, 205, 0.5), rgba(255, 236, 205, 0) 58%),
+    radial-gradient(1000px 800px at 96% 70%, rgba(214, 178, 132, 0.38), rgba(214, 178, 132, 0) 60%),
+    linear-gradient(160deg, #8a7460 0%, #6d5b4a 46%, #4a3d33 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-03"] .cm-ambient {
+  display: none !important;
+}
+
+/* wallpapers.css dims the room through .ambient-scrim with a selector of
+   its own; in this collection the room belongs to the theme, so this one
+   outranks it. */
+html[data-theme="spatial-03"]:root[data-wallpaper] .ambient-scrim {
+  background: radial-gradient(1600px 1100px at 50% 40%, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2) 92%);
+}
+
+/* ---- the pane ---- */
+
+html[data-theme="spatial-03"] div:has(> .glass-shell) {
+  padding: var(--s3-gap) var(--s3-gap) calc(var(--s3-gap) + var(--s3-navh)) !important;
+}
+
+html[data-theme="spatial-03"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--s3-radius) !important;
+  padding: var(--s3-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--s3-gap) - var(--s3-navh)) !important;
+}
+
+html[data-theme="spatial-03"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--s3-gap) var(--s3-gap) calc(var(--s3-gap) + var(--s3-navh));
+  z-index: 0;
+  border-radius: var(--s3-radius);
+  background: var(--s3-pane);
+  backdrop-filter: blur(54px) saturate(130%);
+  -webkit-backdrop-filter: blur(54px) saturate(130%);
+  border: 1px solid var(--s3-line);
+  box-shadow: 0 70px 150px -50px rgba(40, 26, 14, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+html[data-theme="spatial-03"] .grain::before {
+  display: none;
+}
+
+html[data-theme="spatial-03"] .glass {
+  background: rgba(255, 255, 255, 0.11) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+html[data-theme="spatial-03"] .glass-strong {
+  background: rgba(46, 40, 35, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* ---- the whole navigation, gathered at the bottom ---- */
+
+@media (min-width: 900px) {
+  html[data-theme="spatial-03"] header > div:has(> nav[data-testid="icon-rail"]) {
+    position: static !important;
+    width: 0 !important;
+    height: 0 !important;
+    transform: none !important;
+  }
+
+  html[data-theme="spatial-03"] nav[data-testid="icon-rail"] {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--s3-gap) * 0.5);
+    transform: translateX(-50%);
+    z-index: 45;
+    gap: 2px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(34px) saturate(150%);
+    -webkit-backdrop-filter: blur(34px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 30px 60px -22px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+
+  html[data-theme="spatial-03"] nav[data-testid="icon-rail"] a {
+    width: auto !important;
+    height: auto !important;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.86) !important;
+    transition: background 150ms var(--s3-ease), color 150ms var(--s3-ease);
+  }
+
+  html[data-theme="spatial-03"] nav[data-testid="icon-rail"] a svg {
+    display: none;
+  }
+
+  html[data-theme="spatial-03"] nav[data-testid="icon-rail"] a::after {
+    content: attr(title);
+    white-space: nowrap;
+  }
+
+  html[data-theme="spatial-03"] nav[data-testid="icon-rail"] a:hover {
+    background: rgba(255, 255, 255, 0.24) !important;
+    color: #ffffff !important;
+  }
+
+  html[data-theme="spatial-03"] nav[data-testid="icon-rail"] a.active,
+  html[data-theme="spatial-03"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #26201b !important;
+  }
+}
+
+/* ---- pills ---- */
+
+html[data-theme="spatial-03"] [data-testid="category-tabs"] {
+  justify-content: center;
+}
+
+html[data-theme="spatial-03"] [data-testid="category-tabs"] > * {
+  border-radius: 999px !important;
+  padding: 8px 18px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+html[data-theme="spatial-03"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  color: #26201b !important;
+}
+
+/* ---- hero as an inset card, shelf underneath ---- */
+
+html[data-theme="spatial-03"] [data-testid="hero-panel"] {
+  order: 1;
+  grid-row: auto !important;
+  border-radius: 26px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  min-height: clamp(360px, 46vh, 560px) !important;
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-theme="spatial-03"] [data-testid="upcoming-panel"] { order: 2; }
+
+html[data-theme="spatial-03"] [data-testid="new-trailer-panel"] {
+  order: 3;
+  grid-row: auto !important;
+  align-self: auto !important;
+}
+
+@media (min-width: 1024px) {
+  html[data-theme="spatial-03"] [data-testid="home-page"] > .grid {
+    grid-template-columns: 1fr !important;
+    gap: clamp(18px, 2.2vh, 30px) !important;
+  }
+
+  html[data-theme="spatial-03"] [data-testid="new-trailer-panel"] > div:last-child {
+    min-height: 0 !important;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    overflow: visible !important;
+  }
+
+  /* The shelf is landscape here, so the poster is cropped to the frame. */
+  html[data-theme="spatial-03"] [data-testid="upcoming-panel"] > .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  html[data-theme="spatial-03"] [data-testid="upcoming-panel"] .poster-frame img {
+    aspect-ratio: 16 / 10 !important;
+    object-fit: cover;
+    object-position: center 22%;
+  }
+}
+
+html[data-theme="spatial-03"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(360px, 46vh, 560px) !important;
+  padding: clamp(26px, 2.6vw, 48px) !important;
+  max-width: min(52rem, 60%) !important;
+}
+
+html[data-theme="spatial-03"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(94deg, rgba(10, 8, 7, 0.9) 0%, rgba(10, 8, 7, 0.5) 38%, rgba(10, 8, 7, 0) 72%) !important;
+}
+
+html[data-theme="spatial-03"] [data-testid="hero-title"] {
+  font-size: clamp(2.3rem, 3.7vw, 3.8rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em;
+}
+
+html[data-theme="spatial-03"] [data-testid="hero-watch-button"] {
+  background: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  color: #1b1613 !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="spatial-03"] [data-testid="hero-panel"] .chip.glass-strong {
+  background: rgba(229, 72, 60, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="spatial-03"] .poster-frame {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 26px 52px -22px rgba(0, 0, 0, 0.6) !important;
+  transition: transform 300ms var(--s3-ease);
+}
+
+html[data-theme="spatial-03"] .poster-frame img {
+  border-radius: 17px !important;
+}
+
+html[data-theme="spatial-03"] .poster-frame:hover {
+  transform: translateY(-5px) scale(1.015);
+}
+
+html[data-theme="spatial-03"] .chip-rose {
+  border-color: rgba(229, 72, 60, 0.6);
+  background: rgba(229, 72, 60, 0.2);
+  color: #ffb9b0;
+}
+
+/* ---- swatch ---- */
+
+.theme-swatch-spatial-03 .preview-circle {
+  background: rgba(229, 72, 60, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.theme-swatch-spatial-03 .preview-circle-dot {
+  border-color: rgba(255, 255, 255, 0.8);
+}

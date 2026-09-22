@@ -1,0 +1,315 @@
+/* Spatial 04 — Night Lounge.
+   Reference: the Movieflix concept in a dark living room. The rail floats
+   outside the pane, the hero sits left with Continue Watching down the right,
+   and the trending shelf runs the full width underneath in landscape. Amber
+   is the only colour. */
+
+html[data-theme="spatial-04"] {
+  --bg: #0b0b0d;
+  --surface: #17171a;
+  --gold: #f5b53c;
+  --gold-soft: #ffd489;
+  --text: #f4f4f6;
+  --muted: #adaeb4;
+  --subtle: #82848b;
+
+  --s4-gap: clamp(18px, 2.2vw, 44px);
+  --s4-rail: 96px;
+  --s4-pad: clamp(18px, 1.9vw, 32px);
+  --s4-radius: 28px;
+  --s4-pane: rgba(18, 18, 21, 0.66);
+  --s4-line: rgba(255, 255, 255, 0.1);
+  --s4-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: #131316 !important;
+  color-scheme: dark;
+}
+
+/* :root outranks html[data-wallpaper=…] from wallpapers.css, so the
+   theme's own room wins over the wallpaper picker in this theme. */
+html[data-theme="spatial-04"]:root body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif !important;
+  background:
+    radial-gradient(900px 700px at 8% 18%, rgba(245, 181, 60, 0.14), rgba(245, 181, 60, 0) 58%),
+    radial-gradient(1100px 800px at 92% 84%, rgba(120, 130, 160, 0.12), rgba(120, 130, 160, 0) 62%),
+    linear-gradient(170deg, #26262b 0%, #191a1e 52%, #0c0c0e 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-04"] .cm-ambient {
+  filter: blur(140px) saturate(60%) brightness(0.55) !important;
+  opacity: 0.25 !important;
+}
+
+/* wallpapers.css dims the room through .ambient-scrim with a selector of
+   its own; in this collection the room belongs to the theme, so this one
+   outranks it. */
+html[data-theme="spatial-04"]:root[data-wallpaper] .ambient-scrim {
+  background: radial-gradient(1500px 1000px at 50% 40%, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4) 92%);
+}
+
+/* ---- the pane, held clear of the rail ---- */
+
+html[data-theme="spatial-04"] div:has(> .glass-shell) {
+  padding: var(--s4-gap) !important;
+}
+
+@media (min-width: 1100px) {
+  html[data-theme="spatial-04"] div:has(> .glass-shell) {
+    padding-left: var(--s4-rail) !important;
+  }
+}
+
+html[data-theme="spatial-04"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--s4-radius) !important;
+  padding: var(--s4-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--s4-gap)) !important;
+}
+
+html[data-theme="spatial-04"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--s4-gap);
+  z-index: 0;
+  border-radius: var(--s4-radius);
+  background: var(--s4-pane);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border: 1px solid var(--s4-line);
+  box-shadow: 0 60px 130px -46px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+@media (min-width: 1100px) {
+  html[data-theme="spatial-04"] .glass-shell::after {
+    left: var(--s4-rail);
+  }
+}
+
+html[data-theme="spatial-04"] .grain::before {
+  z-index: 1;
+  opacity: 0.08;
+}
+
+html[data-theme="spatial-04"] .glass {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.11) !important;
+}
+
+html[data-theme="spatial-04"] .glass-strong {
+  background: rgba(24, 24, 28, 0.86) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
+}
+
+/* ---- rail: a tall rounded slab outside the pane ---- */
+
+@media (min-width: 1100px) {
+  html[data-theme="spatial-04"] header > div:has(> nav[data-testid="icon-rail"]) {
+    position: static !important;
+    width: 0 !important;
+    height: 0 !important;
+    transform: none !important;
+  }
+
+  html[data-theme="spatial-04"] nav[data-testid="icon-rail"] {
+    position: fixed;
+    left: calc(var(--s4-gap) * 0.6);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 10px;
+    padding: 16px 10px;
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.85);
+  }
+
+  html[data-theme="spatial-04"] nav[data-testid="icon-rail"] a {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: background 150ms var(--s4-ease), transform 150ms var(--s4-ease), color 150ms var(--s4-ease);
+  }
+
+  html[data-theme="spatial-04"] nav[data-testid="icon-rail"] a:hover {
+    background: rgba(245, 181, 60, 0.2) !important;
+    color: var(--gold-soft) !important;
+    transform: scale(1.08);
+  }
+
+  html[data-theme="spatial-04"] nav[data-testid="icon-rail"] a.active,
+  html[data-theme="spatial-04"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+    background: rgba(245, 181, 60, 0.92) !important;
+    color: #14120c !important;
+  }
+}
+
+/* ---- pills, left of the row like the reference ---- */
+
+html[data-theme="spatial-04"] [data-testid="category-tabs"] > * {
+  border-radius: 999px !important;
+  padding: 8px 17px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  color: var(--muted) !important;
+}
+
+html[data-theme="spatial-04"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  color: #ffffff !important;
+}
+
+/* ---- hero left, Continue Watching right, shelf across the bottom ---- */
+
+@media (min-width: 1200px) {
+  html[data-theme="spatial-04"] [data-testid="home-page"] > .grid {
+    grid-template-columns: minmax(0, 1fr) 320px !important;
+    gap: 20px !important;
+  }
+
+  html[data-theme="spatial-04"] [data-testid="hero-panel"] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  html[data-theme="spatial-04"] [data-testid="new-trailer-panel"] {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: stretch !important;
+  }
+
+  html[data-theme="spatial-04"] [data-testid="new-trailer-panel"] > div:last-child {
+    min-height: 0 !important;
+  }
+
+  html[data-theme="spatial-04"] [data-testid="upcoming-panel"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  html[data-theme="spatial-04"] [data-testid="upcoming-panel"] > .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  /* Landscape cards with the title lying on the artwork. */
+  html[data-theme="spatial-04"] [data-testid="upcoming-panel"] .poster-frame img {
+    aspect-ratio: 16 / 10 !important;
+    object-fit: cover;
+    object-position: center 22%;
+  }
+
+  html[data-theme="spatial-04"] [data-testid^="upcoming-card-"] {
+    position: relative;
+  }
+
+  html[data-theme="spatial-04"] [data-testid^="upcoming-card-"] .poster-frame::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 62%;
+    border-radius: 0 0 19px 19px;
+    background: linear-gradient(0deg, rgba(8, 8, 10, 0.92) 12%, rgba(8, 8, 10, 0) 100%);
+    pointer-events: none;
+  }
+
+  html[data-theme="spatial-04"] [data-testid^="upcoming-card-"] h3 {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 46px;
+    margin: 0 !important;
+    z-index: 5;
+    font-size: 1.05rem !important;
+    pointer-events: none;
+  }
+
+  html[data-theme="spatial-04"] [data-testid^="upcoming-card-"] h3 + p {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 16px;
+    margin: 0 !important;
+    z-index: 5;
+    pointer-events: none;
+  }
+}
+
+html[data-theme="spatial-04"] [data-testid="hero-panel"] {
+  border-radius: 22px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  min-height: clamp(340px, 44vh, 500px) !important;
+}
+
+html[data-theme="spatial-04"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(340px, 44vh, 500px) !important;
+  padding: clamp(24px, 2.3vw, 40px) !important;
+  max-width: min(44rem, 66%) !important;
+}
+
+html[data-theme="spatial-04"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(96deg, rgba(8, 8, 10, 0.9) 0%, rgba(8, 8, 10, 0.5) 38%, rgba(8, 8, 10, 0) 74%) !important;
+}
+
+html[data-theme="spatial-04"] [data-testid="hero-title"] {
+  font-size: clamp(2.1rem, 3.3vw, 3.3rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em;
+}
+
+html[data-theme="spatial-04"] [data-testid="hero-watch-button"] {
+  background: #f5b53c !important;
+  border: 1px solid #f5b53c !important;
+  color: #17130a !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="spatial-04"] [data-testid="hero-watch-button"]:hover {
+  background: #ffc75c !important;
+}
+
+html[data-theme="spatial-04"] .poster-frame {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 26px 54px -22px rgba(0, 0, 0, 0.85) !important;
+  transition: transform 300ms var(--s4-ease), box-shadow 300ms var(--s4-ease);
+}
+
+html[data-theme="spatial-04"] .poster-frame img {
+  border-radius: 19px !important;
+}
+
+html[data-theme="spatial-04"] .poster-frame:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 44px 80px -26px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(245, 181, 60, 0.4) !important;
+}
+
+html[data-theme="spatial-04"] .chip-rose {
+  border-color: rgba(245, 181, 60, 0.5);
+  background: rgba(245, 181, 60, 0.16);
+  color: var(--gold-soft);
+}
+
+/* ---- swatch ---- */
+
+.theme-swatch-spatial-04 .preview-circle {
+  background: rgba(245, 181, 60, 0.3);
+  border: 1px solid rgba(245, 181, 60, 0.6);
+}
+
+.theme-swatch-spatial-04 .preview-circle-dot {
+  border-color: rgba(255, 212, 137, 0.8);
+}

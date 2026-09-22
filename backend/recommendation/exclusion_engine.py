@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, Optional, Set, Tuple
 
-from .media_identity import title_key
+from .media_identity import coerce_int, identity_link_keys, title_key
 
 
 def _parse_dt(value: Any) -> Optional[datetime]:
@@ -18,15 +18,18 @@ def _parse_dt(value: Any) -> Optional[datetime]:
         return None
 
 
-def _keys(item: Dict[str, Any]) -> Set[str]:
-    keys = set()
+def identity_keys(item: Dict[str, Any]) -> Set[tuple]:
+    """Comparable identities across providers, with media-scoped numeric IDs."""
+    keys = set(identity_link_keys(item))
     if item.get("canonical_media_id"):
-        keys.add(f"id:{item['canonical_media_id']}")
-    if item.get("tmdb_id"):
-        keys.add(f"tmdb:{item.get('media_type') or item.get('type')}:{item['tmdb_id']}")
-    if item.get("title") and item.get("year"):
-        keys.add(f"slug:{title_key(item.get('title'))}:{item['year']}")
+        keys.add(("canonical", str(item["canonical_media_id"])))
     return keys
+
+
+def _title_year(item: Dict[str, Any]) -> Optional[tuple]:
+    title = title_key(item.get("title"))
+    year = coerce_int(item.get("year"))
+    return (title, year) if title and year is not None else None
 
 
 def build_exclusion_context(
@@ -37,25 +40,33 @@ def build_exclusion_context(
     blacklist: Iterable[Dict[str, Any]],
     feedback: Optional[Iterable[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    recommended_at: Dict[str, datetime] = {}
-    recommended_keys: Set[str] = set()
+    blacklist_rows = list(blacklist)
+    recommended_at: Dict[tuple, datetime] = {}
+    recommended_keys: Set[tuple] = set()
     for item in recommended:
         stamp = _parse_dt(item.get("created_at") or item.get("updated_at"))
-        for key in _keys(item):
+        for key in identity_keys(item):
             recommended_keys.add(key)
             if stamp:
                 recommended_at[key] = stamp
-    feedback_changed: Set[str] = set()
+    feedback_changed: Set[tuple] = set()
     for item in feedback or []:
         if item.get("action") in {"like", "dislike", "watched"}:
-            feedback_changed.update(_keys(item))
+            feedback_changed.update(identity_keys(item))
     return {
-        "watched": {key for item in history for key in _keys(item)},
-        "library": {key for item in library for key in _keys(item)},
+        "watched": {key for item in history for key in identity_keys(item)},
+        "library": {key for item in library for key in identity_keys(item)},
         "recommended": recommended_keys,
         "recommended_at": recommended_at,
-        "requested": {key for item in requested for key in _keys(item)},
-        "blacklist": {key for item in blacklist for key in _keys(item)},
+        "requested": {key for item in requested for key in identity_keys(item)},
+        "blacklist": {key for item in blacklist_rows for key in identity_keys(item)},
+        # Older feedback blacklist rows did not store media type. Match their
+        # title/year without making all candidate deduplication type-blind.
+        "blacklist_untyped_titles": {
+            key for item in blacklist_rows
+            if not (item.get("media_type") or item.get("type"))
+            for key in [_title_year(item)] if key is not None
+        },
         "feedback_changed": feedback_changed,
         "seen_candidates": set(),
     }
@@ -63,7 +74,7 @@ def build_exclusion_context(
 
 def apply_exclusions(
     candidate: Dict[str, Any],
-    context: Dict[str, Set[str]],
+    context: Dict[str, Any],
     exclusions: Optional[Dict[str, bool]] = None,
 ) -> Tuple[bool, Optional[str]]:
     exclusions = {
@@ -75,8 +86,9 @@ def apply_exclusions(
         "duplicates": True,
         **(exclusions or {}),
     }
-    keys = _keys(candidate)
-    if exclusions.get("blacklisted") and keys & context["blacklist"]:
+    keys = identity_keys(candidate)
+    legacy_blacklisted = _title_year(candidate) in context.get("blacklist_untyped_titles", set())
+    if exclusions.get("blacklisted") and (keys & context["blacklist"] or legacy_blacklisted):
         return False, "rejected_blacklisted"
     if exclusions.get("already_watched") and keys & context["watched"]:
         return False, "rejected_already_watched"

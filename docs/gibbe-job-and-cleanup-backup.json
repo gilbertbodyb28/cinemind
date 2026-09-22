@@ -1,0 +1,4774 @@
+{
+ "created_at": "2026-09-19T21:07:13.949119+00:00",
+ "reason": "Set min_rating 7.5 on job 'Gibbe' and reject the low-rated rows it created",
+ "job_before": {
+  "id": "job_7949c3fae8a7",
+  "name": "Gibbe",
+  "filters": {
+   "include_genres": [],
+   "exclude_genres": [],
+   "min_year": null,
+   "max_year": null,
+   "min_rating": null,
+   "min_vote_count": null,
+   "min_runtime": null,
+   "max_runtime": null,
+   "language": "en",
+   "country": null,
+   "anime_format": null,
+   "anime_season": null,
+   "anime_status": null,
+   "studio": null,
+   "include_tags": [],
+   "min_episodes": null,
+   "max_episodes": null
+  }
+ },
+ "rejected_count": 593,
+ "items": [
+  {
+   "id": "req_67d3804ca333",
+   "title": "Extrapolations",
+   "rating": 6.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5e8d65f5-aed6-472d-837b-9257451db73e"
+  },
+  {
+   "id": "req_2e4c03da957c",
+   "title": "The Ark",
+   "rating": 6.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2deced69-d596-4bc9-9a2e-23df1cf5293c"
+  },
+  {
+   "id": "req_92989ec8dc80",
+   "title": "The Great North",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "29295fd9-44c5-4667-ade1-adc046298540"
+  },
+  {
+   "id": "req_2999eb1fe228",
+   "title": "Watch What Happens Live with Andy Cohen",
+   "rating": 4.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1004dea4-07b6-4d2e-bb2e-2ac8e3b0177c"
+  },
+  {
+   "id": "req_9759e0597685",
+   "title": "Law & Order",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d1e7fb55-a5f9-4648-bd9f-51a265ce9d0e"
+  },
+  {
+   "id": "req_ef2e80d24cc4",
+   "title": "The Tonight Show Starring Jimmy Fallon",
+   "rating": 5.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ad2fa1ec-a956-48bf-80cc-0af635298d18"
+  },
+  {
+   "id": "req_583208475d72",
+   "title": "Sesame Street",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "863ed4e6-b5fe-4ef6-8892-2709659048ec"
+  },
+  {
+   "id": "req_3d41c0babc2e",
+   "title": "The Daily Show",
+   "rating": 6.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "474e2403-6e92-44df-af6c-821edb839809"
+  },
+  {
+   "id": "req_a52572f05d36",
+   "title": "The Late Show with Stephen Colbert",
+   "rating": 6.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2a3d28c1-caa5-46df-99d2-a96f16d80e98"
+  },
+  {
+   "id": "req_dc64401b93ed",
+   "title": "JAG",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "271af557-d36e-46f2-9205-9ff56dc347ba"
+  },
+  {
+   "id": "req_2fbfbf978a0b",
+   "title": "Pirates of the Caribbean: Dead Man's Chest",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2cf881e8-2a12-4a9e-8b14-8bbaaf4ec8b1"
+  },
+  {
+   "id": "req_c6380d5a9f93",
+   "title": "The Hobbit: The Battle of the Five Armies",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d80d0fb-3a60-4fd5-b5ed-704107d3ba2d"
+  },
+  {
+   "id": "req_fcaeab5443ca",
+   "title": "Teen Titans Go!",
+   "rating": 6.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "022d493c-0e55-4418-bd1d-956a64636859"
+  },
+  {
+   "id": "req_7fc15bba2a7b",
+   "title": "Late Night with Seth Meyers",
+   "rating": 5.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6e2a502e-d464-48c7-9bf1-e5ba8be81ff4"
+  },
+  {
+   "id": "req_706fa921cf29",
+   "title": "Supergirl",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b9d06585-0414-45df-9834-7f9121a8ebe8"
+  },
+  {
+   "id": "req_1302b8b4c34b",
+   "title": "DC's Legends of Tomorrow",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e2fcb4e7-afb0-441b-b7cf-3226aabade3b"
+  },
+  {
+   "id": "req_c211a726ca7f",
+   "title": "Jeopardy!",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a23f386f-6c36-416d-99e1-90fee536035b"
+  },
+  {
+   "id": "req_98484425cf12",
+   "title": "WWE NXT",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6fb0e2e4-2a14-488a-8028-968db6f07da9"
+  },
+  {
+   "id": "req_0bef0305fc83",
+   "title": "Spider-Man: Homecoming",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ce768e0d-7046-46ce-bf43-e8596ade31cd"
+  },
+  {
+   "id": "req_d40d1d1e6fef",
+   "title": "Frozen II",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c878e60f-9519-4e67-8464-5aae6782e664"
+  },
+  {
+   "id": "req_c2db3201c370",
+   "title": "Conan",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "32ffd43e-47e8-4199-8639-d6eb86258eab"
+  },
+  {
+   "id": "req_a395fd3b13bf",
+   "title": "Raw",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "df661f14-8d09-427e-968f-caf0793c3bb7"
+  },
+  {
+   "id": "req_804a451f61f6",
+   "title": "Practical Magic",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4df16829-3d4d-4958-8b23-fc74f8406552"
+  },
+  {
+   "id": "req_ba183a6d8a51",
+   "title": "Okja",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1c26eb17-d6f2-4e88-8dc1-192d8bddf6ac"
+  },
+  {
+   "id": "req_0ed89ddaba9e",
+   "title": "Avengers: Age of Ultron",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8ffe1a78-8f7b-4ee3-8b66-8408a3e98ead"
+  },
+  {
+   "id": "req_078cf1493f68",
+   "title": "Spider-Man: Far From Home",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c0afe980-cb7b-4795-9f62-cb40f84bd3e0"
+  },
+  {
+   "id": "req_4a0d1923478d",
+   "title": "Once Upon a Time",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6ef86bdb-26e8-4155-b3f4-25bfad65957e"
+  },
+  {
+   "id": "req_0c5743123fe0",
+   "title": "Deep Water",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "70f65dfe-55c5-4f56-b2a4-01e52f5c2f2a"
+  },
+  {
+   "id": "req_01783af49f79",
+   "title": "Troy",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "229ec4ab-20bf-42da-bce0-97747bd06000"
+  },
+  {
+   "id": "req_d60ddc23d39b",
+   "title": "The Cat in the Hat",
+   "rating": 5.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5b6fbfa6-e404-4774-ab38-69a56b9b60e8"
+  },
+  {
+   "id": "req_1b93e28155df",
+   "title": "Shrek the Third",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "36fd60fa-ecc3-4c43-bd10-a3643aaee8ae"
+  },
+  {
+   "id": "req_691a948b8aa7",
+   "title": "Late Show with David Letterman",
+   "rating": 6.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a8b6a859-c43f-422f-9ebf-a0771b7ec4b9"
+  },
+  {
+   "id": "req_7500582f4608",
+   "title": "Death in Paradise",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "37e496f1-3535-473f-a4a6-d4228ca29305"
+  },
+  {
+   "id": "req_dde7a610bbe1",
+   "title": "The Graham Norton Show",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c57c2d31-5417-4163-865c-1de47caa96e6"
+  },
+  {
+   "id": "req_718d4c71ff1d",
+   "title": "Star Wars: The Force Awakens",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5a773860-b969-419b-a061-b1d5f31e58eb"
+  },
+  {
+   "id": "req_2aab884a3868",
+   "title": "King of the Hill",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4138a8fd-b750-4c1d-99ad-6642fcc406ca"
+  },
+  {
+   "id": "req_46b322809f10",
+   "title": "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e5ff9f20-5192-4f3a-bf5e-0da4221eaf6c"
+  },
+  {
+   "id": "req_17e8488f429e",
+   "title": "Star Wars: The Rise of Skywalker",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "367d3029-db7c-4309-a874-e27fa4eaa343"
+  },
+  {
+   "id": "req_37d1fa8ae785",
+   "title": "Star Trek Into Darkness",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "36360099-d329-4e63-b87e-db56026929ff"
+  },
+  {
+   "id": "req_846ccd167a51",
+   "title": "Elsbeth",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "90a2c1ec-efd8-4a9c-8d0a-746df693feaa"
+  },
+  {
+   "id": "req_e6af610a8ed5",
+   "title": "Solo: A Star Wars Story",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4c7d9f53-1727-4a27-9bc4-54c3b02a4a92"
+  },
+  {
+   "id": "req_2b5ae0013096",
+   "title": "The Kelly Clarkson Show",
+   "rating": 6.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "324acbac-0f4a-4d79-9e17-e88c3939c4c7"
+  },
+  {
+   "id": "req_fbbd1cd4e9b9",
+   "title": "The Adventures of Jimmy Neutron: Boy Genius",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ac1449f3-56f3-49d5-ad30-712ea8fc33c6"
+  },
+  {
+   "id": "req_58f9a7b7f76d",
+   "title": "Valerian and the City of a Thousand Planets",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c2186745-3a01-4ec0-b19e-b44faa8dc7d3"
+  },
+  {
+   "id": "req_123af6999614",
+   "title": "The Devil Wears Prada 2",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f04d0a23-0bc1-4bd2-869e-b84ec948ca62"
+  },
+  {
+   "id": "req_fb6b303ab53b",
+   "title": "Coronation Street",
+   "rating": 5.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a67ed1c2-24d4-475c-af01-a717dc53cb6a"
+  },
+  {
+   "id": "req_2901244a1eb8",
+   "title": "The View",
+   "rating": 4.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "87aab17f-28d9-4872-8471-1fdb358430a9"
+  },
+  {
+   "id": "req_f342a4d2c8c6",
+   "title": "Two and a Half Men",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9a26c870-b439-4522-ae27-e0ba82e97b3d"
+  },
+  {
+   "id": "req_ebfdfb2bdc37",
+   "title": "The Late Late Show with Craig Ferguson",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "58aba19b-f849-483f-bfb0-35ff26e2947f"
+  },
+  {
+   "id": "req_0df34b718d70",
+   "title": "Cars",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "471cfc47-ce34-4353-8963-b6938d4febb0"
+  },
+  {
+   "id": "req_801d2bc6ad2e",
+   "title": "Spider-Man",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7f3b4765-37ec-4374-a5ff-3e4648e0ab5a"
+  },
+  {
+   "id": "req_64fd27e13051",
+   "title": "CSI: NY",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "28185414-4e58-482a-9d7a-1b5983db331e"
+  },
+  {
+   "id": "req_335ab758b082",
+   "title": "Jimmy Kimmel Live!",
+   "rating": 5.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "654f295c-fb73-4fa3-8105-98ecbe876791"
+  },
+  {
+   "id": "req_6964b0e1090d",
+   "title": "Diagnosis: Murder",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e1404499-7e60-4262-81a5-1bf9cd7a56d4"
+  },
+  {
+   "id": "req_cd8053398614",
+   "title": "Star Trek: Insurrection",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f14223c4-318c-4639-b993-05daf6f1e7bb"
+  },
+  {
+   "id": "req_94964c8cab6f",
+   "title": "The Love Boat",
+   "rating": 6.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "76a31824-04ac-4bc2-89f9-95019a9259a1"
+  },
+  {
+   "id": "req_5dbfc67d06f1",
+   "title": "Cars 2",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7b7820cb-fcd3-4bb2-91e5-8b127cb35ec4"
+  },
+  {
+   "id": "req_9be59f530296",
+   "title": "The Whisper Man",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a590ceb1-b8ef-4dfb-9dc6-185c3f6f25a3"
+  },
+  {
+   "id": "req_35df96d8f36c",
+   "title": "The Maze Runner",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1f6eb883-1cb0-4cdf-a476-f07cbf291c75"
+  },
+  {
+   "id": "req_5dbbb1ef9710",
+   "title": "Once Upon a Time... in Hollywood",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a1073ac3-1503-442c-a236-65f57e4f85d4"
+  },
+  {
+   "id": "req_d5048440f728",
+   "title": "PAW Patrol",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5443de58-ce3a-4fbf-bd3f-be49fcad64f9"
+  },
+  {
+   "id": "req_44d6f99c040e",
+   "title": "The Equalizer",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0ce45fd6-37dd-46ea-97f4-8779cf83179b"
+  },
+  {
+   "id": "req_d09a8d6c674a",
+   "title": "The Croods",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b5ca8a8d-fa25-44c0-af52-8bca21ad0927"
+  },
+  {
+   "id": "req_6d6aecba1fed",
+   "title": "The King of Queens",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "82f54375-680b-4b37-b236-09b733ba8939"
+  },
+  {
+   "id": "req_a0586c6726c2",
+   "title": "Good Mythical Morning",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "173d4883-2a28-45a3-a77a-fc0dbd8274ed"
+  },
+  {
+   "id": "req_402bde6da5af",
+   "title": "Rosebush Pruning",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ac0f8e2c-6701-4124-956e-ec994aca1730"
+  },
+  {
+   "id": "req_61df440e739a",
+   "title": "Everybody Loves Raymond",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c603a00f-683a-4e11-9bdb-b4a3407c1f02"
+  },
+  {
+   "id": "req_7c84770d8e6f",
+   "title": "Scary Movie",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "95b835d5-dd8d-4113-ab78-242c47f4c6f3"
+  },
+  {
+   "id": "req_ac210b5a8001",
+   "title": "Free Willy",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "03e31654-99bd-4770-87e2-653b0ee21438"
+  },
+  {
+   "id": "req_85d8a72ccbcc",
+   "title": "Late Night with Conan O'Brien",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7e9b003d-1fec-417b-93ac-62380a78a4a6"
+  },
+  {
+   "id": "req_63aa85b5103b",
+   "title": "Mr. Peabody & Sherman",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4ba6715f-0bf1-4440-8553-7a92c57bc9b0"
+  },
+  {
+   "id": "req_d58a15eefe85",
+   "title": "Beauty and the Beast",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "39913f6c-8d5c-44f2-93ff-43bf44220744"
+  },
+  {
+   "id": "req_bbe32ab1c01d",
+   "title": "Flash Gordon",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "78ff41f4-1c42-486d-9f03-35aafbf55e01"
+  },
+  {
+   "id": "req_9b1039340680",
+   "title": "The Boxtrolls",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0a5dbaa5-7594-4348-90a4-d599e5cb3bd0"
+  },
+  {
+   "id": "req_6314fd4940d0",
+   "title": "Dark Shadows",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d528359c-4420-4b45-a71e-d13375da697b"
+  },
+  {
+   "id": "req_7c03ba9ab943",
+   "title": "As Good as It Gets",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d52962fa-47ef-4726-8818-59298dc73bac"
+  },
+  {
+   "id": "req_0c2f965970d3",
+   "title": "Easy Rider",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "46cc69af-19fe-4bde-bfbc-9bef61a6aef9"
+  },
+  {
+   "id": "req_6fd65fbf1f83",
+   "title": "The Tonight Show with Jay Leno",
+   "rating": 5.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4867e04b-028e-4e1e-bec5-ea1258339339"
+  },
+  {
+   "id": "req_10fb20784bf6",
+   "title": "Finding Dory",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "15b32c9b-df45-4afa-9b6e-ea55e93e50d6"
+  },
+  {
+   "id": "req_78fcba8f38e4",
+   "title": "Chicago Hope",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "de52f9e3-a72c-4203-8061-db4e6d193548"
+  },
+  {
+   "id": "req_c036dbbeb4aa",
+   "title": "Dancing with the Stars",
+   "rating": 6.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2e81e4fb-dc67-4b81-bfbb-09ad59054fba"
+  },
+  {
+   "id": "req_fb991a15864a",
+   "title": "Despicable Me",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "26739b11-1dbb-498d-81f4-6e84ae3d54fb"
+  },
+  {
+   "id": "req_bcd7a95b3322",
+   "title": "Big Brother",
+   "rating": 4.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "616455e2-4fe5-42f5-95c5-c67101661b41"
+  },
+  {
+   "id": "req_2a7775750f16",
+   "title": "About a Boy",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "919ddbf5-5685-4360-a249-6debaf1fd156"
+  },
+  {
+   "id": "req_2e6aa5dbbc48",
+   "title": "WWE Friday Night SmackDown",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9a4d3ceb-4660-4fd1-b32c-de7c2f8efdba"
+  },
+  {
+   "id": "req_82d32efa1de8",
+   "title": "Peppa Pig",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "773f0fcc-3203-4b5d-b495-8820c8c97182"
+  },
+  {
+   "id": "req_19086e1993ce",
+   "title": "SAINT SEIYA: Knights of the Zodiac",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1849af03-2b15-4565-8071-07d5d7c50690"
+  },
+  {
+   "id": "req_271c4710564d",
+   "title": "The Voice",
+   "rating": 5.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "088ba440-c1be-43b1-8efd-171539754cd1"
+  },
+  {
+   "id": "req_72cfe3dad7de",
+   "title": "One Battle After Another",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "40913108-2590-4421-a9ee-fe4b1692231b"
+  },
+  {
+   "id": "req_a286c4ee7224",
+   "title": "Captain Planet and the Planeteers",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b7ec9b49-31f8-4f8c-aa46-1cd8675ed787"
+  },
+  {
+   "id": "req_7a6387ff90fd",
+   "title": "The Little Mermaid",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "53bb0257-c15e-41e9-a1b6-91c91c3a1637"
+  },
+  {
+   "id": "req_f0ecf5672e5d",
+   "title": "Jersey Girl",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d828f9f5-f35e-4269-ad4f-23ece8530b40"
+  },
+  {
+   "id": "req_262554d3f18d",
+   "title": "Project Runway",
+   "rating": 6.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "870f6e42-b1bb-444d-9337-4c07a502b4b1"
+  },
+  {
+   "id": "req_40e4b647e891",
+   "title": "Doctor Strange",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fa46b698-ec17-47a3-a913-c3a343917cac"
+  },
+  {
+   "id": "req_59e6890a22fe",
+   "title": "Pirates of the Caribbean: At World's End",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "857a0f40-8380-4d41-9cde-a4696d6b9a77"
+  },
+  {
+   "id": "req_99f2dac9c3ea",
+   "title": "The Hobbit: An Unexpected Journey",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "39db9c96-24b7-4baa-a6a6-d0de0cd14ed5"
+  },
+  {
+   "id": "req_f026ba2eb202",
+   "title": "The Mummy",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f38c701a-5366-4391-8a78-c8cebd8fbe80"
+  },
+  {
+   "id": "req_9dbe4a85ec37",
+   "title": "Pirates of the Caribbean: On Stranger Tides",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "df909e57-6ce1-41e4-86f1-8da87cdb8bb7"
+  },
+  {
+   "id": "req_76d5567cf399",
+   "title": "Aquaman",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2c7cb223-f6dd-40a7-89f5-1a71a8e955ba"
+  },
+  {
+   "id": "req_4cb0b74a549e",
+   "title": "Kingdom of Heaven",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b2377207-e4ef-4210-9fa9-5d8debbd9ce1"
+  },
+  {
+   "id": "req_965ae797b54d",
+   "title": "Thor: The Dark World",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "065f5b7d-ec7f-4551-8abc-4799d20d7a3e"
+  },
+  {
+   "id": "req_7479ead0547f",
+   "title": "Batman v Superman: Dawn of Justice",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0cd8e37c-5b5f-488f-bb47-6c393d17c47b"
+  },
+  {
+   "id": "req_2d7f9ab528db",
+   "title": "NCIS: New Orleans",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c076db11-d81a-49bb-967d-d33a68cc2772"
+  },
+  {
+   "id": "req_820a605d5dfe",
+   "title": "Star Trek: Discovery",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d53a335e-f3a7-4182-97a6-0246362b0afa"
+  },
+  {
+   "id": "req_9ad3eb1a4b96",
+   "title": "Blindspot",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7663a78c-f130-4d19-b10f-2e18c06b77f5"
+  },
+  {
+   "id": "req_355e9197d2ba",
+   "title": "Lois & Clark: The New Adventures of Superman",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "63e70904-e4a4-472b-8c73-0f0cde1f0607"
+  },
+  {
+   "id": "req_c3fb716b453f",
+   "title": "Charlie and the Chocolate Factory",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "31711475-61da-4638-a318-ee55ce80efa2"
+  },
+  {
+   "id": "req_152d94d5d691",
+   "title": "The Last Ship",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7cc437ce-137f-4bb7-bf8d-a8980e2f9c63"
+  },
+  {
+   "id": "req_3f6001b46dd7",
+   "title": "Black Panther",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "53afea8f-8831-4e24-9988-d7c0180d9e12"
+  },
+  {
+   "id": "req_d7f2bce5dd6b",
+   "title": "Marco Polo",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9ed78a44-9c75-4d52-a427-32fdcc9112f0"
+  },
+  {
+   "id": "req_e69287c633ba",
+   "title": "Iron Man 3",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d12f03f2-fcf2-4df0-b839-462a55d99c56"
+  },
+  {
+   "id": "req_3435214738b8",
+   "title": "The Hunger Games: Catching Fire",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4248b35c-8aec-4537-93c1-b2ac33cd23f0"
+  },
+  {
+   "id": "req_92befcaad53e",
+   "title": "The Amazing Spider-Man 2",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "faeff14d-5a1e-4b29-8dfd-ef6013a5fe1d"
+  },
+  {
+   "id": "req_9ebcc73b2dc8",
+   "title": "Star Wars: The Last Jedi",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ffdcae7b-f7bd-42a1-8da8-147079242ab9"
+  },
+  {
+   "id": "req_c20942337a54",
+   "title": "The Incredible Hulk",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ca117a2c-3231-4fa1-820f-b059ffec9587"
+  },
+  {
+   "id": "req_495440ee8d65",
+   "title": "Las Vegas",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0cd5ed64-4223-4f26-9b54-988e16b35004"
+  },
+  {
+   "id": "req_a41a633ccaf5",
+   "title": "Ant-Man",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b91b34aa-5729-4bc7-8025-bc852e60edc2"
+  },
+  {
+   "id": "req_3fdb724a4b94",
+   "title": "Pacific Rim",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3fcf88cf-031c-41dd-acd1-ad8257694036"
+  },
+  {
+   "id": "req_b23e0f14dcb7",
+   "title": "Man of Steel",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "26c4ec71-52a1-4ed3-ac81-d62c32beb91f"
+  },
+  {
+   "id": "req_beacffe65247",
+   "title": "Frozen",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1631a92a-9a9d-41dc-bdb0-cb1c92e34561"
+  },
+  {
+   "id": "req_20df33821422",
+   "title": "Captain Marvel",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e78a0515-3bc7-42e2-bd30-afe23877ef0f"
+  },
+  {
+   "id": "req_1d70cc9ffef1",
+   "title": "Lilo & Stitch: The Series",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ce5a25d0-db3f-490e-9ee7-de248e486687"
+  },
+  {
+   "id": "req_131710d1122b",
+   "title": "Fantastic Beasts and Where to Find Them",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "52e85047-7f3d-4146-ba0c-e7f53c4bcd96"
+  },
+  {
+   "id": "req_9775085473cc",
+   "title": "Justice League",
+   "rating": 6.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5cab0c12-3746-473a-80dd-586009ecd7e9"
+  },
+  {
+   "id": "req_d72692eb6e67",
+   "title": "Sex and the City",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3b2c0bea-b2f1-4ffd-b178-2b42a4b702f6"
+  },
+  {
+   "id": "req_e50422c758a9",
+   "title": "Brave",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "adcafa52-a2de-4f38-9898-639ed20b5b25"
+  },
+  {
+   "id": "req_1b66ded329f6",
+   "title": "Dark Phoenix",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "41f6f4e0-60a7-4b60-b28c-4300ae5ebdc1"
+  },
+  {
+   "id": "req_af568bc0ddd4",
+   "title": "Real Steel",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1f9596bd-d0e2-45ca-9b8e-8538edb337d4"
+  },
+  {
+   "id": "req_c888e54986cd",
+   "title": "Rise of the Planet of the Apes",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3044eb5e-8a0d-4b57-9a36-ff770761cc76"
+  },
+  {
+   "id": "req_5c66908185b0",
+   "title": "Cars 3",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "53de8e51-a239-4594-8cf4-90167aed2ba8"
+  },
+  {
+   "id": "req_4a93dece6556",
+   "title": "Jack Reacher",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a8cbed72-523e-4715-8dda-ecbb57e50a88"
+  },
+  {
+   "id": "req_841b4e91429a",
+   "title": "Entourage",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0541a73b-cdd3-4feb-9b3b-2cefe2210964"
+  },
+  {
+   "id": "req_6fbbf4ab83c0",
+   "title": "Kung Fu Panda",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b7f2fb36-0093-4ddd-b96c-89c2077c6dbd"
+  },
+  {
+   "id": "req_0587a3a1adbf",
+   "title": "Mom",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a3c245a2-9ad6-4f32-a08a-623eb473037e"
+  },
+  {
+   "id": "req_1fd9361dd72f",
+   "title": "Ice Age",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c7124d2d-b070-4b70-9cfc-faa529c5a59d"
+  },
+  {
+   "id": "req_b861a79e45d7",
+   "title": "Hunter",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3c1f5eab-7219-469b-bc26-8ddd79e76f12"
+  },
+  {
+   "id": "req_81780ba82f76",
+   "title": "Beverly Hills, 90210",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "33a1c88b-c642-4006-baf4-fef7ea9a3843"
+  },
+  {
+   "id": "req_be6627f13a5f",
+   "title": "Twilight",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7b65082d-b362-4f84-9a0b-f968b0a1719f"
+  },
+  {
+   "id": "req_535f2c56a9b6",
+   "title": "Wreck-It Ralph",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "724cf953-157e-4b4c-b1da-9a25c94c4649"
+  },
+  {
+   "id": "req_e08cece8931e",
+   "title": "Hawaii Five-O",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "770340d6-b3b9-46cf-a9e5-db45f17c04f0"
+  },
+  {
+   "id": "req_0e9a82cae82c",
+   "title": "New Girl",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fbfe68d9-456b-460c-9438-2a0567201332"
+  },
+  {
+   "id": "req_ff82015ce972",
+   "title": "Scandal",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7f909b1b-e35c-4f16-b1d3-b60375b50d17"
+  },
+  {
+   "id": "req_eae45014706d",
+   "title": "Home Alone 2: Lost in New York",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bbffd51e-68d8-45a5-8006-d0120becccda"
+  },
+  {
+   "id": "req_cf6bf5a97c6d",
+   "title": "Over the Hedge",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1503d1b7-1bbb-493e-ad4d-b840a32b73e0"
+  },
+  {
+   "id": "req_1ab630a71ea7",
+   "title": "Madagascar",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "92122d17-f15d-473e-8d8c-2640e65b94e2"
+  },
+  {
+   "id": "req_abdd10e84d92",
+   "title": "Ted 2",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "097cb315-204e-4660-b600-c4ae66fd6884"
+  },
+  {
+   "id": "req_9e80b52a19ac",
+   "title": "Ice Age: Continental Drift",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dce011ad-28d8-48eb-8588-c06e84c76e4d"
+  },
+  {
+   "id": "req_0b2e8a51675e",
+   "title": "Wings",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "003f2690-ce76-4637-8c79-b8887c05123d"
+  },
+  {
+   "id": "req_8729c8fc58ca",
+   "title": "Monster: The Ed Gein Story",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f78a3641-2ce8-45cc-8f3a-afbd120e88ee"
+  },
+  {
+   "id": "req_5634c69f0cc1",
+   "title": "Ice Age: Collision Course",
+   "rating": 6.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e7c1fc2a-206b-43f8-965c-c6e51ebffc18"
+  },
+  {
+   "id": "req_704a3313015f",
+   "title": "NYPD Blue",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cb5b0974-2720-45c1-99a4-71b0f5eb89c1"
+  },
+  {
+   "id": "req_a4e5750e94d6",
+   "title": "2 Broke Girls",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d510aaf2-231a-4ec0-88a2-6c16fc702136"
+  },
+  {
+   "id": "req_222724fb4801",
+   "title": "John Wick: Chapter 2",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "448130f4-d923-491c-887f-768619d5440d"
+  },
+  {
+   "id": "req_c151188c1bfa",
+   "title": "Crossing Jordan",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3d7a0c51-352d-49d5-a46e-e5355d5b9779"
+  },
+  {
+   "id": "req_f981a5ecb38b",
+   "title": "Mean Girls",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1266fb6a-e551-41d9-bc1f-e77a7c4838db"
+  },
+  {
+   "id": "req_e662e693bfe0",
+   "title": "Nip/Tuck",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0f12ca47-1271-4b79-88a3-cf1ab586b0f7"
+  },
+  {
+   "id": "req_9a2c836af173",
+   "title": "The Proposal",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ff65c359-2f65-4d61-8fe8-a9de4a22050f"
+  },
+  {
+   "id": "req_23c15cd0120d",
+   "title": "Mannix",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9677963c-9cd0-4a12-bb9e-81a16e6863a7"
+  },
+  {
+   "id": "req_63b826d8f8b2",
+   "title": "The Good Dinosaur",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ef12d873-ab90-4eb8-ba5b-db16935cd37f"
+  },
+  {
+   "id": "req_7cedebfd43b5",
+   "title": "World War Z",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8e74760b-195c-4ad6-b958-24484cd6b698"
+  },
+  {
+   "id": "req_4652a467dc5d",
+   "title": "Dawson's Creek",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "53f1914a-d2a2-4df9-9da8-1f98c017bdec"
+  },
+  {
+   "id": "req_a8b2e9f77301",
+   "title": "Jungle",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0e24397b-0ef4-4d85-87cc-ab552a4eaaf0"
+  },
+  {
+   "id": "req_a597a15be889",
+   "title": "Melrose Place",
+   "rating": 5.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0b9191b9-51e7-486a-b698-68667db4be92"
+  },
+  {
+   "id": "req_50bbbe05f09c",
+   "title": "Godzilla: King of the Monsters",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "090d3092-232d-49a0-997a-51a9428c4118"
+  },
+  {
+   "id": "req_443c7c04644a",
+   "title": "V.I.P.",
+   "rating": 5.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "59b76fdb-ced3-4b47-a793-150c1c353acb"
+  },
+  {
+   "id": "req_0ac6a11b5b7d",
+   "title": "The Fugitive",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dce06fc7-451d-4cdb-87da-8e76a51e712d"
+  },
+  {
+   "id": "req_6796003dc764",
+   "title": "Will & Grace",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1ecb1a19-7235-4171-a1db-0340c39ee592"
+  },
+  {
+   "id": "req_e23494f40650",
+   "title": "Terminator Genisys",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "412818a3-053b-44e8-b803-63500e48b171"
+  },
+  {
+   "id": "req_6493d8fe0412",
+   "title": "Major Crimes",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "78ca64cd-07d8-4efa-87fa-e34ec6716983"
+  },
+  {
+   "id": "req_ae540f6df699",
+   "title": "Killers of the Flower Moon",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "01e6bfa7-b441-4047-8cee-14e305ba7fbf"
+  },
+  {
+   "id": "req_59210b778c89",
+   "title": "Touched by an Angel",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "21307992-39b1-44f2-a95f-fdf38b62502f"
+  },
+  {
+   "id": "req_d28f51f154ff",
+   "title": "Madam Secretary",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79b4aa81-1177-417e-ad73-8045347586df"
+  },
+  {
+   "id": "req_b4a751a1a2f1",
+   "title": "Marty Supreme",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "56a57dd0-7f3d-4016-9465-c69f735420f2"
+  },
+  {
+   "id": "req_0b8ba38e9143",
+   "title": "Dallas",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "492eca73-aaf1-4357-8e73-858363777121"
+  },
+  {
+   "id": "req_d3d91e22582c",
+   "title": "New Looney Tunes",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "be4010fd-9f48-40c6-bc18-3a4f7051e87f"
+  },
+  {
+   "id": "req_2304e79b975e",
+   "title": "black-ish",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "632fc9dc-553d-47c1-9dd9-ebf35a17b2dd"
+  },
+  {
+   "id": "req_fcd3d1996574",
+   "title": "Magnum, P.I.",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "30844857-5eb4-412a-9cb4-e9123789de46"
+  },
+  {
+   "id": "req_8c1d20ade744",
+   "title": "Send Help",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d6a175a6-4ba5-4c17-b7bc-0677c604134d"
+  },
+  {
+   "id": "req_fe963091c451",
+   "title": "Keeping Up with the Kardashians",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "037db994-1826-4b28-8806-8699df6faf9a"
+  },
+  {
+   "id": "req_ca2a4bc1ac59",
+   "title": "The Hangover",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6ad42fe4-070b-4127-a1d6-56fbf91eab41"
+  },
+  {
+   "id": "req_339af692faf4",
+   "title": "Fifty Shades of Grey",
+   "rating": 5.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "578088fc-6423-484d-8979-28e4de15f3e0"
+  },
+  {
+   "id": "req_2209b37744ea",
+   "title": "The Drew Carey Show",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1d054e27-352c-4d65-a421-1efcec412a87"
+  },
+  {
+   "id": "req_dc53de182358",
+   "title": "White Chicks",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "46c6936a-da80-49b6-a458-52c2cbe0d84c"
+  },
+  {
+   "id": "req_1a361a70dbd8",
+   "title": "21 Jump Street",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "85829f8f-4960-437c-ac68-cd7f4504fdca"
+  },
+  {
+   "id": "req_a11a6d0c71e1",
+   "title": "Survivor",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2928a281-4892-4e20-8123-5fd8041959e9"
+  },
+  {
+   "id": "req_edab10f70532",
+   "title": "Grown Ups 2",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f7038133-269c-492e-acaf-b53b590c5862"
+  },
+  {
+   "id": "req_2b5ba6d8da80",
+   "title": "Grown Ups",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e77b9c2d-c1bd-4aff-820e-5313cb48d9ff"
+  },
+  {
+   "id": "req_e14359019c6b",
+   "title": "Dynasty",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d0730423-a6da-460d-b8ed-58ed7df0e88b"
+  },
+  {
+   "id": "req_36b58a327baa",
+   "title": "The Rifleman",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a0321e33-0178-41b8-aa04-ecf445ad725c"
+  },
+  {
+   "id": "req_dd147b1d715e",
+   "title": "Alice",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b01ca735-26bb-47d3-a0ed-d92bbf36c83a"
+  },
+  {
+   "id": "req_190a3bfa1bc0",
+   "title": "The Cosby Show",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "15ca8a5e-d164-4e2a-a82b-1d571fa13a50"
+  },
+  {
+   "id": "req_bb0558b9740e",
+   "title": "Ironside",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3a0ac33c-08af-4e78-9ec4-67ea389d7542"
+  },
+  {
+   "id": "req_c884315cfeba",
+   "title": "Night Court",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9cb6a10c-447c-434d-9f1b-1b51534e53b3"
+  },
+  {
+   "id": "req_8dd8656c0f6c",
+   "title": "Family Matters",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f44b620c-6ff1-4c19-b03c-6ea0f921691e"
+  },
+  {
+   "id": "req_79e6d7d39e63",
+   "title": "Fall",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "db6d7b76-519a-4713-a977-51cadb694c3e"
+  },
+  {
+   "id": "req_f863eeca910e",
+   "title": "Insidious",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8aef957e-5443-4cda-893c-b52bd0731e89"
+  },
+  {
+   "id": "req_49f4bdff2e39",
+   "title": "Have I Got News for You",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c956bbc8-52b3-4a95-9f9e-9a006f225c13"
+  },
+  {
+   "id": "req_c51d842d7046",
+   "title": "Hot Ones",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7f664c90-da89-451f-9432-6f9601fad0ba"
+  },
+  {
+   "id": "req_661e5349d7c7",
+   "title": "The Conjuring 2",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9b8505c8-c679-44be-a150-979be4584d34"
+  },
+  {
+   "id": "req_be7307190666",
+   "title": "28 Days Later",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "03e14de3-b5eb-4575-9a71-42625a1b796d"
+  },
+  {
+   "id": "req_7dd91e4611f7",
+   "title": "The Conjuring: The Devil Made Me Do It",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6249a3ee-56cb-4b28-a130-7b6c332f1db2"
+  },
+  {
+   "id": "req_711567048c84",
+   "title": "The Accountant\u00b2",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e9c1e38f-ce90-4136-8b18-c38778313cb5"
+  },
+  {
+   "id": "req_ddf3d44fb724",
+   "title": "Now You See Me",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "75b617cf-b547-4f19-89a9-5d747f3a202b"
+  },
+  {
+   "id": "req_7461db4e894c",
+   "title": "Scream VI",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d550ed53-c4a9-4ecd-a45b-424929c9ed7f"
+  },
+  {
+   "id": "req_51953602f4c1",
+   "title": "America's Got Talent",
+   "rating": 5.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "86596749-ad85-4c7e-87fc-4c6a49aa9815"
+  },
+  {
+   "id": "req_830b8df57771",
+   "title": "L.A. Law",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "72bc0b4c-4a9e-4890-825c-600aa25e648a"
+  },
+  {
+   "id": "req_93dad51ced99",
+   "title": "Final Destination Bloodlines",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "671bc65c-75df-47cb-b9b7-a67e622420ef"
+  },
+  {
+   "id": "req_a2cf19443dda",
+   "title": "The Conjuring: Last Rites",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f8601154-a0ed-4be4-b1b9-4ad3512acdc8"
+  },
+  {
+   "id": "req_0d030618ca6a",
+   "title": "It Follows",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "281dccf7-4744-4f11-9b81-7bf9049b532f"
+  },
+  {
+   "id": "req_db15d61a722a",
+   "title": "The Da Vinci Code",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "40661e69-721c-47e3-b8bb-fc6d2ddc883c"
+  },
+  {
+   "id": "req_55cbf68ffabb",
+   "title": "Smile 2",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "610124be-b475-432b-a511-97aec9d39305"
+  },
+  {
+   "id": "req_c09662f0cb4b",
+   "title": "The Lorax",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ccbd5d89-251b-42a5-be31-45a820e40b88"
+  },
+  {
+   "id": "req_35040a85d954",
+   "title": "Insidious: The Red Door",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4a7d9eff-96b5-44c3-8d95-55069e3fdf45"
+  },
+  {
+   "id": "req_fd3dfd732a0f",
+   "title": "Casualty",
+   "rating": 6.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79222d44-2c3b-4251-9ca3-2ed9981f715d"
+  },
+  {
+   "id": "req_2a950891edd1",
+   "title": "Scream 7",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d02bd5bf-27ee-4093-9f82-132df0d0e098"
+  },
+  {
+   "id": "req_0df1b598ef88",
+   "title": "The Bullwinkle Show",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "98db7e8c-f6de-4384-b1f8-f9860debc61b"
+  },
+  {
+   "id": "req_f68b122e4242",
+   "title": "Hokum",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "67b88353-5558-4e46-b1b7-90a044accf1e"
+  },
+  {
+   "id": "req_2f7c9c9cdc4a",
+   "title": "Passenger",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "36fb6f44-9f0d-4f8a-a736-0b9f6381eb65"
+  },
+  {
+   "id": "req_425fd71fa01b",
+   "title": "T. J. Hooker",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ea16b747-6dfc-4089-bc6e-2483e56f4e8c"
+  },
+  {
+   "id": "req_132dd8293f0d",
+   "title": "The Fly",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b459416f-dab4-46c6-bfae-21993b0ee824"
+  },
+  {
+   "id": "req_1b4c792f2364",
+   "title": "Falcon Crest",
+   "rating": 5.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b7bde378-b664-4309-b888-276fe1ee332e"
+  },
+  {
+   "id": "req_4affc243f148",
+   "title": "Coach",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c1e404b4-0ba9-49ae-875f-430a4d60100e"
+  },
+  {
+   "id": "req_403495529b01",
+   "title": "Hollyoaks",
+   "rating": 5.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1076e0ac-7007-43e2-9e3b-19f91812857a"
+  },
+  {
+   "id": "req_4136602c9ebb",
+   "title": "Black Box",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "295a81cf-a05b-43fd-a8d6-4766eda219fe"
+  },
+  {
+   "id": "req_97934369d715",
+   "title": "The Priest: Thanksgiving Massacre",
+   "rating": 3.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7e8eb085-f01f-4289-af88-f45938817420"
+  },
+  {
+   "id": "req_29136f65025e",
+   "title": "Pixels",
+   "rating": 5.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b2d3ebed-09d0-4324-a3a5-b3c478c5dfc0"
+  },
+  {
+   "id": "req_4be0c046a12f",
+   "title": "Wonder Woman",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1d7e3efa-e123-4ad1-b15c-5fd38f89feb7"
+  },
+  {
+   "id": "req_1d539e6235fc",
+   "title": "Pirates of the Caribbean: Dead Men Tell No Tales",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a4f3fef7-081f-497d-a245-3ea1d2b53c76"
+  },
+  {
+   "id": "req_0f0cc817b504",
+   "title": "Kong: Skull Island",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "044810a3-1d31-4cd8-b7ba-5f6756bf1e58"
+  },
+  {
+   "id": "req_6f73e7bef0c6",
+   "title": "The Mummy Returns",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "49897a16-33c6-4a97-b066-35aa9935ee90"
+  },
+  {
+   "id": "req_e0f5bb5305c5",
+   "title": "Men in Black",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7a8f430f-6018-4a83-8266-c1a4689fc695"
+  },
+  {
+   "id": "req_20f15842c127",
+   "title": "Lethal Weapon",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dc05eec8-d1c4-4e01-8c4d-e7bd54d9ddd5"
+  },
+  {
+   "id": "req_23d9b4cb9207",
+   "title": "Fast & Furious Presents: Hobbs & Shaw",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "78c241e6-21f0-4c02-869b-ac2e6a60263d"
+  },
+  {
+   "id": "req_3a63d13a9744",
+   "title": "Puss in Boots",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d236079f-e992-4fa2-ac7c-122394d170f4"
+  },
+  {
+   "id": "req_f19c55f85215",
+   "title": "Falling Skies",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b771a218-81a3-42a6-a93f-eadb672bc9cc"
+  },
+  {
+   "id": "req_869c7fea496c",
+   "title": "The Lego Movie",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2f8af1f2-d05f-4270-8d28-77feb7fee0da"
+  },
+  {
+   "id": "req_d77f85820819",
+   "title": "The SpongeBob SquarePants Movie",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "647a340e-bf15-4a05-acdd-34aba667a85d"
+  },
+  {
+   "id": "req_0d459805751c",
+   "title": "Teenage Mutant Ninja Turtles",
+   "rating": 5.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "13d6592c-2c73-482a-b178-119d80e0d8c4"
+  },
+  {
+   "id": "req_40cc08cc6977",
+   "title": "Jumanji: The Next Level",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "315267fc-6246-41a1-ba88-3a2691b5e72e"
+  },
+  {
+   "id": "req_07f63397e874",
+   "title": "Shrek Forever After",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4cbd12e-7b93-403c-989f-6f24391274fd"
+  },
+  {
+   "id": "req_d441380c1019",
+   "title": "MacGyver",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d4728b40-eec2-439b-92de-5d6a60776082"
+  },
+  {
+   "id": "req_504595e77f3d",
+   "title": "Mission: Impossible - Rogue Nation",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b4a64868-841b-4b72-bac3-5d8a4c248d5d"
+  },
+  {
+   "id": "req_1309320e55ab",
+   "title": "Alita: Battle Angel",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "febb9023-f24c-4bca-9288-a4d6a685b7fe"
+  },
+  {
+   "id": "req_ac2abf60b610",
+   "title": "Mission: Impossible - Ghost Protocol",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ee36b0e7-cb1e-425d-b68f-0debf5a0b4c8"
+  },
+  {
+   "id": "req_234591040667",
+   "title": "The Matrix Reloaded",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fe5a9a80-4081-4863-9c63-432f1b572d4b"
+  },
+  {
+   "id": "req_9ca7f9c6e36f",
+   "title": "Mission: Impossible",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "653afccd-e3d0-4305-975c-76a2ba2bd9ef"
+  },
+  {
+   "id": "req_d3a4f7008a33",
+   "title": "Ant-Man and the Wasp",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4424615e-b5a7-4692-bcec-1e5c86b4b6e5"
+  },
+  {
+   "id": "req_fbe4c425e9d2",
+   "title": "Stargate Universe",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "94f0772e-885d-4ddf-89d3-b9dad61efcc4"
+  },
+  {
+   "id": "req_fa4ab5611e7d",
+   "title": "The Hunger Games: Mockingjay - Part 2",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cba6c32a-f96f-442c-b85a-114831535ccc"
+  },
+  {
+   "id": "req_d33a8c7d2edd",
+   "title": "Terminator: Dark Fate",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "aab9346c-42f6-40be-bff1-2bfa33b3c2f2"
+  },
+  {
+   "id": "req_992b62cceb16",
+   "title": "Batman Returns",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4f31c914-f3f6-4442-8d82-4d19aa9320c1"
+  },
+  {
+   "id": "req_d1a4a915b510",
+   "title": "X-Men: Apocalypse",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "04be1268-a798-4bb5-8bfa-e4ed80426189"
+  },
+  {
+   "id": "req_873afc498238",
+   "title": "xXx: Return of Xander Cage",
+   "rating": 6.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4d82b975-2c9c-4b82-bc3f-15c8d9a826a4"
+  },
+  {
+   "id": "req_3d4fe0c86f46",
+   "title": "Dawn of the Planet of the Apes",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0465ef75-1d3d-4b01-b3f8-3617e6cf0d26"
+  },
+  {
+   "id": "req_e971766cfb81",
+   "title": "Transformers: Age of Extinction",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1fc102c3-da6e-432d-af24-84695295e8af"
+  },
+  {
+   "id": "req_5ba84b23746f",
+   "title": "Hercules",
+   "rating": 5.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6e88a177-afbc-4f39-ae66-26a96d8c8003"
+  },
+  {
+   "id": "req_2cee0130a3b4",
+   "title": "Highlander: The Series",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "00786bea-ee45-49e8-99a5-0690a53c55b8"
+  },
+  {
+   "id": "req_c3f328cd7890",
+   "title": "Alice in Wonderland",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "00844691-f120-40a8-a0c5-e90805d65eaf"
+  },
+  {
+   "id": "req_d8b738d7fbb7",
+   "title": "Green Lantern",
+   "rating": 5.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ed4fb998-fab8-47c3-84fd-1936c915a6e1"
+  },
+  {
+   "id": "req_bcfe4aa0447d",
+   "title": "Bridge to Terabithia",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dbabdcb3-000b-405c-b561-ce6683986d87"
+  },
+  {
+   "id": "req_98f9c7948d5e",
+   "title": "Life of Pi",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ab6c0060-2540-43d1-804e-5084be53cd09"
+  },
+  {
+   "id": "req_a3b6f0679d7e",
+   "title": "The Lion King",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e97f0118-1f6b-4f60-a11f-783e56539904"
+  },
+  {
+   "id": "req_819c7335bb61",
+   "title": "Nash Bridges",
+   "rating": 6.6,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "877b8ae3-f5c4-47ed-aba2-7c0551eaf46c"
+  },
+  {
+   "id": "req_d6470e43a782",
+   "title": "Indiana Jones and the Temple of Doom",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "484e08c6-d6ff-45e1-a908-97b11afa6045"
+  },
+  {
+   "id": "req_f00cc7b6c664",
+   "title": "The Eagle",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bc413d99-6142-423c-ba77-ec17765d515c"
+  },
+  {
+   "id": "req_4399bdd34bd0",
+   "title": "Kung Fu Panda 2",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e34d6510-8744-4894-a170-bb95cc79ba8d"
+  },
+  {
+   "id": "req_94a1b7bc60fd",
+   "title": "Kingsman: The Golden Circle",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c48c04eb-2283-472c-b04b-33ef2ed439cf"
+  },
+  {
+   "id": "req_a1fd0fb09113",
+   "title": "Rush Hour",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c478818f-9fc5-4bd5-8e18-fc51098fd152"
+  },
+  {
+   "id": "req_d3595c7de549",
+   "title": "Megamind",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ee4b5271-9034-4562-be4d-405120880f15"
+  },
+  {
+   "id": "req_669d79152cec",
+   "title": "The Nice Guys",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "449faf43-38af-493f-b499-fb079bd9033d"
+  },
+  {
+   "id": "req_d591153175a0",
+   "title": "A Bug's Life",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "edbe291a-d714-40fb-815e-5ef73aba11aa"
+  },
+  {
+   "id": "req_f95b573e463c",
+   "title": "Shrek 2",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f23b7aec-c094-442e-be79-55521ab95409"
+  },
+  {
+   "id": "req_ea2359d0d397",
+   "title": "Top Gun",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "34cf0bcf-fcaf-476a-bb02-8eee81d92f5a"
+  },
+  {
+   "id": "req_aa53899c22cb",
+   "title": "The Secret Life of Pets 2",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8c6613ba-4e33-4f8e-9abd-7145cfb0ee35"
+  },
+  {
+   "id": "req_eb805bfe921f",
+   "title": "Madagascar 3: Europe's Most Wanted",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "505818d4-4d9c-4270-a6ca-6e494641a692"
+  },
+  {
+   "id": "req_7dc3ce6ed8a5",
+   "title": "Hotel Transylvania",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "54c8ff87-e348-49df-8aea-79d421cd8d0c"
+  },
+  {
+   "id": "req_94fc1a63cae0",
+   "title": "Ice Age: The Meltdown",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "70966ef5-cd32-42e9-b90c-4c3a5bd4bae9"
+  },
+  {
+   "id": "req_2f18e4211ebe",
+   "title": "Ice Age: Dawn of the Dinosaurs",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3a0ac9e7-983c-4b94-a111-d394f4dfb786"
+  },
+  {
+   "id": "req_672cfccc4bcd",
+   "title": "The Saint",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2449cffe-7c05-4941-9e9f-3d87dfefd22a"
+  },
+  {
+   "id": "req_6664e77bee18",
+   "title": "Bull",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1e3a7f14-d07b-4227-a67a-ada37bbe064a"
+  },
+  {
+   "id": "req_2861f1952536",
+   "title": "Penguins of Madagascar",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "26b9fc69-f483-4c1d-8561-f249fb53d7e8"
+  },
+  {
+   "id": "req_d551bff6224f",
+   "title": "Batman",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "47d1f83b-6b05-419a-9dcd-90d39681e21b"
+  },
+  {
+   "id": "req_96ff7e2dbfe7",
+   "title": "Lassie",
+   "rating": 6.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6e3b8e78-35b8-46fd-a4da-1a89b1c2f1af"
+  },
+  {
+   "id": "req_61313760cd3b",
+   "title": "Ted",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b628ab00-3dce-43ac-847c-f4273a381918"
+  },
+  {
+   "id": "req_40ba6c081083",
+   "title": "Bee Movie",
+   "rating": 6.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "272ea8f4-bdf7-4c29-9c73-57a1887c9c7d"
+  },
+  {
+   "id": "req_8c9a6e018eea",
+   "title": "The Big Short",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e383d023-b8d0-4d4d-8706-6dd86d7ba0c8"
+  },
+  {
+   "id": "req_3d02ab018ca5",
+   "title": "Will Trent",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "22a9374a-d4c5-4c06-9a24-98bcc726b454"
+  },
+  {
+   "id": "req_c19956932ef6",
+   "title": "Babylon",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "562c4339-b736-4271-835d-aaed047f5f68"
+  },
+  {
+   "id": "req_8cba20b28f67",
+   "title": "Black Hawk Down",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e2591646-97b6-434c-a135-a9e0dfd19bcb"
+  },
+  {
+   "id": "req_f4eb9d513f47",
+   "title": "War Dogs",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6f4e176f-7e40-42a7-8005-62802a139035"
+  },
+  {
+   "id": "req_1a5904366b2c",
+   "title": "John Wick: Chapter 3 - Parabellum",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "61e3aec0-55ec-479b-9afa-4cde840c3326"
+  },
+  {
+   "id": "req_dcfaed1fe84c",
+   "title": "Spin City",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "db3b01f9-1bff-456d-94af-826cd8e21f88"
+  },
+  {
+   "id": "req_c2b7e10f314e",
+   "title": "Sleepy Hollow",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5f6428d9-8c89-4f4f-b5b8-f0d640d340fe"
+  },
+  {
+   "id": "req_393cfcf46c26",
+   "title": "Sicario",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "15201421-2476-4bc3-a49d-a7777a8d1a23"
+  },
+  {
+   "id": "req_051dc4adf962",
+   "title": "Nurse Jackie",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0903c1df-02d3-4ee7-8f6f-2e99ca74f4b1"
+  },
+  {
+   "id": "req_a54839cd400c",
+   "title": "Under the Dome",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "06bbf851-3292-4afe-92d4-5693c6649765"
+  },
+  {
+   "id": "req_5e1c0d045518",
+   "title": "I, Robot",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "58b244ca-ab1d-4e58-8eb6-c11faf5f5e92"
+  },
+  {
+   "id": "req_77ccdbed5999",
+   "title": "Venom",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e5b91e12-b4ee-4819-8957-893e9707a015"
+  },
+  {
+   "id": "req_246f522a6d36",
+   "title": "The Equalizer 2",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c737cf69-01bb-4d04-9140-020f5102530a"
+  },
+  {
+   "id": "req_8db35b9ddf8b",
+   "title": "Chappie",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dcc43331-e9e1-42a5-b613-3b536919435c"
+  },
+  {
+   "id": "req_e3840331853f",
+   "title": "Jurassic World",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6693b521-7872-4cbb-8595-a16565d914e6"
+  },
+  {
+   "id": "req_e9e235fcb502",
+   "title": "The Meg",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0e8efa74-028a-479a-b093-54ac3a6eb9a2"
+  },
+  {
+   "id": "req_ddc90a14dda4",
+   "title": "Taken 3",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e22592d0-40b9-456c-83f4-e3aaa27b104b"
+  },
+  {
+   "id": "req_6c09ce90edd3",
+   "title": "The Equalizer",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f26cff51-6d1e-4bf4-9439-794946e9afca"
+  },
+  {
+   "id": "req_f7bb6af2779c",
+   "title": "Jurassic World: Fallen Kingdom",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e74d8c64-93dd-4c58-94d0-a464edf9fb69"
+  },
+  {
+   "id": "req_8c839dde1fd0",
+   "title": "War of the Worlds",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d5dbbd2-e6e5-46ef-99bd-dd80af96efac"
+  },
+  {
+   "id": "req_3faccc8ebd8d",
+   "title": "Monsters vs Aliens",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0d470bb7-4d5a-4e8b-817b-731af9b8c3da"
+  },
+  {
+   "id": "req_99dbb6cb4e73",
+   "title": "Empire",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9979dfff-7176-4c5c-97e4-2e2e6c8c7143"
+  },
+  {
+   "id": "req_3ef0b7ef9825",
+   "title": "Vera",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8d021d90-4e8f-4854-98f2-3e5b9153c022"
+  },
+  {
+   "id": "req_890c3b972aae",
+   "title": "Unforgettable",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a67c736a-b7c8-4e8d-a67c-a8ef3e0d0c75"
+  },
+  {
+   "id": "req_5e4a559f7fc5",
+   "title": "The Godfather Part III",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1bf03387-c751-43bd-b035-21db96b5167c"
+  },
+  {
+   "id": "req_127545d01862",
+   "title": "A Quiet Place",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6b4d7981-6871-49b5-a65e-7fef2f075c13"
+  },
+  {
+   "id": "req_8611ade978ba",
+   "title": "Party of Five",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "527570b4-84ec-488b-8b4b-1ae84f3c6202"
+  },
+  {
+   "id": "req_e24868f27822",
+   "title": "Remington Steele",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2d41cac4-38be-469b-ab78-16c3309be479"
+  },
+  {
+   "id": "req_46ec53aa6633",
+   "title": "American Psycho",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a5c8995f-8c72-48c6-bc9b-80abbf60588d"
+  },
+  {
+   "id": "req_bb659d80125f",
+   "title": "Brothers and Sisters",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "47d1ff0c-6e35-4e51-b9f9-2723f38c8d92"
+  },
+  {
+   "id": "req_dff61eb97cb3",
+   "title": "Midsommar",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a2a02508-e71e-4bff-833d-f85ad77167dc"
+  },
+  {
+   "id": "req_be1604461e4a",
+   "title": "Moonlight",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6552bd36-6e36-4cfc-9a2c-3b0809d2f0cd"
+  },
+  {
+   "id": "req_74d26835e207",
+   "title": "I Am Legend",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7cff6d2a-deca-4cec-a5b3-ac8853648c1e"
+  },
+  {
+   "id": "req_eb7373fd4dc5",
+   "title": "War for the Planet of the Apes",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ad68d568-6c01-48ee-8747-a8ea8320cb0a"
+  },
+  {
+   "id": "req_b2b848cf7123",
+   "title": "Big Sky",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d759db5-2449-4c21-86f2-a1422c653be3"
+  },
+  {
+   "id": "req_1a5f79a04c84",
+   "title": "The Facts of Life",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "77c6dcfc-6abb-4762-a301-c30d1a851d9b"
+  },
+  {
+   "id": "req_db87922319fd",
+   "title": "The Cleaning Lady",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b6f7082d-5328-4505-9888-d37c1dc38818"
+  },
+  {
+   "id": "req_b08c66c196ff",
+   "title": "Fifty Shades Freed",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ea726e3d-4ae0-4c5f-92d0-36c1bbee9865"
+  },
+  {
+   "id": "req_a9c87657ad38",
+   "title": "The Agency",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9d8b2bc0-a5ff-4ff9-a837-bebb6073745f"
+  },
+  {
+   "id": "req_924ccf0c4085",
+   "title": "Home Improvement",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f011912d-bf1c-4e3d-9361-59f0204e53cc"
+  },
+  {
+   "id": "req_b829bc2d4439",
+   "title": "The Pretender",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8ed5d11b-d112-49c3-a913-9fe8bc037824"
+  },
+  {
+   "id": "req_4e834f25c49d",
+   "title": "The Dead Zone",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ac8336f9-00cb-4089-94c6-ab5b72e7a84b"
+  },
+  {
+   "id": "req_d1b8c392ddec",
+   "title": "Unfaithful",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cdafb329-27ca-4206-8bb0-4ff705304dd1"
+  },
+  {
+   "id": "req_21b7e6506c2c",
+   "title": "Big Love",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5d56797c-cdcf-4ad6-86d7-862abf30d85d"
+  },
+  {
+   "id": "req_05dde61c506a",
+   "title": "Peaky Blinders: The Immortal Man",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ba4f2acb-c075-4ad1-8d4b-f4574f876a27"
+  },
+  {
+   "id": "req_3fe062ada457",
+   "title": "Nashville",
+   "rating": 6.6,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8a5930d2-86bc-468c-bd22-04e362ef36de"
+  },
+  {
+   "id": "req_66c73837df43",
+   "title": "The Tom and Jerry Show",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "78397cd3-c9ce-4bb7-888b-c4b96cd8fe53"
+  },
+  {
+   "id": "req_a108c6ea8f94",
+   "title": "Last Man Standing",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1e42d6c4-bf7d-4f2b-a41e-f5a70eb04ab4"
+  },
+  {
+   "id": "req_2d38403d903c",
+   "title": "Snow White and the Seven Dwarfs",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ecfa42ee-7a87-4802-9df0-5673e4aa2c50"
+  },
+  {
+   "id": "req_42425e2cf144",
+   "title": "Beavis and Butt-Head",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2912e904-73e8-4e19-a758-d51790642a21"
+  },
+  {
+   "id": "req_5059ede7d786",
+   "title": "Charlie's Angels",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f57ee4d5-b3fb-463a-a6a4-7bfa52f1292a"
+  },
+  {
+   "id": "req_79be7d019174",
+   "title": "Reno 911!",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "43de49b4-e3bb-435f-8f00-1fa643ddd0ab"
+  },
+  {
+   "id": "req_9f772a4ed38f",
+   "title": "Cow and Chicken",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8b39bcf7-0052-468e-83dd-672d765843ab"
+  },
+  {
+   "id": "req_41d062325515",
+   "title": "The Flintstones",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "92ec3725-031d-46e5-b809-6faf11d1b2e4"
+  },
+  {
+   "id": "req_c69db4b1ebfd",
+   "title": "Hot in Cleveland",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a8e24e1a-c1fd-4696-86bb-4c1d4067e832"
+  },
+  {
+   "id": "req_be8efdb32cd5",
+   "title": "Fresh Off the Boat",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1fb66d05-0b93-4fde-8e7e-c6595e39927d"
+  },
+  {
+   "id": "req_b69ce019a5a6",
+   "title": "The Parent Trap",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "eae3ccd5-9289-4726-bd6f-30c8dc9de5e4"
+  },
+  {
+   "id": "req_98f6c16047da",
+   "title": "Despicable Me 2",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5e74c3a8-7779-483c-880c-e2d10089a34b"
+  },
+  {
+   "id": "req_15fd9f5ab902",
+   "title": "The Menu",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c5f484c3-f7cf-4c62-a82c-11ba0bd0a61e"
+  },
+  {
+   "id": "req_3aa3ee2c74fb",
+   "title": "Tom & Jerry Kids Show",
+   "rating": 6.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8f906d9f-9ca1-4415-8037-5658ec938130"
+  },
+  {
+   "id": "req_d90779909473",
+   "title": "Sleeping Beauty",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f78bc9d4-f08b-4dc3-a670-280c03f9d900"
+  },
+  {
+   "id": "req_a7bf11f55911",
+   "title": "Joker: Folie \u00e0 Deux",
+   "rating": 5.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2b830897-7137-4fe2-aac8-765ded60e12b"
+  },
+  {
+   "id": "req_fb9397bc8b02",
+   "title": "Octonauts",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "79890fdb-9180-493b-bf0f-517be80aca5c"
+  },
+  {
+   "id": "req_13128e48b682",
+   "title": "The Waltons",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "10e7523d-ce9e-454c-ba57-4453b0b908a1"
+  },
+  {
+   "id": "req_ea2a830cdb29",
+   "title": "According to Jim",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3e762faf-2076-42c2-bd52-ed2e405dfa1a"
+  },
+  {
+   "id": "req_6f4d8add7d87",
+   "title": "Scary Movie",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c4ea84db-04d7-4ad2-9c05-72240b416216"
+  },
+  {
+   "id": "req_42fec10cf554",
+   "title": "The Mindy Project",
+   "rating": 6.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b24a7c5e-d389-4cd0-859e-8437716db51c"
+  },
+  {
+   "id": "req_23aee3025532",
+   "title": "Cougar Town",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5744f835-5fa8-4432-893a-5e4fc1d07060"
+  },
+  {
+   "id": "req_784b845997b6",
+   "title": "Highway to Heaven",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7252025c-b495-40b8-a4bf-eec2a803c3de"
+  },
+  {
+   "id": "req_d4d9b34a1284",
+   "title": "Ridiculousness",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5cb65885-654a-4d46-93c9-accdc295528f"
+  },
+  {
+   "id": "req_da931cdbb4bb",
+   "title": "Matlock",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "50f86a0a-db68-4bbb-b71d-271b864c548e"
+  },
+  {
+   "id": "req_bbeb04c2aeee",
+   "title": "My Gym Partner's a Monkey",
+   "rating": 6.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f932379c-1fb4-45b0-9dfe-5622c9cae828"
+  },
+  {
+   "id": "req_b979dfa41949",
+   "title": "The Monkey",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "16423190-f3c6-4ae2-90c5-4879e1c717fd"
+  },
+  {
+   "id": "req_83b9327ef721",
+   "title": "Newhart",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0ac70657-97f0-44e2-9852-21390240167e"
+  },
+  {
+   "id": "req_85d54bd50b9b",
+   "title": "The Smurfs",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cc7d9d93-9835-47ef-b2e2-31644ad8c7d4"
+  },
+  {
+   "id": "req_1508ef856e52",
+   "title": "Saw",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e9f38a0a-56d4-4ef1-8091-f91299cd6aeb"
+  },
+  {
+   "id": "req_012883668370",
+   "title": "Scream",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1030d78e-5575-4814-a477-b3b70b0066c3"
+  },
+  {
+   "id": "req_c5bd48fb3069",
+   "title": "Hereditary",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2f2f5d30-5525-44af-8d62-88c345f6b1bb"
+  },
+  {
+   "id": "req_39528bcb1277",
+   "title": "Spaceballs",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7469ba30-4cbd-439b-bc5d-73e0077c9d89"
+  },
+  {
+   "id": "req_48eb1df392d5",
+   "title": "Evil Dead Rise",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "70fa88d4-bab8-4c67-a44a-17e51d3e1990"
+  },
+  {
+   "id": "req_dc7b75cab06f",
+   "title": "Five Nights at Freddy's",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "98df64a8-c0a3-4be3-ac70-692389bbe4e6"
+  },
+  {
+   "id": "req_1a6311425152",
+   "title": "Rambo: The Force of Freedom",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d850f153-bb1c-45fd-b708-403d8e0894cb"
+  },
+  {
+   "id": "req_6e2fc307b7c3",
+   "title": "Ancient Aliens",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9f1b7dfa-7b4c-4639-a96b-8ae9e14db91e"
+  },
+  {
+   "id": "req_2aad25f42736",
+   "title": "Barbarian",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "af1033d6-997a-4749-8718-b8f3b74016ba"
+  },
+  {
+   "id": "req_6fbdb7598edb",
+   "title": "Pawn Stars",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9b735042-846a-49ff-a6b5-721c93ba1787"
+  },
+  {
+   "id": "req_1a7706d9206b",
+   "title": "Now You See Me 2",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "08843e84-80e9-4ded-a220-98dee3465907"
+  },
+  {
+   "id": "req_7551ec7c1ac0",
+   "title": "X",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a4a28a8e-e078-4e33-a98e-ec721142a441"
+  },
+  {
+   "id": "req_e335070c5fe5",
+   "title": "Uncle Grandpa",
+   "rating": 4.6,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "00ef9f51-030f-410a-a659-7287ae91ed18"
+  },
+  {
+   "id": "req_18afab6220b4",
+   "title": "Hell's Kitchen",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1390ed00-a043-4db9-b0bb-ae0d8c386c64"
+  },
+  {
+   "id": "req_8b849f1e0e73",
+   "title": "The Bernie Mac Show",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "91fe0f7f-254c-465e-95d0-5f6db85c699b"
+  },
+  {
+   "id": "req_a14d145dad90",
+   "title": "Basic Instinct",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "556dbd1a-73ef-413a-aa78-6656f1187bf3"
+  },
+  {
+   "id": "req_063ceb1b8223",
+   "title": "Scream",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "73d98168-ed3a-475d-94ea-9865ceb3c674"
+  },
+  {
+   "id": "req_c70a02649607",
+   "title": "Neighbours",
+   "rating": 6.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "01756165-3aea-41b0-962a-c5e907544d6a"
+  },
+  {
+   "id": "req_a537dc03aa5b",
+   "title": "Terrifier 3",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0ea59a33-e422-458e-add1-2aec63512027"
+  },
+  {
+   "id": "req_564873cd41d8",
+   "title": "Insidious: The Last Key",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "63cae941-62f5-409c-ab3a-bd09b592a8e2"
+  },
+  {
+   "id": "req_1ffdd9ffd530",
+   "title": "RuPaul's Drag Race All Stars",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f4a904fc-9550-41ca-a728-0ae485a2e478"
+  },
+  {
+   "id": "req_9f6b933fce50",
+   "title": "28 Weeks Later",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e05bce6a-e40a-40ea-9493-1df5d2fa38f9"
+  },
+  {
+   "id": "req_c746b96a769e",
+   "title": "Prometheus",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "052a489b-06a5-41dc-8432-6489ef52ff99"
+  },
+  {
+   "id": "req_fa0aa22669a6",
+   "title": "Curious George",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "542fc6ce-bb92-4521-befd-0328e89184fb"
+  },
+  {
+   "id": "req_5ff5178659c4",
+   "title": "Crawl",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "91a025a5-8def-406d-86a3-168d84d6cc06"
+  },
+  {
+   "id": "req_3648b4817c93",
+   "title": "Insidious: Chapter 3",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f713bdd4-fb5b-45b3-a83c-ff0c4f2914b8"
+  },
+  {
+   "id": "req_01a7fede91ef",
+   "title": "The Nun",
+   "rating": 5.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8aba63d1-6f46-439e-a0cc-11fe90c43146"
+  },
+  {
+   "id": "req_248645ced592",
+   "title": "American Idol",
+   "rating": 5.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a35fc5ce-526c-4440-bda4-7e6397f9342c"
+  },
+  {
+   "id": "req_f277960144c4",
+   "title": "Simon & Simon",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "858ec88a-d2fb-467b-8285-d7ded034fbca"
+  },
+  {
+   "id": "req_45c60350b5c4",
+   "title": "Cops",
+   "rating": 6.6,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9935d4f9-de9e-4e56-b0f2-cb59a6d6b3ae"
+  },
+  {
+   "id": "req_c72725ad98a0",
+   "title": "St. Elsewhere",
+   "rating": 5.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0f08dd53-b08b-4486-bb88-35bafd78e986"
+  },
+  {
+   "id": "req_d4ca0a94d0f9",
+   "title": "Return to Silent Hill",
+   "rating": 5.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "40028a84-6763-413a-81dc-4f64af8da99e"
+  },
+  {
+   "id": "req_b97c38502c20",
+   "title": "Top Chef",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5b74a54e-e5e5-4b21-99f8-2601ef595489"
+  },
+  {
+   "id": "req_863dd348a443",
+   "title": "Barney Miller",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ecff5870-7882-4f05-9bfa-95d6f98b6b0b"
+  },
+  {
+   "id": "req_aed02182fe86",
+   "title": "Judge Judy",
+   "rating": 5.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4edbd7bf-7065-40d2-bf98-c5cca25e1e70"
+  },
+  {
+   "id": "req_58bdc8ce5e1a",
+   "title": "Chopped",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c9782f3a-0d4b-42e5-9283-accd7fe8683e"
+  },
+  {
+   "id": "req_f8ed98da1b0c",
+   "title": "Diners, Drive-Ins and Dives",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bcde3ee9-a35e-4ae9-8ceb-649edf1935d3"
+  },
+  {
+   "id": "req_13261f69b67a",
+   "title": "Dateline",
+   "rating": 6.6,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "901120a9-cf88-488e-8da5-07c689ccd1d3"
+  },
+  {
+   "id": "req_b7ee86f067bc",
+   "title": "60 Minutes",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e4cb3d10-575c-433f-8acb-fe4c11dc638a"
+  },
+  {
+   "id": "req_051210f18757",
+   "title": "Frontline",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "65cb44ba-c800-43fe-9373-0f9537c80edd"
+  },
+  {
+   "id": "req_2c23839dbb61",
+   "title": "Wheel of Fortune",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d3878772-8432-4100-a54f-692c8f9b5f99"
+  },
+  {
+   "id": "req_71eae46b1e17",
+   "title": "The Price Is Right",
+   "rating": 6.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1ea9cde0-19f9-4601-8f25-b57d0d6e3b90"
+  },
+  {
+   "id": "req_7e5e7d499071",
+   "title": "The Secret Life of Walter Mitty",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6e893824-8627-4ce3-ab2e-88da00bffbab"
+  },
+  {
+   "id": "req_a0c3f1253963",
+   "title": "Rise of the Guardians",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7e08ced1-a7e6-4bbc-8cdf-e96cf56b0a0f"
+  },
+  {
+   "id": "req_6088f53a2c23",
+   "title": "Maleficent",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "955cdceb-c478-4066-8ece-ad18b275fc16"
+  },
+  {
+   "id": "req_c9023b7ae80f",
+   "title": "Pok\u00e9mon Detective Pikachu",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4df2084b-1d76-4fe8-873e-ef6217a8ad33"
+  },
+  {
+   "id": "req_6d4ee205feba",
+   "title": "Tomb Raider",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8285eb78-36c4-4c93-a399-fb0a7cf99e16"
+  },
+  {
+   "id": "req_f8b02db4259f",
+   "title": "The Great Wall",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5f5b7e89-6848-41bc-b775-a3d09f43a4fe"
+  },
+  {
+   "id": "req_7b7d69740fbb",
+   "title": "The Karate Kid",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "eb5ac000-1aa7-49ee-b3e7-807984a0d182"
+  },
+  {
+   "id": "req_839389a3b4be",
+   "title": "Ralph Breaks the Internet",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "611a72b2-5efb-4c54-86ee-9c1c1ae153d1"
+  },
+  {
+   "id": "req_cb36cd62124b",
+   "title": "Kung Fu Panda 3",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a3621d68-4f23-4e3a-ad57-e91474397310"
+  },
+  {
+   "id": "req_94be1df0dcfc",
+   "title": "Charlie's Angels",
+   "rating": 5.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "07be48f2-d584-4ae2-84b1-4a01db02d216"
+  },
+  {
+   "id": "req_032e0faae902",
+   "title": "Mr. & Mrs. Smith",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "169c98e3-cf5a-4f79-b040-e84e9472fe48"
+  },
+  {
+   "id": "req_0af2fa3ae898",
+   "title": "Skyfall",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9c8d1460-1395-4e1a-81d3-eff64888f7e5"
+  },
+  {
+   "id": "req_5f2eb52f15a3",
+   "title": "Total Recall",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "59776d9e-3707-47ed-8044-3c44f53c8936"
+  },
+  {
+   "id": "req_7805d0aab5b3",
+   "title": "Maze Runner: The Death Cure",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4112c55d-0047-4bca-9706-ad8fec12e532"
+  },
+  {
+   "id": "req_7a52a6417c8e",
+   "title": "Independence Day",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c161a0ad-f60a-43a6-90df-d801878e43bc"
+  },
+  {
+   "id": "req_99fb64291495",
+   "title": "Divergent",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "80788016-9dad-442b-978d-79535421e286"
+  },
+  {
+   "id": "req_cae41987bc7a",
+   "title": "The Matrix Revolutions",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8cf64dab-219c-4313-9e65-694a570c0e30"
+  },
+  {
+   "id": "req_8a79fbc9192e",
+   "title": "Constantine",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7b1a09c1-48b6-4da7-94bc-883581608910"
+  },
+  {
+   "id": "req_067f4b7600f0",
+   "title": "Taken",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fa1849b5-0ad4-4ef2-9e1c-9968c24d6f8c"
+  },
+  {
+   "id": "req_0a8749ed8aac",
+   "title": "Van Helsing",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2315a411-b0bd-473e-9b00-67ccbc341f63"
+  },
+  {
+   "id": "req_7bb89a159b53",
+   "title": "Transformers: The Last Knight",
+   "rating": 6.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2c0d9f0b-9ac5-4f3a-8a22-189951895a40"
+  },
+  {
+   "id": "req_1f0ad9fec8ca",
+   "title": "Indiana Jones and the Kingdom of the Crystal Skull",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3793a7a4-d37f-4123-a3a6-2ca2b0e9f32b"
+  },
+  {
+   "id": "req_8839c35bf21c",
+   "title": "Battleship",
+   "rating": 5.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0fac1e0e-39aa-40fb-9c8c-c0c2a8c8a73f"
+  },
+  {
+   "id": "req_dd16306041ed",
+   "title": "The Jungle Book",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "78973176-cfd5-4bb1-bb77-e033ceaf4817"
+  },
+  {
+   "id": "req_c72e47df55a3",
+   "title": "2012",
+   "rating": 5.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ac507191-ffb2-4b3b-b31b-d774b47ed455"
+  },
+  {
+   "id": "req_39990b699404",
+   "title": "Black Lightning",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4dc29d2d-7a43-409a-8784-83c69e86928d"
+  },
+  {
+   "id": "req_b215d10b3fe0",
+   "title": "Timeless",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "16356b43-0c0b-4662-8080-9b258eaff012"
+  },
+  {
+   "id": "req_207547e1a5fd",
+   "title": "Shooter",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "090daca8-a611-44ef-af36-fbf02454be17"
+  },
+  {
+   "id": "req_21658096d886",
+   "title": "Fantastic Four",
+   "rating": 5.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "673e505f-9ad6-43c9-98a0-620ff17d4220"
+  },
+  {
+   "id": "req_9f46c9d9963b",
+   "title": "Ghost Rider",
+   "rating": 5.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4a0c50ef-ddfa-4fac-beff-d119a4c7c95b"
+  },
+  {
+   "id": "req_28a1bc020e5a",
+   "title": "Percy Jackson & the Olympians: The Lightning Thief",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "78ae7d4c-d9de-435d-a0f2-c3eecc8fef70"
+  },
+  {
+   "id": "req_ee44a1ee3a18",
+   "title": "The Unit",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "85ddede0-b917-4afa-8cfc-8fe840904eef"
+  },
+  {
+   "id": "req_935358c3eedf",
+   "title": "Andromeda",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f419bc83-53af-4ac3-abb7-61ed7a61da30"
+  },
+  {
+   "id": "req_c37c4c30778d",
+   "title": "Godzilla",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cde4273c-876e-4421-8fd1-34af1d785095"
+  },
+  {
+   "id": "req_40121f945685",
+   "title": "San Andreas",
+   "rating": 6.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "17ae5296-c11e-4b84-b5c7-956ea1b99e0d"
+  },
+  {
+   "id": "req_4d1998add8d2",
+   "title": "Meet Joe Black",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c446d134-4c81-46ac-99e3-d46f5ccc0ebb"
+  },
+  {
+   "id": "req_1d1248cbf67f",
+   "title": "The Lion King II: Simba's Pride",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d5b2b3d1-18ca-403a-b72f-b6754f9219f2"
+  },
+  {
+   "id": "req_e2fdcf211600",
+   "title": "Interview with the Vampire",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a15ce78f-6d82-434d-b166-8e9438008424"
+  },
+  {
+   "id": "req_e89cac6e6b32",
+   "title": "The Shape of Water",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b9db2e87-51d3-45fd-9b3b-fbdcf0cd12b1"
+  },
+  {
+   "id": "req_9515dd9b4c64",
+   "title": "Renegade",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b5fa70c5-2a43-4f9f-80f6-387fe956a35d"
+  },
+  {
+   "id": "req_6acd6c42716d",
+   "title": "The Witch",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d8c47f3c-3a28-4612-8291-8649258ba8b2"
+  },
+  {
+   "id": "req_68e8a75622ec",
+   "title": "Cinderella",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "00225fa7-ed62-445b-9417-a7a14c69d1d7"
+  },
+  {
+   "id": "req_44bc9c7ad6ad",
+   "title": "Earth: Final Conflict",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4111c7f7-8581-4e11-80f0-ec7b1f32899a"
+  },
+  {
+   "id": "req_9dbb4eaca9b1",
+   "title": "Dune",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2f738632-b22e-41d0-a28e-054f4d1427c4"
+  },
+  {
+   "id": "req_14aa99b48b87",
+   "title": "Bad Boys",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "cecaafa3-3f2b-4eb1-966f-2528e66a0263"
+  },
+  {
+   "id": "req_2eeb0b71e139",
+   "title": "Mickey Mouse Clubhouse",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "625f9f5f-ff52-4129-afa4-6b3d00317ea7"
+  },
+  {
+   "id": "req_712383e5383a",
+   "title": "Men in Black II",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9a3181d3-0b39-4def-9ab5-e69d8f3ffede"
+  },
+  {
+   "id": "req_0b4e7ccd11c6",
+   "title": "The Wild Thornberrys",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4a7b10ac-436a-4448-905b-87d0484bc5da"
+  },
+  {
+   "id": "req_b3bb58f57781",
+   "title": "The Incredible Hulk",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "595dd37e-58d5-472a-bd48-5f3be280e22e"
+  },
+  {
+   "id": "req_2d344beaf463",
+   "title": "The Six Million Dollar Man",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ad07fec6-7938-472c-8560-cc0f2ee4e558"
+  },
+  {
+   "id": "req_108053a0beb8",
+   "title": "The Mask",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b3da030d-0b41-41b8-954b-929eb0708f54"
+  },
+  {
+   "id": "req_3d0c70dc9802",
+   "title": "Monsters University",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "07e070c6-3a10-4e0e-83f8-4d39dc9ee847"
+  },
+  {
+   "id": "req_a636c509e4ee",
+   "title": "Bolt",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b89ecf2f-5785-4a20-988c-7bb57abc2257"
+  },
+  {
+   "id": "req_6d914d0b0411",
+   "title": "Minions",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ca6fb956-7c47-4096-8b4d-22f8ef460537"
+  },
+  {
+   "id": "req_5f3c2c5cc593",
+   "title": "How the Grinch Stole Christmas",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b2f75570-4125-4b1a-bafb-e60ae94d8011"
+  },
+  {
+   "id": "req_b4cb199456b0",
+   "title": "Monster House",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e66bf913-50e7-499d-ac7a-da4d9022df62"
+  },
+  {
+   "id": "req_5ef36c2989ec",
+   "title": "Bruce Almighty",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1a61b57a-8545-4a2a-885b-540051bfef3c"
+  },
+  {
+   "id": "req_c52795885147",
+   "title": "Starsky & Hutch",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b9bc5e60-8d12-4981-afa0-e6f0e9122a99"
+  },
+  {
+   "id": "req_a3edf76de4e7",
+   "title": "Johnny Test",
+   "rating": 6.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "89be8748-88cb-49d1-a179-752082ed737f"
+  },
+  {
+   "id": "req_75acc3ec2c42",
+   "title": "Night at the Museum",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "de63a44d-8449-4e27-a36a-40bb751235b5"
+  },
+  {
+   "id": "req_5197a21dfb16",
+   "title": "Birdman or (The Unexpected Virtue of Ignorance)",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d5739fdb-b493-49c4-ad37-10168f435ffe"
+  },
+  {
+   "id": "req_3056bc03cdab",
+   "title": "Fanboy and Chum Chum",
+   "rating": 5.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a16ac6b5-8329-49ef-8cc5-8e36fb9157ae"
+  },
+  {
+   "id": "req_fb439cc035e2",
+   "title": "Baby Driver",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "65e5512f-d3cb-4bb5-8dbd-40b404b9ed1e"
+  },
+  {
+   "id": "req_81fd9760fb0b",
+   "title": "Alvin and the Chipmunks",
+   "rating": 5.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ccf07fe4-cafd-4909-9911-176d624c98da"
+  },
+  {
+   "id": "req_e0bac4afe127",
+   "title": "Private Eyes",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "608a5916-e103-4b0c-9ad1-b5286ae9f4cc"
+  },
+  {
+   "id": "req_08f76cc0e9ed",
+   "title": "Taken",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "37171158-d33b-4f8f-bb6f-ce76b6e64789"
+  },
+  {
+   "id": "req_6d9b97c25750",
+   "title": "Furious 7",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ad5bab03-42fa-4ce5-941c-8fb99ed0f900"
+  },
+  {
+   "id": "req_3f084d324f97",
+   "title": "Early Edition",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f48da16c-f41e-4780-aa56-c8029c9403f7"
+  },
+  {
+   "id": "req_0a8206c3d714",
+   "title": "Designated Survivor",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "654d73ea-390d-4071-be49-53be766f7ee8"
+  },
+  {
+   "id": "req_d3b251feb4a7",
+   "title": "Mike & Molly",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6b66c738-7cc5-4b27-805b-05b8a75c2191"
+  },
+  {
+   "id": "req_b54650d2cc96",
+   "title": "One Hundred and One Dalmatians",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4e6cf2e4-1973-4db5-88da-14d4efad354a"
+  },
+  {
+   "id": "req_b58241d0ef00",
+   "title": "Brother Bear",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ad2b2d4c-6344-4111-a8c1-0edea0a34df8"
+  },
+  {
+   "id": "req_0055ca1f4fdb",
+   "title": "Lucy",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2172ab11-ef1b-41f9-a186-0b6716b13384"
+  },
+  {
+   "id": "req_783fa34e2a54",
+   "title": "Younger",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f262d315-15f9-4e4c-8e96-c7085e9d3cb7"
+  },
+  {
+   "id": "req_c5c55128017a",
+   "title": "Ugly Betty",
+   "rating": 6.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "9469cadc-c352-434a-82e6-3937d9289d35"
+  },
+  {
+   "id": "req_22a56c4dcf02",
+   "title": "Royal Pains",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "eea87736-8359-4124-8594-6e53c2fc6507"
+  },
+  {
+   "id": "req_cff4e9dc951c",
+   "title": "Insurgent",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7d6dcc6a-269d-41f3-8b83-39fcb6cad650"
+  },
+  {
+   "id": "req_01b4f49c70ab",
+   "title": "The Princess and the Frog",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bbadc802-c0d7-4860-b6ba-ec932a8dc151"
+  },
+  {
+   "id": "req_529bdc26374b",
+   "title": "Terminator 3: Rise of the Machines",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "30e5b0f9-d18a-489d-bc86-27f7ae1cadd2"
+  },
+  {
+   "id": "req_b469ee58cca4",
+   "title": "The Secret Life of the American Teenager",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6bb7686c-aee3-4a43-a558-13fd8b42f0dc"
+  },
+  {
+   "id": "req_998d4f13e8bb",
+   "title": "Ghost",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0b908d0c-f5c8-485c-9faa-0c0a64380b3a"
+  },
+  {
+   "id": "req_f38973e367a5",
+   "title": "Geostorm",
+   "rating": 6.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5a376c10-0787-47b7-962f-9dfc794e9b0c"
+  },
+  {
+   "id": "req_000c4b90d70b",
+   "title": "Sleepy Hollow",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "146082e4-d17a-4b40-a2d5-f5b92f43eab5"
+  },
+  {
+   "id": "req_817b8ba6288e",
+   "title": "The Social Network",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "814f36e1-c5a2-43f0-bdc0-af03c82db3c1"
+  },
+  {
+   "id": "req_6f198cd1011d",
+   "title": "Sully",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "72647add-55bb-4e35-bcab-fde7dc8d7738"
+  },
+  {
+   "id": "req_db2aa6461f18",
+   "title": "Creed",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e02c47c8-1497-4ea6-a0c4-2acf51c08abe"
+  },
+  {
+   "id": "req_58f19f786d5f",
+   "title": "Dark Matter",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "82ebe560-bf8f-4bb2-9cfe-cb8cd202323f"
+  },
+  {
+   "id": "req_3e34d9ff64d9",
+   "title": "The Following",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5a1ed276-6f18-43ab-90ad-cecf09df2014"
+  },
+  {
+   "id": "req_69dbe8f257a7",
+   "title": "The Accountant",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "559c694f-2970-4a0f-aadf-adf1cd2fb1e8"
+  },
+  {
+   "id": "req_6c4cabca28b2",
+   "title": "It Chapter Two",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "553d83e5-e82e-4877-86be-ec48de2ae181"
+  },
+  {
+   "id": "req_7e69f2bab8dd",
+   "title": "The Equalizer",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b9eeaf6b-7d72-4bfd-b651-37618592c241"
+  },
+  {
+   "id": "req_4be145808346",
+   "title": "Lethal Weapon",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2f19460a-bd7c-4182-aecd-571c2f8f64b4"
+  },
+  {
+   "id": "req_83b251fc9b98",
+   "title": "A Complete Unknown",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "42896c0f-d312-481f-a769-85ab7fb1a15a"
+  },
+  {
+   "id": "req_b13816487e2e",
+   "title": "Family Ties",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7a653245-839e-4703-a3d8-696028d2e538"
+  },
+  {
+   "id": "req_010d46dc3e32",
+   "title": "Murder on the Orient Express",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "82d4f57c-69ea-459b-8098-4462cd57e8ce"
+  },
+  {
+   "id": "req_73761a3d8960",
+   "title": "Vigil",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "133aa929-5822-4ed2-8c24-90cbcb9761c0"
+  },
+  {
+   "id": "req_7668b47a6eca",
+   "title": "The Twilight Zone",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b87d4070-dc19-45af-9ba0-1c05d91ceabd"
+  },
+  {
+   "id": "req_2e8cb1360755",
+   "title": "Hannah Montana",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "850e90cc-8f13-4770-9ac6-a74921f468c9"
+  },
+  {
+   "id": "req_7548c9a3860f",
+   "title": "The Affair",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "ff31b426-b021-417e-bcad-a7bca3fd9ad1"
+  },
+  {
+   "id": "req_fab262a6c3ab",
+   "title": "56 Days",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7ef9488f-5f19-4008-a534-2aec338686e6"
+  },
+  {
+   "id": "req_b9637bfe00af",
+   "title": "Johnny Bravo",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "bb925fb5-d9f0-49fc-b13b-8ace473d3e4f"
+  },
+  {
+   "id": "req_ec8d4d4a6039",
+   "title": "Franklin & Bash",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "eba8eb43-123b-4c7a-a24c-45f0738f0bbd"
+  },
+  {
+   "id": "req_9273fe4cbea7",
+   "title": "Courage Under Fire",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "a4f53aba-aaa3-4bf7-9fc1-76b449583112"
+  },
+  {
+   "id": "req_2c84cad644ef",
+   "title": "Matlock",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e906ad00-6acc-4302-91c8-6f9c603996e3"
+  },
+  {
+   "id": "req_a4d431e0272c",
+   "title": "New Tricks",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c337c939-cf6d-45af-8e0e-dd994fb99b45"
+  },
+  {
+   "id": "req_14117942f8eb",
+   "title": "Fantasy Island",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0c3a4e77-be0d-4d93-8033-d39fc783fa72"
+  },
+  {
+   "id": "req_27ad54e4f2e0",
+   "title": "Superbad",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "580d3473-90cf-45a3-abe3-5f136bb57d85"
+  },
+  {
+   "id": "req_3ab10e988d00",
+   "title": "Scarpetta",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3b07f9e0-5649-4b15-bb52-7b1a158a4ae9"
+  },
+  {
+   "id": "req_d81b326c45f7",
+   "title": "Hart to Hart",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f36adb2b-407f-4c17-bd23-2ef1a906efff"
+  },
+  {
+   "id": "req_449101b44825",
+   "title": "Timon and Pumbaa",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f263119e-45f8-4b98-834e-cc19db3d9d84"
+  },
+  {
+   "id": "req_20f18f2d38b3",
+   "title": "Jake and the Fatman",
+   "rating": 6.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "77857fcd-348b-4582-a40b-88cc2416dfd8"
+  },
+  {
+   "id": "req_71ba04f37bb2",
+   "title": "Cinderella",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "eabea8d4-d192-4aa4-83b4-79e0fd3c5ccd"
+  },
+  {
+   "id": "req_04c5aaec5f54",
+   "title": "Sing",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f416eab3-a846-47de-b416-8e895c5c85ec"
+  },
+  {
+   "id": "req_cb738f27d86e",
+   "title": "Ready or Not",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "513ec09b-f457-4316-9fcb-e63df09ce3cd"
+  },
+  {
+   "id": "req_0beefa52384e",
+   "title": "The Simpsons Movie",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "58bb6b81-27b6-49d2-a992-abe5423b6aa7"
+  },
+  {
+   "id": "req_546b40a4b2d3",
+   "title": "The Princess Diaries",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0b19ac39-beaf-4d87-a838-4808e6c70cfb"
+  },
+  {
+   "id": "req_28317446c4bc",
+   "title": "Glass Onion: A Knives Out Mystery",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "745ef8e2-0436-49c6-a274-9fb692a43cd5"
+  },
+  {
+   "id": "req_73c6ddfe0d4e",
+   "title": "Abigail",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "fb23d0f8-2912-467f-9261-782a76892820"
+  },
+  {
+   "id": "req_ef878a78954d",
+   "title": "Legally Blonde",
+   "rating": 6.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5e4e25b0-4579-4e35-b826-7e45137977fa"
+  },
+  {
+   "id": "req_52951fc13a02",
+   "title": "Chicken Run",
+   "rating": 6.9,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "62b5701a-3da4-4c1c-9b25-3e86081dfb9a"
+  },
+  {
+   "id": "req_76527ea67ad8",
+   "title": "90210",
+   "rating": 5.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5a4f88e1-1675-474b-8e3c-67fcb90eeecf"
+  },
+  {
+   "id": "req_8ca55ff3ac0e",
+   "title": "The Hangover Part II",
+   "rating": 6.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "813e8f4d-3380-49f9-bf36-c40996c37f0d"
+  },
+  {
+   "id": "req_7ce67d6abb92",
+   "title": "Dumb and Dumber",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "be4d1be4-c998-4d90-8b17-77f8dd50cc3c"
+  },
+  {
+   "id": "req_0ad1c71936e8",
+   "title": "American Pie",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7b757c46-b94a-42ae-b76d-dd1e8bb25de6"
+  },
+  {
+   "id": "req_a29b76d4f5b2",
+   "title": "Childrens Hospital",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "426b6d4e-9677-4e5b-aceb-7cfc2c9efef8"
+  },
+  {
+   "id": "req_1dad52543da2",
+   "title": "Dirty Dancing",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3421c79f-e6d4-4cc9-91ee-cf24f605d037"
+  },
+  {
+   "id": "req_507564e4fbbe",
+   "title": "Rules of Engagement",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "92ce2917-b1f0-4913-b80e-962ddb6cf764"
+  },
+  {
+   "id": "req_3d845cc56558",
+   "title": "Jennifer's Body",
+   "rating": 6.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "95f436ed-898d-4cfc-9422-e402a0a09437"
+  },
+  {
+   "id": "req_e803ede7e251",
+   "title": "Scary Movie 2",
+   "rating": 5.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6f41cb25-7a17-4951-816f-fc5aa6c5689d"
+  },
+  {
+   "id": "req_1444af845c94",
+   "title": "Arthur",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5d58d623-71d4-44de-801c-3390cf72bff3"
+  },
+  {
+   "id": "req_3d40bdea085c",
+   "title": "Just Shoot Me!",
+   "rating": 6.6,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7587dd54-eefe-4398-b608-77b4f7c29ba3"
+  },
+  {
+   "id": "req_6516fe0b9604",
+   "title": "Man with a Plan",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "593b5a9b-6d7c-4dca-a54e-df45399f00ff"
+  },
+  {
+   "id": "req_db876b344c7b",
+   "title": "The Cleveland Show",
+   "rating": 5.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "02c81999-5b12-401f-990a-0866d62b5b72"
+  },
+  {
+   "id": "req_43873d21c59f",
+   "title": "Highest 2 Lowest",
+   "rating": 5.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "258fb20e-eeb7-41da-8fe2-80dd10b23e41"
+  },
+  {
+   "id": "req_af3eb641f29d",
+   "title": "9 Songs",
+   "rating": 5.5,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3e1ce01c-3049-47c4-b303-d81e31568567"
+  },
+  {
+   "id": "req_6f7ca2c4496a",
+   "title": "Split",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5510bf02-c2f4-4d85-8753-e537570b1983"
+  },
+  {
+   "id": "req_a41b9c753ff3",
+   "title": "Bring Her Back",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "55133442-26d6-40e4-baa2-c25afdd6142e"
+  },
+  {
+   "id": "req_4dea78f5bd8a",
+   "title": "Airplane!",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "275292ab-e423-44fb-99d9-5dcfb2da8f8f"
+  },
+  {
+   "id": "req_81f6b5cbd62b",
+   "title": "Source Code",
+   "rating": 7.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6176815d-ff44-44e9-8e5a-3abaaeca47bd"
+  },
+  {
+   "id": "req_62cf6681c83e",
+   "title": "Talk to Me",
+   "rating": 7.1,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "0c3d119e-4a4d-497c-9502-68d1bd0454fb"
+  },
+  {
+   "id": "req_2a3d0931c4d7",
+   "title": "The Shards",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "7954fe99-33a1-4b83-82aa-cbe4c5780c59"
+  },
+  {
+   "id": "req_0f5bedff27d2",
+   "title": "Limitless",
+   "rating": 7.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6a51c90e-1c58-4fa7-add9-645505a2daf1"
+  },
+  {
+   "id": "req_1ef16e524015",
+   "title": "The Guardian",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "edd93953-45bf-4e43-94fc-2d5b4afc7b48"
+  },
+  {
+   "id": "req_39cf28c02328",
+   "title": "Profiler",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "d16a946e-de88-4a54-b228-6d1d16dfb71f"
+  },
+  {
+   "id": "req_2785e38144fc",
+   "title": "Garfield and Friends",
+   "rating": 7.3,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3974f7a5-ef11-47b8-be20-fad42b97a04e"
+  },
+  {
+   "id": "req_a3796319532a",
+   "title": "Who's the Boss?",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "67ad75e0-31af-4cb8-ab52-5b419339f3af"
+  },
+  {
+   "id": "req_e469859ecfac",
+   "title": "Insidious: Chapter 2",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "f32a815d-62fd-4295-bf88-853d0f3a25df"
+  },
+  {
+   "id": "req_b515118212e1",
+   "title": "Angels & Demons",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e8445aba-8406-48c9-9adc-2d29ea394354"
+  },
+  {
+   "id": "req_845acbc1f7e8",
+   "title": "Blink Twice",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4e7c33ca-333a-46d3-a01c-813205dc4eaf"
+  },
+  {
+   "id": "req_e50d9a33a7b0",
+   "title": "Smile",
+   "rating": 6.7,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1e9d7234-959a-4e3c-82bd-815c7a01187d"
+  },
+  {
+   "id": "req_49bef82bb0ba",
+   "title": "Gold Rush",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5cbc89e3-ee2c-4192-b36b-ad33b4fd4528"
+  },
+  {
+   "id": "req_4c633084e868",
+   "title": "Another Simple Favor",
+   "rating": 5.8,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1eae11d8-988f-4b0e-ab55-b0a7668d6bc8"
+  },
+  {
+   "id": "req_0f5bef78face",
+   "title": "A Haunting in Venice",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "90f19df9-2d8d-435d-a6f3-b0d5ab703fb8"
+  },
+  {
+   "id": "req_e70f4ae8cb92",
+   "title": "Black Phone 2",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "e882b056-e20f-4488-b50f-6fbab820ba3a"
+  },
+  {
+   "id": "req_a68551b62c2b",
+   "title": "Death on the Nile",
+   "rating": 6.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "948ae9be-7d65-4929-bd27-f0466822f228"
+  },
+  {
+   "id": "req_74eeb4755047",
+   "title": "MasterChef",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8931f655-f96e-4c37-a1b6-bf9d950b9078"
+  },
+  {
+   "id": "req_4e9151adc629",
+   "title": "The Bold and the Beautiful",
+   "rating": 5.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "b163d931-68f1-406f-a66c-e0fcd85a1554"
+  },
+  {
+   "id": "req_4a271d3eb286",
+   "title": "Felicity",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "12068790-1cbe-4885-8da3-8871805754d4"
+  },
+  {
+   "id": "req_d68ac887430a",
+   "title": "Shark Tank",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "23bbfbd6-614a-4e24-a459-f26780019b25"
+  },
+  {
+   "id": "req_5b0f673bd467",
+   "title": "Alien: Covenant",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c3b88c85-1bd6-4311-bd3c-b307b7cf6bee"
+  },
+  {
+   "id": "req_5772b78d96dd",
+   "title": "Trap",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "6f707d65-8958-465e-ae99-3399f02c4831"
+  },
+  {
+   "id": "req_37724a2c76a3",
+   "title": "The Beverly Hillbillies",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "dd4e0252-c0d5-4141-a607-f0be0e207303"
+  },
+  {
+   "id": "req_fcc77a7f2017",
+   "title": "Deadliest Catch",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "8665e73d-fafe-4d90-aa2c-622bd9dc30bf"
+  },
+  {
+   "id": "req_eff477a8e6a8",
+   "title": "The Harder They Fall",
+   "rating": 6.6,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "483a2662-d596-43dc-b4a3-8977dbfc7698"
+  },
+  {
+   "id": "req_d4e2a20bbfad",
+   "title": "Blaze and the Monster Machines",
+   "rating": 7.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "70366976-c887-4d57-8bd1-7416085487de"
+  },
+  {
+   "id": "req_9068b47e8bc6",
+   "title": "The Human Centipede (First Sequence)",
+   "rating": 5.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "5ec4a51e-02ed-4748-bf6b-2b77fd0bcce0"
+  },
+  {
+   "id": "req_4758672ebc13",
+   "title": "Tales from the Darkside",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "81246776-41b3-4506-8a33-069f5d8ba16e"
+  },
+  {
+   "id": "req_5e40107093e9",
+   "title": "Moesha",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "24f34195-4b64-4ebc-a425-0ca15ed521c6"
+  },
+  {
+   "id": "req_a896c37f0296",
+   "title": "The Real Housewives of Beverly Hills",
+   "rating": 6.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "385b5b69-4cf2-422e-a110-368acd958ad0"
+  },
+  {
+   "id": "req_1ebe11f723d3",
+   "title": "A Nightmare on Elm Street",
+   "rating": 7.4,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "60cb4333-fb49-473f-a311-37197475227b"
+  },
+  {
+   "id": "req_540d0a6f5aae",
+   "title": "Cagney & Lacey",
+   "rating": 6.9,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "965039a7-ffef-4c08-a50b-03211504f1a0"
+  },
+  {
+   "id": "req_eeb2bfeb227a",
+   "title": "The New Alfred Hitchcock Presents",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "1fdecf3a-ec54-45ac-9ec5-195dd03472f3"
+  },
+  {
+   "id": "req_7549f1a2a7f5",
+   "title": "Ellen",
+   "rating": 6.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "4cd4e28b-b2f3-43a7-a4c9-5c3e1d6eaea9"
+  },
+  {
+   "id": "req_a15a621c3b43",
+   "title": "Tales of the Unexpected",
+   "rating": 6.7,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "51316225-0fdb-457a-a3a5-d582717a6f78"
+  },
+  {
+   "id": "req_10d27bb5991b",
+   "title": "America's Next Top Model",
+   "rating": 5.4,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "73bd77c3-54ff-4e36-a76e-c073cc98cc7a"
+  },
+  {
+   "id": "req_7fb15d392deb",
+   "title": "Saccharine",
+   "rating": 7.0,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "85b7a8ac-a791-4cf2-a13b-335fdc5f262f"
+  },
+  {
+   "id": "req_82f35d8d1e2b",
+   "title": "The X Factor",
+   "rating": 5.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "646f9e26-dd90-4f93-804d-1248a43dd7cc"
+  },
+  {
+   "id": "req_7c33077a19d1",
+   "title": "Thomas & Friends",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "67e3acb0-f278-4a5f-8600-4f4151c88f95"
+  },
+  {
+   "id": "req_de33f090c125",
+   "title": "Infidelity in Suburbia",
+   "rating": 6.2,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "018e0202-7b83-4662-8f3a-fc80aa74ab9e"
+  },
+  {
+   "id": "req_f12994ac069c",
+   "title": "The Big Valley",
+   "rating": 6.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3f4d0dfd-ede4-4282-a2ee-053f521bf33a"
+  },
+  {
+   "id": "req_6c0be675ec4a",
+   "title": "8 Out of 10 Cats",
+   "rating": 7.2,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "84c0d1d6-f42b-42e3-a228-5601ce1315ab"
+  },
+  {
+   "id": "req_f3a2819563ae",
+   "title": "The Traitors",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "170fb727-ffe6-4761-afe7-ede8d096e764"
+  },
+  {
+   "id": "req_62f99bbde2d3",
+   "title": "Murphy Brown",
+   "rating": 6.5,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "18e219c3-03cf-419c-977a-5ab946ff0332"
+  },
+  {
+   "id": "req_06c35bd43e55",
+   "title": "The Lucy Show",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "07c66de9-41f4-40e1-a394-c6dd35f1be39"
+  },
+  {
+   "id": "req_dffddea126e7",
+   "title": "The Mortuary Assistant",
+   "rating": 5.3,
+   "type": "movie",
+   "previous_status": "pending_approval",
+   "recommendation_id": "600f1f4b-c7a5-4327-8a4e-0d122d62dd74"
+  },
+  {
+   "id": "req_dfc00f01a60d",
+   "title": "RuPaul's Drag Race UK",
+   "rating": 7.1,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c9d825c5-6208-4ec7-a4d9-ce6bacfc1e7f"
+  },
+  {
+   "id": "req_ee8b1a2e9974",
+   "title": "So You Think You Can Dance",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "c5a8423d-5f27-43ed-90d6-9ec8ffbe692f"
+  },
+  {
+   "id": "req_877265cd79ae",
+   "title": "One Day at a Time",
+   "rating": 6.8,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "3d172e06-a6df-4540-a6af-af7ca356499d"
+  },
+  {
+   "id": "req_b15c877d95d1",
+   "title": "Doc McStuffins",
+   "rating": 6.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "2c9d706a-50f0-4db9-a2d4-e7b0b87be3e5"
+  },
+  {
+   "id": "req_c06faa9c5282",
+   "title": "48 Hours",
+   "rating": 7.0,
+   "type": "show",
+   "previous_status": "pending_approval",
+   "recommendation_id": "52e575cd-6d88-459b-8a20-662d07277bde"
+  }
+ ]
+}

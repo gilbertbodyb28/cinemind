@@ -1,8 +1,8 @@
 export const MODELS = [
-  { key: "qwen3:14b", label: "Qwen3 14B", hint: "Ollama" },
+  { key: "qwen-suggestarr", label: "Qwen2.5 7B", hint: "Ollama" },
 ];
 
-export const DEFAULT_MODEL = "qwen3:14b";
+export const DEFAULT_MODEL = "qwen-suggestarr";
 
 export const modelLabel = (key) => MODELS.find((m) => m.key === key)?.label || key || "Ollama";
 

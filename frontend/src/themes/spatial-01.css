@@ -1,0 +1,225 @@
+/* Spatial 01 — Cinema Pane.
+   Reference: the CineMind spatial mock. A dark room, one warm amber pane,
+   navigation spelled out in words across the top, the trailer shelf on the
+   left and posters underneath. Scoped to its own data-theme; nothing here
+   can reach Vision UI, Apple or Spatial. */
+
+html[data-theme="spatial-01"] {
+  --bg: #0d0b09;
+  --surface: #1a1611;
+  --gold: #d8b26a;
+  --gold-soft: #ecd6a8;
+  --text: #f6efe4;
+  --muted: #bfb09a;
+  --subtle: #8c7f6d;
+
+  --s1-gap: 26px;
+  --s1-pad: clamp(18px, 1.9vw, 32px);
+  --s1-radius: 30px;
+  --s1-pane: rgba(23, 19, 15, 0.66);
+  --s1-line: rgba(236, 214, 168, 0.13);
+  --s1-raise: rgba(255, 246, 232, 0.06);
+  --s1-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: #14110e !important;
+  color-scheme: dark;
+}
+
+/* :root outranks html[data-wallpaper=…] from wallpapers.css, so the
+   theme's own room wins over the wallpaper picker in this theme. */
+html[data-theme="spatial-01"]:root body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif !important;
+  background:
+    radial-gradient(1500px 900px at 50% -25%, rgba(216, 178, 106, 0.14), rgba(216, 178, 106, 0) 62%),
+    linear-gradient(180deg, #231d16 0%, #171310 48%, #0d0b09 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-01"] .cm-ambient {
+  filter: blur(130px) saturate(80%) brightness(0.6) !important;
+  opacity: 0.3 !important;
+}
+
+/* wallpapers.css dims the room through .ambient-scrim with a selector of
+   its own; in this collection the room belongs to the theme, so this one
+   outranks it. */
+html[data-theme="spatial-01"]:root[data-wallpaper] .ambient-scrim {
+  background: radial-gradient(1500px 1000px at 50% 42%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.42) 92%);
+}
+
+/* ---- the pane ---- */
+
+html[data-theme="spatial-01"] div:has(> .glass-shell) {
+  padding: var(--s1-gap) !important;
+}
+
+html[data-theme="spatial-01"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--s1-radius) !important;
+  padding: var(--s1-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--s1-gap)) !important;
+}
+
+html[data-theme="spatial-01"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--s1-gap);
+  z-index: 0;
+  border-radius: var(--s1-radius);
+  background: var(--s1-pane);
+  backdrop-filter: blur(46px) saturate(150%);
+  -webkit-backdrop-filter: blur(46px) saturate(150%);
+  border: 1px solid var(--s1-line);
+  box-shadow: 0 64px 150px -46px rgba(0, 0, 0, 0.92), inset 0 1px 0 rgba(255, 240, 220, 0.14);
+  pointer-events: none;
+}
+
+html[data-theme="spatial-01"] .grain::before {
+  z-index: 1;
+  opacity: 0.16;
+}
+
+html[data-theme="spatial-01"] .glass {
+  background: rgba(255, 246, 232, 0.05) !important;
+  border: 1px solid rgba(236, 214, 168, 0.11) !important;
+  box-shadow: 0 16px 40px -18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 240, 220, 0.1) !important;
+}
+
+html[data-theme="spatial-01"] .glass-strong {
+  background: rgba(30, 25, 19, 0.82) !important;
+  border: 1px solid rgba(236, 214, 168, 0.16) !important;
+}
+
+/* ---- word navigation ---- */
+
+/* The rail's anchors already carry title=, so the glyph can step aside and
+   let the word do the work. Same links, same routes. */
+html[data-theme="spatial-01"] nav[data-testid="icon-rail"] a {
+  width: auto !important;
+  height: auto !important;
+  padding: 8px 15px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--muted) !important;
+  transition: background 160ms var(--s1-ease), color 160ms var(--s1-ease);
+}
+
+html[data-theme="spatial-01"] nav[data-testid="icon-rail"] a svg {
+  display: none;
+}
+
+html[data-theme="spatial-01"] nav[data-testid="icon-rail"] a::after {
+  content: attr(title);
+  white-space: nowrap;
+}
+
+html[data-theme="spatial-01"] nav[data-testid="icon-rail"] a:hover {
+  background: rgba(255, 246, 232, 0.08) !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="spatial-01"] nav[data-testid="icon-rail"] a.active,
+html[data-theme="spatial-01"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+  background: rgba(216, 178, 106, 0.2) !important;
+  color: var(--gold-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 220, 0.16);
+}
+
+html[data-theme="spatial-01"] nav[data-testid="icon-rail"] {
+  gap: 2px;
+}
+
+/* ---- category pills ---- */
+
+html[data-theme="spatial-01"] [data-testid="category-tabs"] > * {
+  border-radius: 999px !important;
+  padding: 8px 17px !important;
+  border: 1px solid rgba(236, 214, 168, 0.12) !important;
+  background: rgba(255, 246, 232, 0.05) !important;
+  color: var(--muted) !important;
+}
+
+html[data-theme="spatial-01"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(216, 178, 106, 0.22) !important;
+  border-color: rgba(216, 178, 106, 0.45) !important;
+  color: var(--gold-soft) !important;
+}
+
+/* ---- hero ---- */
+
+html[data-theme="spatial-01"] [data-testid="hero-panel"] {
+  border-radius: 24px !important;
+  border: 1px solid rgba(236, 214, 168, 0.12) !important;
+  min-height: clamp(380px, 44vh, 520px) !important;
+  box-shadow: 0 34px 70px -28px rgba(0, 0, 0, 0.8) !important;
+}
+
+html[data-theme="spatial-01"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(380px, 44vh, 520px) !important;
+  padding: clamp(24px, 2.4vw, 40px) !important;
+  max-width: min(58rem, 66%) !important;
+}
+
+html[data-theme="spatial-01"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(97deg, rgba(13, 11, 9, 0.9) 0%, rgba(13, 11, 9, 0.6) 32%, rgba(13, 11, 9, 0) 72%) !important;
+}
+
+html[data-theme="spatial-01"] [data-testid="hero-title"] {
+  font-size: clamp(2.3rem, 3.6vw, 3.6rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em;
+}
+
+html[data-theme="spatial-01"] [data-testid="hero-watch-button"] {
+  background: rgba(216, 178, 106, 0.22) !important;
+  border: 1px solid rgba(216, 178, 106, 0.48) !important;
+  color: var(--gold-soft) !important;
+}
+
+html[data-theme="spatial-01"] [data-testid="hero-watch-button"]:hover {
+  background: rgba(216, 178, 106, 0.32) !important;
+}
+
+/* ---- shelves ---- */
+
+html[data-theme="spatial-01"] .poster-frame {
+  background: linear-gradient(180deg, rgba(34, 28, 22, 0.9), rgba(16, 13, 11, 0.96)) !important;
+  border: 1px solid rgba(236, 214, 168, 0.14) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 54px -22px rgba(0, 0, 0, 0.8) !important;
+  transition: transform 320ms var(--s1-ease), box-shadow 320ms var(--s1-ease);
+}
+
+html[data-theme="spatial-01"] .poster-frame:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 40px 80px -26px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(216, 178, 106, 0.32) !important;
+}
+
+html[data-theme="spatial-01"] [data-testid="new-trailer-panel"] {
+  border-radius: 22px !important;
+}
+
+html[data-theme="spatial-01"] .chip-rose {
+  border-color: rgba(216, 178, 106, 0.45);
+  background: rgba(216, 178, 106, 0.16);
+  color: var(--gold-soft);
+}
+
+/* ---- swatch ---- */
+
+.theme-swatch-spatial-01 .preview-circle {
+  background: rgba(216, 178, 106, 0.22);
+  border: 1px solid rgba(236, 214, 168, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 220, 0.25);
+}
+
+.theme-swatch-spatial-01 .preview-circle-dot {
+  border-color: rgba(236, 214, 168, 0.6);
+}

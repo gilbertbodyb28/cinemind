@@ -1,0 +1,219 @@
+/* Spatial 08 — Lamplight.
+   Reference: the Dark Knight concept in a warm daylit room with a lamp in
+   frame. No separate rail at all — every destination reaches from the top
+   row, the way the reference puts its whole navigation on one line. The shelf
+   underneath runs five across. */
+
+html[data-theme="spatial-08"] {
+  --bg: #26241f;
+  --surface: #35322c;
+  --gold: #ffffff;
+  --gold-soft: #ffffff;
+  --text: #f8f6f2;
+  --muted: #c9c3b9;
+  --subtle: #9b958b;
+
+  --s8-gap: clamp(20px, 3.2vw, 70px);
+  --s8-pad: clamp(18px, 1.9vw, 32px);
+  --s8-radius: 32px;
+  --s8-pane: rgba(96, 92, 86, 0.36);
+  --s8-line: rgba(255, 252, 245, 0.26);
+  --s8-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: #8b8378 !important;
+  color-scheme: dark;
+}
+
+/* :root outranks html[data-wallpaper=…] from wallpapers.css, so the
+   theme's own room wins over the wallpaper picker in this theme. */
+html[data-theme="spatial-08"]:root body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif !important;
+  background:
+    radial-gradient(900px 700px at 12% 26%, rgba(255, 238, 205, 0.85), rgba(255, 238, 205, 0) 56%),
+    radial-gradient(1100px 800px at 82% 8%, rgba(255, 250, 240, 0.5), rgba(255, 250, 240, 0) 58%),
+    linear-gradient(168deg, #cfc6b8 0%, #a89f92 50%, #746c62 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-08"] .cm-ambient {
+  filter: blur(150px) saturate(45%) brightness(1.1) !important;
+  opacity: 0.18 !important;
+}
+
+/* wallpapers.css dims the room through .ambient-scrim with a selector of
+   its own; in this collection the room belongs to the theme, so this one
+   outranks it. */
+html[data-theme="spatial-08"]:root[data-wallpaper] .ambient-scrim {
+  background: radial-gradient(1500px 1000px at 50% 40%, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.14) 92%);
+}
+
+/* ---- the pane ---- */
+
+html[data-theme="spatial-08"] div:has(> .glass-shell) {
+  padding: var(--s8-gap) !important;
+}
+
+html[data-theme="spatial-08"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--s8-radius) !important;
+  padding: var(--s8-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--s8-gap)) !important;
+}
+
+html[data-theme="spatial-08"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--s8-gap);
+  z-index: 0;
+  border-radius: var(--s8-radius);
+  background: var(--s8-pane);
+  backdrop-filter: blur(52px) saturate(130%);
+  -webkit-backdrop-filter: blur(52px) saturate(130%);
+  border: 1px solid var(--s8-line);
+  box-shadow: 0 60px 130px -46px rgba(60, 48, 34, 0.65), inset 0 1px 0 rgba(255, 252, 245, 0.42);
+  pointer-events: none;
+}
+
+html[data-theme="spatial-08"] .grain::before {
+  display: none;
+}
+
+html[data-theme="spatial-08"] .glass {
+  background: rgba(255, 252, 245, 0.12) !important;
+  border: 1px solid rgba(255, 252, 245, 0.24) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 252, 245, 0.3) !important;
+}
+
+html[data-theme="spatial-08"] .glass-strong {
+  background: rgba(52, 48, 43, 0.82) !important;
+  border: 1px solid rgba(255, 252, 245, 0.24) !important;
+}
+
+/* ---- navigation stays on the top row, as one clean strip ---- */
+
+html[data-theme="spatial-08"] nav[data-testid="icon-rail"] {
+  gap: 3px;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: rgba(255, 252, 245, 0.12);
+  border: 1px solid rgba(255, 252, 245, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 252, 245, 0.28);
+}
+
+html[data-theme="spatial-08"] nav[data-testid="icon-rail"] a {
+  border-radius: 999px;
+  color: rgba(255, 252, 245, 0.86) !important;
+  transition: background 150ms var(--s8-ease), color 150ms var(--s8-ease), transform 150ms var(--s8-ease);
+}
+
+html[data-theme="spatial-08"] nav[data-testid="icon-rail"] a:hover {
+  background: rgba(255, 252, 245, 0.2) !important;
+  color: #ffffff !important;
+  transform: scale(1.06);
+}
+
+html[data-theme="spatial-08"] nav[data-testid="icon-rail"] a.active,
+html[data-theme="spatial-08"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+  background: rgba(255, 252, 245, 0.95) !important;
+  color: #2c2822 !important;
+}
+
+/* ---- pills ---- */
+
+html[data-theme="spatial-08"] [data-testid="category-tabs"] {
+  justify-content: center;
+}
+
+html[data-theme="spatial-08"] [data-testid="category-tabs"] > * {
+  border-radius: 999px !important;
+  padding: 9px 19px !important;
+  background: rgba(255, 252, 245, 0.12) !important;
+  border: 1px solid rgba(255, 252, 245, 0.2) !important;
+  color: rgba(255, 252, 245, 0.85) !important;
+}
+
+html[data-theme="spatial-08"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(255, 252, 245, 0.95) !important;
+  border-color: rgba(255, 252, 245, 1) !important;
+  color: #2c2822 !important;
+}
+
+/* ---- hero ---- */
+
+html[data-theme="spatial-08"] [data-testid="hero-panel"] {
+  border-radius: 22px !important;
+  border: 1px solid rgba(255, 252, 245, 0.2) !important;
+  min-height: clamp(330px, 42vh, 470px) !important;
+  box-shadow: 0 36px 72px -28px rgba(50, 40, 28, 0.6) !important;
+}
+
+html[data-theme="spatial-08"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(330px, 42vh, 470px) !important;
+  padding: clamp(22px, 2.2vw, 40px) !important;
+  max-width: min(46rem, 76%) !important;
+}
+
+html[data-theme="spatial-08"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(96deg, rgba(12, 11, 9, 0.9) 0%, rgba(12, 11, 9, 0.5) 40%, rgba(12, 11, 9, 0) 76%) !important;
+}
+
+html[data-theme="spatial-08"] [data-testid="hero-title"] {
+  font-size: clamp(2.1rem, 3.3vw, 3.3rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em;
+}
+
+html[data-theme="spatial-08"] [data-testid="hero-watch-button"] {
+  background: #fffcf5 !important;
+  border: 1px solid #fffcf5 !important;
+  color: #262218 !important;
+  font-weight: 600 !important;
+}
+
+/* ---- five across ---- */
+
+@media (min-width: 1280px) {
+  html[data-theme="spatial-08"] [data-testid="upcoming-panel"] > .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+  }
+}
+
+html[data-theme="spatial-08"] .poster-frame {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 252, 245, 0.24) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 50px -20px rgba(50, 40, 28, 0.6) !important;
+  transition: transform 300ms var(--s8-ease);
+}
+
+html[data-theme="spatial-08"] .poster-frame img {
+  border-radius: 19px !important;
+}
+
+html[data-theme="spatial-08"] .poster-frame:hover {
+  transform: translateY(-6px) scale(1.015);
+}
+
+html[data-theme="spatial-08"] .chip-rose {
+  border-color: rgba(255, 252, 245, 0.36);
+  background: rgba(255, 252, 245, 0.2);
+  color: #ffffff;
+}
+
+/* ---- swatch ---- */
+
+.theme-swatch-spatial-08 .preview-circle {
+  background: rgba(255, 252, 245, 0.34);
+  border: 1px solid rgba(255, 252, 245, 0.6);
+}
+
+.theme-swatch-spatial-08 .preview-circle-dot {
+  border-color: rgba(255, 252, 245, 0.85);
+}

@@ -1,7 +1,7 @@
-"""Live API checks. Generation uses Ollama qwen3:14b; there is no Claude fallback."""
+"""Live API checks. Generation uses the configured Ollama model; there is no Claude fallback."""
 import pytest
 
-from conftest import BASE_URL
+from conftest import BASE_URL, OLLAMA_MODEL
 
 LLM_TIMEOUT = 180
 
@@ -93,12 +93,12 @@ class TestUnreachableOllamaFallback:
     def bad_ollama(self, auth_client):
         r = auth_client.put(
             f"{BASE_URL}/api/connections",
-            json={"ollama_url": "http://127.0.0.1:9", "ollama_model": "qwen3:14b"},
+            json={"ollama_url": "http://127.0.0.1:9", "ollama_model": OLLAMA_MODEL},
             timeout=30,
         )
         assert r.status_code == 200
         yield
-        auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_url": None, "ollama_model": "qwen3:14b"}, timeout=30)
+        auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_url": None, "ollama_model": OLLAMA_MODEL}, timeout=30)
 
     def test_taste_falls_back_to_demo_not_claude(self, auth_client):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate", timeout=LLM_TIMEOUT)

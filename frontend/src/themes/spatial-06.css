@@ -1,0 +1,461 @@
+/* Spatial 06 — Daylight.
+   Reference: the cinewaveflix concept in a sunlit white room. The only light
+   theme in the collection: white glass, dark ink, and the hero left as the
+   one dark object on the screen. The artwork keeps its own light text, so the
+   ink flip stops at the edge of the hero and of every poster plate. */
+
+html[data-theme="spatial-06"] {
+  --bg: #eef0f3;
+  --surface: #ffffff;
+  --gold: #3c4350;
+  --gold-soft: #1d2229;
+  --text: #1c2028;
+  --muted: #5a626e;
+  --subtle: #848c98;
+
+  --s6-gap: clamp(20px, 3vw, 66px);
+  --s6-pad: clamp(16px, 1.7vw, 30px);
+  --s6-radius: 34px;
+  --s6-pane: rgba(255, 255, 255, 0.5);
+  --s6-line: rgba(255, 255, 255, 0.85);
+  --s6-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: #dfe3e8 !important;
+  color-scheme: light;
+}
+
+html[data-theme="spatial-06"],
+html[data-theme="spatial-06"] body,
+html[data-theme="spatial-06"] #root {
+  color: var(--text) !important;
+}
+
+/* :root outranks html[data-wallpaper=…] from wallpapers.css, so the
+   theme's own room wins over the wallpaper picker in this theme. */
+html[data-theme="spatial-06"]:root body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif !important;
+  background:
+    radial-gradient(1200px 800px at 18% 2%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(1000px 700px at 88% 30%, rgba(238, 243, 248, 0.9), rgba(238, 243, 248, 0) 58%),
+    linear-gradient(170deg, #f4f6f9 0%, #e3e8ee 52%, #ccd3dc 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-06"] .cm-ambient {
+  filter: blur(160px) saturate(30%) brightness(1.5) !important;
+  opacity: 0.14 !important;
+}
+
+/* wallpapers.css dims the room through .ambient-scrim with a selector of
+   its own; in this collection the room belongs to the theme, so this one
+   outranks it. */
+html[data-theme="spatial-06"]:root[data-wallpaper] .ambient-scrim {
+  background: none;
+}
+
+/* ---- the pane ---- */
+
+html[data-theme="spatial-06"] div:has(> .glass-shell) {
+  padding: var(--s6-gap) !important;
+}
+
+html[data-theme="spatial-06"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--s6-radius) !important;
+  padding: var(--s6-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--s6-gap)) !important;
+}
+
+html[data-theme="spatial-06"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--s6-gap);
+  z-index: 0;
+  border-radius: var(--s6-radius);
+  background: var(--s6-pane);
+  backdrop-filter: blur(46px) saturate(140%);
+  -webkit-backdrop-filter: blur(46px) saturate(140%);
+  border: 1px solid var(--s6-line);
+  box-shadow: 0 50px 110px -44px rgba(70, 85, 105, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  pointer-events: none;
+}
+
+html[data-theme="spatial-06"] .grain::before {
+  display: none;
+}
+
+/* ---- ink ---- */
+
+html[data-theme="spatial-06"] .text-slate-200,
+html[data-theme="spatial-06"] .text-slate-300 { color: #2b313a !important; }
+html[data-theme="spatial-06"] .text-slate-400 { color: #545c68 !important; }
+html[data-theme="spatial-06"] .text-slate-500 { color: #6d7683 !important; }
+html[data-theme="spatial-06"] .text-slate-600 { color: #838c99 !important; }
+html[data-theme="spatial-06"] .text-\[\#F6EFE4\] { color: #171b21 !important; }
+html[data-theme="spatial-06"] .text-\[\#DCCFBC\] { color: #333a44 !important; }
+html[data-theme="spatial-06"] .text-\[\#BFB09A\] { color: #4c5561 !important; }
+html[data-theme="spatial-06"] .text-\[\#A5987F\] { color: #626b78 !important; }
+html[data-theme="spatial-06"] .text-\[\#8C7F6D\] { color: #7c8593 !important; }
+html[data-theme="spatial-06"] .text-\[\#6E6355\] { color: #909aa6 !important; }
+html[data-theme="spatial-06"] .text-\[\#EBD3A3\],
+html[data-theme="spatial-06"] .text-\[\#D8B26A\] { color: #2f3540 !important; }
+
+html[data-theme="spatial-06"] input::placeholder { color: #8a929e !important; }
+
+/* Artwork keeps its own light type — the flip stops at these edges. */
+html[data-theme="spatial-06"] [data-testid="hero-panel"],
+html[data-theme="spatial-06"] .poster-frame {
+  color: #f7f8fa !important;
+}
+
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .text-slate-200,
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .text-slate-300,
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .text-slate-400,
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .text-\[\#F6EFE4\],
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .text-\[\#DCCFBC\],
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .text-\[\#A5987F\],
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .text-\[\#8C7F6D\],
+html[data-theme="spatial-06"] .poster-frame .text-\[\#8C7F6D\],
+html[data-theme="spatial-06"] .poster-frame .text-slate-400 {
+  color: rgba(255, 255, 255, 0.84) !important;
+}
+
+/* A chip or a pill lying on artwork cannot go white — it would vanish into
+   the picture's highlights and take its label with it. Everything layered on
+   the hero or on a poster keeps the dark treatment. */
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .glass,
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .glass-strong,
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .chip,
+html[data-theme="spatial-06"] .poster-frame .glass,
+html[data-theme="spatial-06"] .poster-frame .glass-strong,
+html[data-theme="spatial-06"] .poster-frame .chip {
+  background: rgba(18, 21, 26, 0.68) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html[data-theme="spatial-06"] [data-testid="hero-panel"] .glass *,
+html[data-theme="spatial-06"] .poster-frame .glass *,
+html[data-theme="spatial-06"] .poster-frame .glass-strong * {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* ---- white surfaces ---- */
+
+html[data-theme="spatial-06"] .glass {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 14px 34px -18px rgba(70, 85, 105, 0.4), inset 0 1px 0 #ffffff !important;
+}
+
+html[data-theme="spatial-06"] .glass-strong {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 26px 56px -24px rgba(70, 85, 105, 0.45) !important;
+}
+
+html[data-theme="spatial-06"] .divider {
+  background: linear-gradient(90deg, transparent, rgba(30, 40, 55, 0.14), rgba(30, 40, 55, 0));
+}
+
+html[data-theme="spatial-06"] .hover\:bg-white\/\[0\.06\]:hover,
+html[data-theme="spatial-06"] .hover\:bg-white\/\[0\.05\]:hover,
+html[data-theme="spatial-06"] .hover\:bg-white\/\[0\.12\]:hover {
+  background-color: rgba(28, 38, 52, 0.07) !important;
+}
+
+html[data-theme="spatial-06"] .chip {
+  border: 1px solid rgba(30, 40, 55, 0.14);
+  background: rgba(255, 255, 255, 0.7);
+  color: #4d5663;
+}
+
+html[data-theme="spatial-06"] .chip-rose {
+  border-color: rgba(30, 40, 55, 0.2);
+  background: rgba(30, 40, 55, 0.1);
+  color: #262d37;
+}
+
+/* ---- rail ---- */
+
+@media (min-width: 1200px) {
+  html[data-theme="spatial-06"] header > div:has(> nav[data-testid="icon-rail"]) {
+    position: static !important;
+    width: 0 !important;
+    height: 0 !important;
+    transform: none !important;
+  }
+
+  html[data-theme="spatial-06"] nav[data-testid="icon-rail"] {
+    position: absolute;
+    left: calc(6px - var(--s6-pad));
+    top: calc(var(--rail-icon, 40px) + 34px);
+    z-index: 40;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 12px 8px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 20px 44px -20px rgba(70, 85, 105, 0.42);
+  }
+
+  html[data-theme="spatial-06"] nav[data-testid="icon-rail"] a {
+    border-radius: 999px;
+    color: #5b636f !important;
+    background: rgba(255, 255, 255, 0.6);
+    transition: background 150ms var(--s6-ease), transform 150ms var(--s6-ease), color 150ms var(--s6-ease);
+  }
+
+  html[data-theme="spatial-06"] nav[data-testid="icon-rail"] a:hover {
+    background: rgba(28, 38, 52, 0.1) !important;
+    color: #1d232b !important;
+    transform: scale(1.08);
+  }
+
+  html[data-theme="spatial-06"] nav[data-testid="icon-rail"] a.active,
+  html[data-theme="spatial-06"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+    background: #23292f !important;
+    color: #ffffff !important;
+  }
+
+  html[data-theme="spatial-06"] .glass-shell > div:last-child {
+    padding-left: calc(var(--rail-icon, 40px) + 18px);
+  }
+}
+
+/* ---- pills ---- */
+
+html[data-theme="spatial-06"] [data-testid="category-tabs"] {
+  justify-content: center;
+}
+
+html[data-theme="spatial-06"] [data-testid="category-tabs"] > * {
+  border-radius: 999px !important;
+  padding: 9px 19px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  color: #5b636f !important;
+}
+
+html[data-theme="spatial-06"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: #23292f !important;
+  border-color: #23292f !important;
+  color: #ffffff !important;
+}
+
+/* ---- hero ---- */
+
+html[data-theme="spatial-06"] [data-testid="hero-panel"] {
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  min-height: clamp(340px, 42vh, 470px) !important;
+  box-shadow: 0 34px 70px -28px rgba(70, 85, 105, 0.55) !important;
+}
+
+html[data-theme="spatial-06"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(340px, 42vh, 470px) !important;
+  padding: clamp(22px, 2.2vw, 40px) !important;
+  max-width: min(46rem, 76%) !important;
+}
+
+html[data-theme="spatial-06"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(96deg, rgba(10, 12, 15, 0.9) 0%, rgba(10, 12, 15, 0.5) 40%, rgba(10, 12, 15, 0) 76%) !important;
+}
+
+html[data-theme="spatial-06"] [data-testid="hero-title"] {
+  font-size: clamp(2.1rem, 3.2vw, 3.2rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em;
+  color: #ffffff !important;
+}
+
+html[data-theme="spatial-06"] [data-testid="hero-watch-button"] {
+  background: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  color: #1b1e22 !important;
+  font-weight: 600 !important;
+}
+
+/* ---- shelf ---- */
+
+html[data-theme="spatial-06"] .poster-frame {
+  padding: 8px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.98) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 22px 46px -20px rgba(70, 85, 105, 0.45) !important;
+  transition: transform 300ms var(--s6-ease), box-shadow 300ms var(--s6-ease);
+}
+
+html[data-theme="spatial-06"] .poster-frame img {
+  border-radius: 15px !important;
+}
+
+html[data-theme="spatial-06"] .poster-frame:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 40px 70px -24px rgba(70, 85, 105, 0.55) !important;
+}
+
+/* ---- swatch ---- */
+
+.theme-swatch-spatial-06 .preview-circle {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+}
+
+.theme-swatch-spatial-06 .preview-circle-dot {
+  border-color: rgba(60, 70, 85, 0.6);
+}
+
+/* ============================================================ dark half ==== */
+
+/* Daylight is the one theme whose base is light, because its reference is a
+   sunlit room. Dark is the collection's default mode, so the night version of
+   the same layout lives here rather than in light-mode.css. */
+
+html[data-theme="spatial-06"][data-mode="dark"] {
+  --gold: #dfe4ec;
+  --gold-soft: #ffffff;
+  --text: #eef1f5;
+  --muted: #aab1bc;
+  --subtle: #7d848f;
+
+  --s6-pane: rgba(16, 18, 22, 0.62);
+  --s6-line: rgba(255, 255, 255, 0.12);
+
+  background: #171a1f !important;
+  color-scheme: dark;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"],
+html[data-theme="spatial-06"][data-mode="dark"] body,
+html[data-theme="spatial-06"][data-mode="dark"] #root {
+  color: var(--text) !important;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"]:root body {
+  background:
+    radial-gradient(1200px 800px at 18% 2%, rgba(150, 168, 190, 0.2), rgba(150, 168, 190, 0) 58%),
+    radial-gradient(1000px 700px at 88% 30%, rgba(110, 126, 148, 0.16), rgba(110, 126, 148, 0) 58%),
+    linear-gradient(170deg, #2b3038 0%, #1e222a 52%, #12151a 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] .glass-shell::after {
+  box-shadow: 0 60px 130px -46px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* Put the ink back. */
+html[data-theme="spatial-06"][data-mode="dark"] .text-slate-200,
+html[data-theme="spatial-06"][data-mode="dark"] .text-slate-300 { color: #dfe3e9 !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-slate-400 { color: #aab1bc !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-slate-500 { color: #7d848f !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-slate-600 { color: #666d77 !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#F6EFE4\] { color: #f2f4f8 !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#DCCFBC\] { color: #d6dae1 !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#BFB09A\] { color: #b6bcc6 !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#A5987F\] { color: #98a0ab !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#8C7F6D\] { color: #7d848f !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#6E6355\] { color: #6a717b !important; }
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#EBD3A3\],
+html[data-theme="spatial-06"][data-mode="dark"] .text-\[\#D8B26A\] { color: #e7ebf1 !important; }
+
+html[data-theme="spatial-06"][data-mode="dark"] input::placeholder { color: #737a85 !important; }
+
+html[data-theme="spatial-06"][data-mode="dark"] .glass {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] .glass-strong {
+  background: rgba(22, 25, 30, 0.86) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 30px 62px -24px rgba(0, 0, 0, 0.85) !important;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] .chip {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #aab1bc;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] .chip-rose {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] .divider {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] .hover\:bg-white\/\[0\.06\]:hover,
+html[data-theme="spatial-06"][data-mode="dark"] .hover\:bg-white\/\[0\.05\]:hover,
+html[data-theme="spatial-06"][data-mode="dark"] .hover\:bg-white\/\[0\.12\]:hover {
+  background-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] .poster-frame {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.82) !important;
+}
+
+@media (min-width: 1200px) {
+  html[data-theme="spatial-06"][data-mode="dark"] nav[data-testid="icon-rail"] {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.13);
+    box-shadow: 0 24px 50px -22px rgba(0, 0, 0, 0.85);
+  }
+
+  html[data-theme="spatial-06"][data-mode="dark"] nav[data-testid="icon-rail"] a {
+    color: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  html[data-theme="spatial-06"][data-mode="dark"] nav[data-testid="icon-rail"] a:hover {
+    background: rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+  }
+
+  html[data-theme="spatial-06"][data-mode="dark"] nav[data-testid="icon-rail"] a.active,
+  html[data-theme="spatial-06"][data-mode="dark"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: #1b1f25 !important;
+  }
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] [data-testid="category-tabs"] > * {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.11) !important;
+  color: #aab1bc !important;
+}
+
+html[data-theme="spatial-06"][data-mode="dark"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  color: #1b1f25 !important;
+}
+
+/* Nothing lies on artwork in dark mode, so the protective overrides step back. */
+html[data-theme="spatial-06"][data-mode="dark"] [data-testid="hero-panel"] .glass,
+html[data-theme="spatial-06"][data-mode="dark"] [data-testid="hero-panel"] .glass-strong,
+html[data-theme="spatial-06"][data-mode="dark"] [data-testid="hero-panel"] .chip,
+html[data-theme="spatial-06"][data-mode="dark"] .poster-frame .glass,
+html[data-theme="spatial-06"][data-mode="dark"] .poster-frame .glass-strong,
+html[data-theme="spatial-06"][data-mode="dark"] .poster-frame .chip {
+  background: rgba(18, 21, 26, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}

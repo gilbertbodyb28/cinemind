@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Loader2, Server, Cpu, Film, Tv, Inbox, Library, AppWindow, Clapperboard, Droplets, Image, Check, Maximize2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Server, Cpu, Film, Tv, Inbox, Library, AppWindow, Clapperboard, Droplets, Image, Check, Maximize2, Orbit, Sun, Moon } from "lucide-react";
 import { DEFAULT_MODEL } from "@/lib/models";
 import DeviceConnect from "@/components/DeviceConnect";
 import AnilistConnect from "@/components/AnilistConnect";
-import { useTheme, WALLPAPERS, MIN_ICON_SIZE, MAX_ICON_SIZE } from "@/context/ThemeContext";
+import { useTheme, normalizeTheme, THEMES, WALLPAPERS, MIN_ICON_SIZE, MAX_ICON_SIZE } from "@/context/ThemeContext";
+import { SPATIAL_THEMES } from "@/themes/catalog";
 
 const THEME_SWATCH = {
   vision: "https://image.tmdb.org/t/p/w500/o8H6HmQNt2qx5bIfmvuI6VJn13A.jpg",
   apple: "https://image.tmdb.org/t/p/w500/cO7J0XSVKPlAjUCMWC7DVBn1Py2.jpg",
+  spatial: "https://image.tmdb.org/t/p/w500/7NNNXo0qG2SqH4JoG7GPvJ2hzes.jpg",
+};
+
+const THEME_NAMES = {
+  vision: "Vision UI",
+  apple: "Apple",
+  spatial: "Spatial",
+  ...Object.fromEntries(SPATIAL_THEMES.map((t) => [t.id, t.name])),
 };
 
 const initial = {
@@ -56,7 +65,7 @@ function savePayload(form, glassIntensity) {
     ollama_model: form.ollama_model || DEFAULT_MODEL,
     mediamanager_url: form.mediamanager_url,
     mediamanager_email: form.mediamanager_email,
-    ui_theme: form.ui_theme === "apple" ? "apple" : "vision",
+    ui_theme: normalizeTheme(form.ui_theme),
     glass_intensity: Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 78,
   };
   for (const key of SECRETS) {
@@ -73,6 +82,8 @@ export default function Connections() {
   const {
     theme,
     setTheme,
+    mode,
+    setMode,
     glassIntensity,
     setGlassIntensity,
     wallpaper,
@@ -91,7 +102,7 @@ export default function Connections() {
           next.ollama_model = DEFAULT_MODEL;
         }
         if (!next.ollama_url) next.ollama_url = "http://localhost:11434";
-        next.ui_theme = next.ui_theme === "apple" ? "apple" : "vision";
+        next.ui_theme = normalizeTheme(next.ui_theme);
         return next;
       }))
       .catch(() => {});
@@ -139,11 +150,16 @@ export default function Connections() {
     toast.success(`${WALLPAPER_LABELS[resolved] || resolved} wallpaper on`);
   };
 
+  const chooseMode = async (next) => {
+    const resolved = await setMode(next);
+    toast.success(resolved === "light" ? "Light mode on" : "Dark mode on");
+  };
+
   const chooseTheme = async (next) => {
-    const resolved = next === "apple" ? "apple" : "vision";
+    const resolved = THEMES.includes(next) ? next : "vision";
     set("ui_theme", resolved);
     await setTheme(resolved);
-    toast.success(resolved === "apple" ? "Apple theme on" : "Vision UI on");
+    toast.success(`${THEME_NAMES[resolved]} on`);
   };
 
   return (
@@ -157,10 +173,37 @@ export default function Connections() {
           <div className="w-10 h-10 rounded-lg chip-rose grid place-items-center"><AppWindow className="w-5 h-5" /></div>
           <div>
             <h3 className="font-display text-xl font-bold">Appearance</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Two full themes. Every card uses the same glass as the request select circle. The slider sets how see-through that glass is.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Eleven themes, each in light and dark. Every card uses the same glass as the request select circle. The slider sets how see-through that glass is.</p>
           </div>
         </div>
-        <div className="mt-5 grid sm:grid-cols-2 gap-3">
+
+        {/* Light or dark applies to whichever theme is selected — the two are
+            separate choices, so every theme has both. */}
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">Mode</span>
+          <div role="group" aria-label="Light or dark" className="glass rounded-full p-1 inline-flex gap-1">
+            {[
+              { id: "dark", label: "Dark", Icon: Moon },
+              { id: "light", label: "Light", Icon: Sun },
+            ].map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                data-testid={`mode-${id}-button`}
+                aria-pressed={mode === id}
+                onClick={() => chooseMode(id)}
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  mode === id
+                    ? "bg-[rgba(216,178,106,0.2)] text-[#EBD3A3]"
+                    : "text-[#A5987F] hover:text-[#F6EFE4] hover:bg-white/[0.06]"
+                }`}
+              >
+                <Icon className="w-4 h-4" /> {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <button
             type="button"
             data-testid="theme-vision-button"
@@ -209,6 +252,65 @@ export default function Connections() {
               <p className="text-xs text-slate-500 mt-2">Clear crystal glass — the select circle on Zip Wire, on every component.</p>
             </div>
           </button>
+          <button
+            type="button"
+            data-testid="theme-spatial-button"
+            onClick={() => chooseTheme("spatial")}
+            className={`text-left rounded-2xl overflow-hidden border transition-colors ${
+              theme === "spatial"
+                ? "border-[rgba(255,255,255,0.55)]"
+                : "border-white/10 hover:border-white/20"
+            }`}
+          >
+            <div className="theme-swatch theme-swatch-spatial">
+              <img src={THEME_SWATCH.spatial} alt="" />
+              <span className="preview-circle" aria-hidden="true">
+                <span className="preview-circle-dot" />
+              </span>
+            </div>
+            <div className="px-4 py-4">
+              <div className="flex items-center gap-2">
+                <Orbit className="w-4 h-4" />
+                <span className="font-display font-bold">Spatial</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">A floating Vision Pro pane — the shell lifts off the wallpaper, the hero fills it, and the posters ride in front of the glass.</p>
+            </div>
+          </button>
+        </div>
+
+        {/* The spatial collection. Its own section so the three themes above
+            keep exactly the markup, and the look, they have always had. */}
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-1">
+            <Orbit className="w-4 h-4 text-[#D8B26A]" />
+            <h4 className="font-display font-bold">Spatial collection</h4>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">Eight more rooms to hang the app in. Each one is a different pane, rail and shelf — same data, same buttons.</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {SPATIAL_THEMES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                data-testid={`theme-${t.id}-button`}
+                onClick={() => chooseTheme(t.id)}
+                style={theme === t.id ? { borderColor: t.ring } : undefined}
+                className={`text-left rounded-2xl overflow-hidden border transition-colors ${
+                  theme === t.id ? "" : "border-white/10 hover:border-white/20"
+                }`}
+              >
+                <div className={`theme-swatch theme-swatch-${t.id}`}>
+                  <img src={t.swatch} alt="" />
+                  <span className="preview-circle" aria-hidden="true">
+                    <span className="preview-circle-dot" />
+                  </span>
+                </div>
+                <div className="px-4 py-3">
+                  <div className="font-display font-bold text-sm">{t.name}</div>
+                  <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">{t.blurb}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="mt-6 liquid-glass-track rounded-2xl px-4 py-4">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -319,7 +421,7 @@ export default function Connections() {
 
         <Section title="Simkl" icon={Tv} tone="cyan" onTest={()=>test("simkl")} status={tests.simkl} testid="section-simkl" hint="One-click sign-in with a Simkl PIN. Manual credentials below are optional.">
           <div className="sm:col-span-2">
-            <DeviceConnect id="simkl" name="Simkl" startPath="/simkl/pin/start" pollPath="/simkl/pin/poll" codeField="user_code" disconnectPath="/simkl/disconnect"
+            <DeviceConnect id="simkl" name="Simkl" startPath="/simkl/pin/start" pollPath="/simkl/pin/poll" codeField="device_code" disconnectPath="/simkl/disconnect"
               connected={form.simkl_connected} username={form.simkl_username} onChange={reload} />
           </div>
           <Field label="Client ID (manual, optional)" testid="simkl-client-id-input" value={form.simkl_client_id} onChange={v=>set("simkl_client_id", v)} />
@@ -355,9 +457,9 @@ export default function Connections() {
           />
         </Section>
 
-        <Section title="Ollama (Local LLM)" icon={Cpu} tone="emerald" onTest={()=>test("ollama")} status={tests.ollama} testid="section-ollama" hint="Jobs and AI Picks call this machine’s Ollama. Default model is qwen3:14b.">
+        <Section title="Ollama (Self-hosted LLM)" icon={Cpu} tone="emerald" onTest={()=>test("ollama")} status={tests.ollama} testid="section-ollama" hint="Jobs and AI Picks call your configured Ollama server. Default model is qwen-suggestarr.">
           <Field label="Ollama URL" testid="ollama-url-input" value={form.ollama_url} onChange={v=>set("ollama_url", v)} placeholder="http://localhost:11434" />
-          <Field label="Model" testid="ollama-model-select" value={form.ollama_model} onChange={v=>set("ollama_model", v)} placeholder="qwen3:14b" />
+          <Field label="Model" testid="ollama-model-select" value={form.ollama_model} onChange={v=>set("ollama_model", v)} placeholder="qwen-suggestarr" />
         </Section>
 
         <div data-testid="section-local-requests" className="glass rounded-2xl p-6 lg:p-8">

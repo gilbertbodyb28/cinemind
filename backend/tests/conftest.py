@@ -18,6 +18,9 @@ if not base_url:
 BASE_URL = base_url.rstrip("/")
 # The seed has to land in the database the running server actually reads.
 DB_NAME = os.environ.get("DB_NAME") or backend_env.get("DB_NAME") or "cinemind"
+# Live LLM assertions follow the deployment's configured model rather than a
+# hard-coded name, so pointing .env at a different Ollama model keeps them valid.
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL") or backend_env.get("OLLAMA_MODEL") or "qwen-suggestarr"
 
 SESSION_TOKEN = "test_session_claude_1"
 USER_ID = "test-user-claude-1"
@@ -87,8 +90,8 @@ def auth_client(seeded_session, api_client):
 
 @pytest.fixture
 def no_ollama(auth_client):
-    """Keep Ollama URL empty in the document; server still falls back to localhost:11434."""
-    r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_url": None, "ollama_model": "qwen3:14b"}, timeout=30)
+    """Keep Ollama URL empty in the document; server still falls back to OLLAMA_BASE_URL."""
+    r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_url": None, "ollama_model": OLLAMA_MODEL}, timeout=30)
     assert r.status_code == 200, r.text
     time.sleep(0.2)
     return True

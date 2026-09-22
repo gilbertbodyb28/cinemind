@@ -1,0 +1,589 @@
+/* Spatial — an Apple Vision Pro style overlay theme.
+   Optional, picked in Sources → Appearance. The frozen Vision UI files stay
+   untouched: everything here is scoped to html[data-theme="spatial"], so the
+   other two themes render exactly as they did before this file existed.
+
+   The composition it aims for: a dim neutral room, one pane floating in front
+   of it, a vertical rail beside the pane, category pills centred above the
+   hero, and posters riding in front of the glass. */
+
+html[data-theme="spatial"] {
+  /* Neutral silver instead of gold — the accent is light, not colour. */
+  --bg: #16181b;
+  --surface: #1e2125;
+  --gold: #e8ecf2;
+  --gold-soft: #ffffff;
+  --sage: #7fd18f;
+  --clay: #ff6f61;
+  --text: #f4f6f8;
+  --muted: #b6bcc4;
+  --subtle: #868d96;
+
+  /* Spatial depth: four surfaces, each one step closer to the viewer. */
+  --sp-room: #14161a;
+  --sp-pane: rgba(14, 16, 19, 0.62);
+  --sp-raise: rgba(255, 255, 255, 0.07);
+  --sp-raise-strong: rgba(255, 255, 255, 0.12);
+  --sp-line: rgba(255, 255, 255, 0.11);
+  --sp-line-bright: rgba(255, 255, 255, 0.2);
+  --sp-shine: rgba(255, 255, 255, 0.22);
+
+  --sp-blur: 44px;
+  --sp-sat: 180%;
+
+  --sp-room-gap: 8px;
+  --sp-pane-pad: clamp(18px, 2vw, 34px);
+  --sp-r-pane: 26px;
+  --sp-r-hero: 34px;
+  --sp-r-card: 24px;
+  --sp-r-pill: 999px;
+
+  --sp-shadow-pane: 0 60px 140px -40px rgba(0, 0, 0, 0.9), 0 18px 60px -30px rgba(0, 0, 0, 0.7);
+  --sp-shadow-raise: 0 18px 46px -18px rgba(0, 0, 0, 0.7);
+  --sp-shadow-float: 0 34px 70px -24px rgba(0, 0, 0, 0.78);
+
+  --sp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sp-fast: 160ms;
+  --sp-normal: 320ms;
+
+  color-scheme: dark;
+}
+
+html[data-theme="spatial"],
+html[data-theme="spatial"] body {
+  color: var(--text) !important;
+}
+
+html[data-theme="spatial"] #root {
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
+/* ---------------------------------------------------------------- room ---- */
+
+/* A dim, evenly lit space. The pane has to read as nearer than this, so the
+   room stays low-contrast and neutral — no colour of its own to compete. */
+html[data-theme="spatial"] body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif !important;
+  background:
+    radial-gradient(1600px 1000px at 50% -24%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 64%),
+    radial-gradient(1200px 760px at 50% 122%, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #4b525b 0%, #383e46 38%, #262b31 74%, #1a1d22 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* The poster wash stays, but far dimmer and desaturated: it tints the room
+   rather than painting it, which is what keeps the pane readable. */
+html[data-theme="spatial"] .cm-ambient {
+  filter: blur(140px) saturate(45%) brightness(0.75) !important;
+  opacity: 0.22 !important;
+}
+
+html[data-theme="spatial"] .ambient-scrim {
+  background: radial-gradient(1600px 1100px at 50% 40%, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.18) 94%);
+}
+
+/* index.css paints the canvas from --bg on <html>; spatial's room lives on
+   <body>, so the element underneath has to stop being the old near-black. */
+html[data-theme="spatial"] {
+  background: #383e46 !important;
+}
+
+html[data-theme="spatial"] .font-display {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif !important;
+  letter-spacing: -0.025em;
+}
+
+html[data-theme="spatial"] .font-mono {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+  letter-spacing: 0.1em;
+}
+
+html[data-theme="spatial"] ::selection {
+  background: rgba(255, 255, 255, 0.28);
+  color: #0b0d10;
+}
+
+/* ---------------------------------------------------------- the one pane ---- */
+
+/* The pane takes the whole work area. Only a hairline of room is left, enough
+   for the corner radius to read as a pane rather than a clipped screen. */
+html[data-theme="spatial"] body > div > div:has(> .glass-shell),
+html[data-theme="spatial"] div:has(> .glass-shell) {
+  padding: var(--sp-room-gap) !important;
+}
+
+/* The glass is painted by ::after, not by the element. An element with a
+   backdrop-filter becomes the containing block for everything `fixed` inside
+   it, which would pin the rail to the pane instead of to the window; moving
+   the filter one level down leaves the rail free to centre on the viewport.
+   ::before is already spoken for by .grain. */
+html[data-theme="spatial"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  border-radius: var(--sp-r-pane) !important;
+  box-shadow: none !important;
+  padding: var(--sp-pane-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--sp-room-gap)) !important;
+}
+
+/* Fixed, not absolute: on a long route the pane is several thousand pixels
+   tall, and a backdrop-filter layer that size blows past the compositor's
+   texture limit — the whole pane stops painting. A window-sized sheet of
+   glass that the content scrolls in front of costs one screen to blur and
+   looks the same, because the pane fills the window anyway. */
+html[data-theme="spatial"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--sp-room-gap);
+  z-index: 0;
+  border-radius: var(--sp-r-pane);
+  background: var(--sp-pane);
+  backdrop-filter: blur(var(--sp-blur)) saturate(var(--sp-sat));
+  -webkit-backdrop-filter: blur(var(--sp-blur)) saturate(var(--sp-sat));
+  border: 1px solid var(--sp-line);
+  box-shadow:
+    var(--sp-shadow-pane),
+    inset 0 1px 0 var(--sp-shine),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+/* The grain belongs to the warm theme; spatial glass is clean. It also has to
+   sit above the new glass layer, which the header and the content already do
+   through their own z-index. */
+html[data-theme="spatial"] .grain::before {
+  opacity: 0.07;
+  mix-blend-mode: soft-light;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------- surfaces ---- */
+
+html[data-theme="spatial"] .glass {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.055)) !important;
+  backdrop-filter: blur(var(--lg-blur, 34px)) saturate(var(--sp-sat)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur, 34px)) saturate(var(--sp-sat)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--lg-stroke, 0.12)) !important;
+  box-shadow:
+    var(--sp-shadow-raise),
+    inset 0 1px 0 rgba(255, 255, 255, var(--lg-shine, 0.16)) !important;
+}
+
+html[data-theme="spatial"] .glass-strong {
+  background: rgba(24, 27, 31, 0.76) !important;
+  backdrop-filter: blur(calc(var(--lg-blur, 34px) + 10px)) saturate(var(--sp-sat)) !important;
+  -webkit-backdrop-filter: blur(calc(var(--lg-blur, 34px) + 10px)) saturate(var(--sp-sat)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    var(--sp-shadow-float),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Softer, larger radii everywhere the app asks for a rounded box. */
+html[data-theme="spatial"] .rounded-2xl { border-radius: 22px !important; }
+html[data-theme="spatial"] .rounded-3xl { border-radius: var(--sp-r-card) !important; }
+
+html[data-theme="spatial"] .divider {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+}
+
+/* ------------------------------------------------------------------ rail ---- */
+
+/* The header rail becomes the reference's floating vertical column: its own
+   piece of glass, beside the pane rather than inside the header row. */
+@media (min-width: 1280px) {
+  /* The header's centring wrapper is neutralised; the rail itself is what
+     gets pinned, so its box is the one being positioned. */
+  html[data-theme="spatial"] header > div:has(> nav[data-testid="icon-rail"]) {
+    position: static !important;
+    width: 0 !important;
+    height: 0 !important;
+    transform: none !important;
+  }
+
+  /* Pinned to the window, halfway down it, and it stays there while the page
+     scrolls — the pane's glass moved to ::after so this can be truly fixed. */
+  html[data-theme="spatial"] nav[data-testid="icon-rail"] {
+    position: fixed;
+    left: calc(var(--sp-room-gap) + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    max-height: calc(100vh - 32px);
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 9px 7px;
+    border-radius: var(--sp-r-pill);
+    background: rgba(255, 255, 255, 0.11);
+    backdrop-filter: blur(30px) saturate(var(--sp-sat));
+    -webkit-backdrop-filter: blur(30px) saturate(var(--sp-sat));
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow: var(--sp-shadow-float), inset 0 1px 0 var(--sp-shine);
+  }
+
+  /* Every route's content starts clear of the rail. The rail sizes itself
+     from --rail-icon, which Sources lets you drag, so the gutter follows it
+     instead of being a number that only happens to fit today. */
+  html[data-theme="spatial"] .glass-shell > div:last-child {
+    padding-left: calc(var(--rail-icon, 40px) + 16px);
+  }
+}
+
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a {
+  transition:
+    background var(--sp-fast) var(--sp-ease),
+    transform var(--sp-fast) var(--sp-ease),
+    box-shadow var(--sp-fast) var(--sp-ease),
+    color var(--sp-fast) var(--sp-ease);
+}
+
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  transform: scale(1.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 10px 24px -10px rgba(0, 0, 0, 0.85);
+}
+
+/* Hovering names the destination. The anchors already carry title=, so the
+   label costs no markup — and the native tooltip stays for screen readers. */
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  padding: 7px 13px;
+  border-radius: var(--sp-r-pill);
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  background: rgba(20, 23, 27, 0.82);
+  backdrop-filter: blur(24px) saturate(var(--sp-sat));
+  -webkit-backdrop-filter: blur(24px) saturate(var(--sp-sat));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 34px -14px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--sp-fast) var(--sp-ease), transform var(--sp-fast) var(--sp-ease);
+}
+
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a:hover::after,
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a:focus-visible::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* Active reads as a lit disc, not as a colour. */
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a.active,
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 18px -8px rgba(0, 0, 0, 0.8);
+}
+
+/* ------------------------------------------------------------ top pills ---- */
+
+/* Category tabs take the place the reference gives its segmented control:
+   centred, compact, on their own line above the hero. */
+html[data-theme="spatial"] [data-testid="category-tabs"] {
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: clamp(16px, 2.4vh, 30px);
+  overflow: visible;
+  flex-wrap: wrap;
+}
+
+html[data-theme="spatial"] [data-testid="category-tabs"] > * {
+  border-radius: var(--sp-r-pill) !important;
+  padding: 9px 20px !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: var(--muted) !important;
+  backdrop-filter: blur(24px) saturate(var(--sp-sat));
+  -webkit-backdrop-filter: blur(24px) saturate(var(--sp-sat));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition: background var(--sp-fast) var(--sp-ease), transform var(--sp-fast) var(--sp-ease), color var(--sp-fast) var(--sp-ease);
+}
+
+html[data-theme="spatial"] [data-testid="category-tabs"] > *:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+html[data-theme="spatial"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  color: #ffffff !important;
+}
+
+/* ------------------------------------------------------------- the hero ---- */
+
+/* One column, so the hero is as dominant as it is in the reference and the
+   posters sit directly under it. The trailer list keeps its data and its
+   behaviour; it simply moves below the fold. */
+/* The hero leads at every width; the trailer list follows the posters. */
+html[data-theme="spatial"] [data-testid="hero-panel"] {
+  order: 1;
+  grid-row: auto !important;
+}
+
+html[data-theme="spatial"] [data-testid="upcoming-panel"] {
+  order: 2;
+}
+
+html[data-theme="spatial"] [data-testid="new-trailer-panel"] {
+  order: 3;
+  grid-row: auto !important;
+  align-self: auto !important;
+}
+
+@media (min-width: 1024px) {
+  html[data-theme="spatial"] [data-testid="home-page"] > .grid {
+    grid-template-columns: 1fr !important;
+    gap: clamp(18px, 2.4vh, 32px) !important;
+  }
+
+  html[data-theme="spatial"] [data-testid="new-trailer-panel"] > div:last-child {
+    min-height: 0 !important;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+    overflow: visible !important;
+  }
+}
+
+html[data-theme="spatial"] [data-testid="hero-panel"] {
+  border-radius: var(--sp-r-hero) !important;
+  border: 1px solid var(--sp-line) !important;
+  min-height: clamp(400px, 46vh, 540px) !important;
+  box-shadow: var(--sp-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+/* max-w-2xl minus the wider padding left the action row too narrow and the
+   bookmark dropped to a line of its own. The copy block gets the width back
+   so Watch trailer, watchlist, approve, reject and bookmark stay on one row,
+   the way they sit in the other themes. */
+html[data-theme="spatial"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(400px, 46vh, 540px) !important;
+  padding: clamp(26px, 2.8vw, 44px) !important;
+  max-width: min(60rem, 68%) !important;
+}
+
+/* Cinematic falloff: dark from the left and from the floor, plus a vignette,
+   so the copy reads without flattening the artwork. */
+html[data-theme="spatial"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(
+    98deg,
+    rgba(8, 9, 11, 0.86) 0%,
+    rgba(8, 9, 11, 0.6) 28%,
+    rgba(8, 9, 11, 0.22) 52%,
+    rgba(8, 9, 11, 0) 74%
+  ) !important;
+}
+
+html[data-theme="spatial"] [data-testid="hero-panel"] > .bg-gradient-to-t {
+  background:
+    linear-gradient(0deg, rgba(8, 9, 11, 0.86) 0%, rgba(8, 9, 11, 0.14) 38%, rgba(8, 9, 11, 0) 62%),
+    radial-gradient(120% 100% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.42) 100%) !important;
+}
+
+html[data-theme="spatial"] [data-testid="hero-title"] {
+  font-size: clamp(2.6rem, 4.4vw, 4.4rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+}
+
+/* --------------------------------------------------------- glass buttons ---- */
+
+html[data-theme="spatial"] [data-testid="hero-watch-button"],
+html[data-theme="spatial"] [data-testid="hero-panel"] .rounded-full {
+  transition: background var(--sp-fast) var(--sp-ease), transform var(--sp-fast) var(--sp-ease), box-shadow var(--sp-fast) var(--sp-ease);
+}
+
+html[data-theme="spatial"] [data-testid="hero-watch-button"] {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 26px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+html[data-theme="spatial"] [data-testid="hero-watch-button"]:hover {
+  background: rgba(255, 255, 255, 0.26) !important;
+  transform: scale(1.03);
+}
+
+html[data-theme="spatial"] [data-testid="hero-watch-button"]:active,
+html[data-theme="spatial"] nav[data-testid="icon-rail"] a:active {
+  transform: scale(0.97);
+}
+
+/* ---------------------------------------------------------- poster cards ---- */
+
+/* The posters ride in front of the pane: the same plate every other theme
+   uses — 9px of it, which is what keeps the match chip and the MediaManager
+   card off each other — with a stronger drop shadow and a lift on hover. */
+html[data-theme="spatial"] .poster-frame {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: var(--sp-r-card) !important;
+  box-shadow: var(--sp-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  transition: transform var(--sp-normal) var(--sp-ease), box-shadow var(--sp-normal) var(--sp-ease);
+}
+
+html[data-theme="spatial"] .poster-frame:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 48px 90px -28px rgba(0, 0, 0, 0.88), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+html[data-theme="spatial"] .poster-frame img,
+html[data-theme="spatial"] .poster-frame > button > img,
+html[data-theme="spatial"] .poster-frame > button:has(> img),
+html[data-theme="spatial"] .poster-frame > a:has(> img) {
+  border-radius: calc(var(--sp-r-card) - 9px) !important;
+}
+
+/* The plate already lifts; the print inside it must not lift a second time. */
+html[data-theme="spatial"] .poster-frame .poster-hover:hover {
+  transform: none;
+}
+
+html[data-theme="spatial"] .poster-frame.is-selected {
+  border-color: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), var(--sp-shadow-float) !important;
+}
+
+/* Up Coming keeps the app's own grid: same poster size and the same number
+   per row as every other theme. A narrower carousel put the match chip and
+   the MediaManager card on top of each other. */
+
+/* ----------------------------------------------------------------- chips ---- */
+
+html[data-theme="spatial"] .chip {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  backdrop-filter: blur(20px) saturate(var(--sp-sat));
+  -webkit-backdrop-filter: blur(20px) saturate(var(--sp-sat));
+}
+
+html[data-theme="spatial"] .chip-rose {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+/* Status colours keep their meaning — approve is green, reject is red. */
+html[data-theme="spatial"] .chip-emerald {
+  border-color: rgba(127, 209, 143, 0.45);
+  background: rgba(127, 209, 143, 0.14);
+  color: #b7ecc2;
+}
+
+html[data-theme="spatial"] .chip-amber {
+  border-color: rgba(255, 190, 90, 0.45);
+  background: rgba(255, 190, 90, 0.13);
+  color: #ffd79a;
+}
+
+html[data-theme="spatial"] .brutal-shadow-rose {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35), 0 16px 38px -14px rgba(0, 0, 0, 0.8);
+}
+
+/* ------------------------------------------------ gold utilities, remapped ---- */
+
+/* The app paints its accents with the warm literals from the locked theme.
+   Spatial answers them with light instead of colour. */
+html[data-theme="spatial"] .text-rose-300,
+html[data-theme="spatial"] .text-rose-400,
+html[data-theme="spatial"] .text-rose-500,
+html[data-theme="spatial"] .text-amber-300 {
+  color: #f2f5f9;
+}
+
+html[data-theme="spatial"] .text-cyan-300 {
+  color: #cfe6d6;
+}
+
+html[data-theme="spatial"] .bg-amber-500 {
+  background-color: #e8ecf2;
+}
+
+/* ---------------------------------------------------- modals & dropdowns ---- */
+
+html[data-theme="spatial"] [role="dialog"],
+html[data-theme="spatial"] .glass-strong.rounded-2xl,
+html[data-theme="spatial"] .glass-strong.rounded-3xl {
+  border-radius: 28px !important;
+}
+
+html[data-theme="spatial"] select,
+html[data-theme="spatial"] option {
+  background-color: #1b1e22;
+  color: var(--text);
+}
+
+html[data-theme="spatial"] input:focus-visible,
+html[data-theme="spatial"] button:focus-visible,
+html[data-theme="spatial"] a:focus-visible,
+html[data-theme="spatial"] select:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------- tables and lists ---- */
+
+/* Dense views stay dense. They get the material, not the poster treatment. */
+html[data-theme="spatial"] table th {
+  color: var(--subtle);
+  font-weight: 600;
+}
+
+html[data-theme="spatial"] table tr + tr td {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* --------------------------------------------------------- theme swatch ---- */
+
+html[data-theme="spatial"] .theme-swatch-spatial .preview-circle,
+.theme-swatch-spatial .preview-circle {
+  background: rgba(255, 255, 255, var(--lg-fill, 0.11));
+  border: 1px solid rgba(255, 255, 255, var(--lg-stroke, 0.24));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, var(--lg-shine, 0.3));
+}
+
+.theme-swatch-spatial .preview-circle-dot {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* ------------------------------------------------------------ restraint ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="spatial"] * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
+
+/* Backdrop filters are the expensive part. Below the desktop breakpoint the
+   pane keeps its blur and the smaller surfaces drop theirs. */
+@media (max-width: 767px) {
+  html[data-theme="spatial"] .chip,
+  html[data-theme="spatial"] [data-testid="category-tabs"] > * {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  html[data-theme="spatial"] .glass-shell {
+    border-radius: 28px !important;
+  }
+}

@@ -9,6 +9,17 @@ import "./index.css";
 import "./themes/vision-glass.css";
 import "./themes/glass-slider.css";
 import "./themes/apple.css";
+import "./themes/spatial.css";
+import "./themes/spatial-01.css";
+import "./themes/spatial-02.css";
+import "./themes/spatial-03.css";
+import "./themes/spatial-04.css";
+import "./themes/spatial-05.css";
+import "./themes/spatial-06.css";
+import "./themes/spatial-07.css";
+import "./themes/spatial-08.css";
+// Last, so the light half of every theme can answer the theme above it.
+import "./themes/light-mode.css";
 import "./themes/perf.css";
 import "./themes/poster-card.css";
 import "./themes/wallpapers.css";

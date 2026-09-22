@@ -116,7 +116,14 @@ class Connections(BaseModel):
     anilist_client_configured: bool = False
     plex_connected: bool = False
     tmdb_configured: bool = False
-    ui_theme: Literal["vision", "apple"] = "vision"
+    # Vision, Apple and Spatial, plus the eight-theme spatial collection.
+    # normalize_ui_theme() is what guards the value on the way in and out.
+    ui_theme: Literal[
+        "vision", "apple", "spatial",
+        "spatial-01", "spatial-02", "spatial-03", "spatial-04",
+        "spatial-05", "spatial-06", "spatial-07", "spatial-08", "spatial-09",
+    ] = "vision"
+    ui_mode: Literal["dark", "light"] = "dark"
     glass_intensity: int = 78
     wallpaper: str = "poster"
     sidebar_icon_size: int = 40
@@ -150,8 +157,21 @@ MIN_SIDEBAR_ICON_SIZE = 28
 MAX_SIDEBAR_ICON_SIZE = 98
 
 
+UI_THEMES = {"vision", "apple", "spatial"} | {f"spatial-{n:02d}" for n in range(1, 10)}
+
+
+UI_MODES = {"dark", "light"}
+
+
+def normalize_ui_mode(value: Any) -> str:
+    """Dark is the default, so an account that never picks one is unchanged."""
+    name = str(value or "").strip().lower()
+    return name if name in UI_MODES else "dark"
+
+
 def normalize_ui_theme(value: Any) -> str:
-    return "apple" if str(value or "").strip().lower() == "apple" else "vision"
+    name = str(value or "").strip().lower()
+    return name if name in UI_THEMES else "vision"
 
 
 # Selectable background gradients; "poster" is the original poster-lit wash.
@@ -200,6 +220,7 @@ def connections_public(doc: Dict[str, Any]) -> Connections:
     data["ollama_url"] = doc.get("ollama_url") or OLLAMA_BASE_URL
     data["ollama_model"] = resolve_model(doc)[1]
     data["ui_theme"] = normalize_ui_theme(doc.get("ui_theme"))
+    data["ui_mode"] = normalize_ui_mode(doc.get("ui_mode"))
     data["glass_intensity"] = normalize_glass_intensity(doc.get("glass_intensity"))
     data["wallpaper"] = normalize_wallpaper(doc.get("wallpaper"))
     data["sidebar_icon_size"] = normalize_sidebar_icon_size(doc.get("sidebar_icon_size"))
@@ -570,6 +591,8 @@ async def update_connections(payload: Connections, user: User = Depends(get_curr
         data["ollama_url"] = OLLAMA_BASE_URL
     if "ui_theme" in data:
         data["ui_theme"] = normalize_ui_theme(data.get("ui_theme"))
+    if "ui_mode" in data:
+        data["ui_mode"] = normalize_ui_mode(data.get("ui_mode"))
     if "glass_intensity" in data:
         data["glass_intensity"] = normalize_glass_intensity(data.get("glass_intensity"))
     if "wallpaper" in data:
@@ -586,6 +609,10 @@ async def update_connections(payload: Connections, user: User = Depends(get_curr
 
 
 # ---------- Simkl PIN OAuth ----------
+class DevicePoll(BaseModel):
+    device_code: str
+
+
 def simkl_params(client_id: str) -> Dict[str, str]:
     return {"client_id": client_id, "app-name": "CineMindAI", "app-version": "1.0"}
 
@@ -595,10 +622,6 @@ def simkl_headers(client_id: str, token: Optional[str] = None) -> Dict[str, str]
     if token:
         h["Authorization"] = f"Bearer {token}"
     return h
-
-
-class SimklPoll(BaseModel):
-    user_code: str
 
 
 async def resolve_simkl_client_id(user_id: str) -> str:
@@ -624,28 +647,43 @@ async def simkl_pin_start(user: User = Depends(get_current_user)):
     client_id = await resolve_simkl_client_id(user.user_id)
     if not client_id:
         raise HTTPException(status_code=503, detail="Simkl app credentials not configured on server")
+    if not SIMKL_CLIENT_SECRET:
+        raise HTTPException(status_code=503, detail="Simkl app secret not configured on server")
+    # OAuth 2.0 device flow. The legacy GET /oauth/pin now answers OAuth2 apps with
+    # 400 "use POST /oauth2/device instead", so this mirrors the Trakt device flow.
     async with httpx.AsyncClient(timeout=15) as hc:
-        r = await hc.get(f"{SIMKL_API}/oauth/pin", params=simkl_params(client_id), headers=simkl_headers(client_id))
+        r = await hc.get(f"{SIMKL_API}/oauth2/device", params={"client_id": client_id}, headers=simkl_headers(client_id))
     data = r.json() if r.status_code == 200 else {}
-    if data.get("result") != "OK" or not data.get("user_code"):
+    if r.status_code != 200 or not data.get("device_code") or not data.get("user_code"):
         raise HTTPException(status_code=502, detail=simkl_error_detail(r))
     return {
+        "device_code": data["device_code"],
         "user_code": data["user_code"],
-        "verification_url": data.get("verification_url") or data.get("verification_uri") or "https://simkl.com/pin",
+        "verification_url": data.get("verification_uri") or data.get("verification_url") or "https://simkl.com/pin",
         "expires_in": int(data.get("expires_in", 900)),
         "interval": int(data.get("interval", 5)),
     }
 
 
 @api.post("/simkl/pin/poll")
-async def simkl_pin_poll(body: SimklPoll, user: User = Depends(get_current_user)):
+async def simkl_pin_poll(body: DevicePoll, user: User = Depends(get_current_user)):
     client_id = await resolve_simkl_client_id(user.user_id)
     async with httpx.AsyncClient(timeout=15) as hc:
-        r = await hc.get(f"{SIMKL_API}/oauth/pin/{body.user_code}", params=simkl_params(client_id), headers=simkl_headers(client_id))
-        data = r.json() if r.status_code == 200 else {}
-        if data.get("result") == "KO":
-            return {"status": "pending"}
-        if data.get("result") == "OK" and data.get("access_token"):
+        r = await hc.post(
+            f"{SIMKL_API}/oauth2/token",
+            json={
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                "client_id": client_id,
+                "client_secret": SIMKL_CLIENT_SECRET,
+                "device_code": body.device_code,
+            },
+            headers=simkl_headers(client_id),
+        )
+        try:
+            data = r.json() or {}
+        except Exception:
+            data = {}
+        if r.status_code == 200 and data.get("access_token"):
             token = data["access_token"]
             username = None
             try:
@@ -664,8 +702,15 @@ async def simkl_pin_poll(body: SimklPoll, user: User = Depends(get_current_user)
                 upsert=True,
             )
             return {"status": "authorized", "username": username}
-        if "device_code" in data:
+        error = (data.get("error") or "").lower()
+        if error == "authorization_pending":
+            return {"status": "pending"}
+        if error == "slow_down":
+            return {"status": "slow_down"}
+        if error in ("expired_token", "expired"):
             return {"status": "expired"}
+        if error == "access_denied":
+            return {"status": "denied"}
     return {"status": "invalid"}
 
 
@@ -830,10 +875,6 @@ def trakt_headers(client_id: str, token: Optional[str] = None) -> Dict[str, str]
     if token:
         h["Authorization"] = f"Bearer {token}"
     return h
-
-
-class DevicePoll(BaseModel):
-    device_code: str
 
 
 @api.post("/trakt/device/start")
@@ -1448,64 +1489,82 @@ async def get_taste(user: User = Depends(get_current_user)):
 # ---------- Recommendations ----------
 @api.post("/recommendations/generate")
 async def generate_recs(payload: Optional[GenerateBody] = None, user: User = Depends(get_current_user)):
-    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-    await ensure_history(user.user_id)
-    docs = await db.history.find({"user_id": user.user_id}, {"_id": 0, "user_id": 0}).to_list(200)
-    titles = ", ".join([f"{d['title']}" for d in docs[:30]])
+    from jobs.engine import execute_job
+    from recommendation.pipeline import default_job
 
-    system = "You are a movie/show recommender. Given the user's watch history, return exactly 8 personalized recommendations. Respond ONLY with a JSON object with a 'recommendations' key whose value is a list of objects: {title, year, type ('movie'|'show'), genres (list of strings), synopsis (1-2 sentences), tmdb_rating (float 6.0-9.5), match_score (int 70-99), why (2 sentence personalized reason referencing watched titles)}. No prose outside JSON."
-    prompt = f"Watch history: {titles}\nGenerate 8 diverse recommendations they haven't seen. Return JSON only."
-    parsed, provider, model_key = await generate_with_llm(conn, f"recs-{user.user_id}", system, prompt, user.user_id, "recommendations", payload.model if payload else None)
+    history_count = await db.history.count_documents({"user_id": user.user_id})
+    if not history_count and not await db.media_history.count_documents({"user_id": user.user_id}):
+        raise HTTPException(status_code=409, detail="Sync viewing history before generating personal picks.")
 
-    recs = None
-    if parsed is not None:
-        arr = parsed.get("recommendations") if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else None)
-        if isinstance(arr, list) and arr:
-            recs = []
-            for r in arr[:8]:
-                if not isinstance(r, dict):
-                    continue
-                recs.append({
-                    "id": str(uuid.uuid4()),
-                    "title": r.get("title", "Untitled"),
-                    "year": int(r.get("year", 2020)) if str(r.get("year", "")).isdigit() else 2020,
-                    "type": r.get("type", "movie"),
-                    "genres": r.get("genres", []) if isinstance(r.get("genres"), list) else [],
-                    "poster": r.get("poster") or PLACEHOLDER_POSTER,
-                    "backdrop": r.get("backdrop"),
-                    "synopsis": r.get("synopsis", ""),
-                    "match_score": int(r.get("match_score", 85)),
-                    "why": r.get("why", ""),
-                    "tmdb_rating": float(r.get("tmdb_rating", 7.5)),
-                    "saved": False,
-                    "dismissed": False,
-                    "provider": provider,
-                    "model": model_key,
-                })
-            recs = await enrich_with_tmdb(recs)
+    job = default_job()
+    job.update({
+        "id": f"content_to_watch:{user.user_id}",
+        "name": "Content to Watch",
+        "job_type": "discover",
+        "media_types": ["movie", "tv", "anime"],
+        "taste_sources": None,
+        "candidate_sources": [
+            "tmdb_discover", "tmdb_similar", "tmdb_recommendations",
+            "trakt", "simkl", "anilist",
+        ],
+        "candidate_limit": 120,
+        "final_recommendation_limit": 8,
+        "ai_enabled": True,
+        "action_mode": "recommendations_only",
+    })
+    job["exclusions"] = {
+        **job["exclusions"],
+        "already_watched": True,
+        "already_recommended": True,
+        "recommend_again_after_days": 90,
+    }
+    result = await execute_job(
+        user.user_id, job, "manual", catalog=[],
+        model_override=payload.model if payload else None,
+    )
+    accepted = result.get("accepted") or []
+    if not accepted:
+        detail = (result.get("detail") or "No high-confidence unseen titles were available from connected catalogs.")
+        raise HTTPException(status_code=503, detail=detail)
+    run = result.get("run") or {}
+    return {
+        "count": len(accepted),
+        "provider": run.get("provider") or "pipeline",
+        "model": run.get("model") or "deterministic",
+        "demo": False,
+        "warnings": result.get("warnings") or [],
+    }
 
-    if not recs:
-        recs = [{**r, "id": str(uuid.uuid4()), "saved": False, "dismissed": False, "provider": "demo"} for r in DEMO_RECS]
-        random.shuffle(recs)
-        provider = "demo"
 
-    await db.recommendations.delete_many({"user_id": user.user_id, "saved": {"$ne": True}})
-    await db.recommendations.insert_many([{**r, "user_id": user.user_id} for r in recs])
-    return {"count": len(recs), "provider": provider, "model": model_key, "demo": provider == "demo"}
+def by_rank(docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Best pick first.
+
+    Rows are written in rank order, so sorting them by created_at descending
+    handed the UI the list upside down - the lowest-scoring title became the
+    hero card. Rows written before `rank` existed fall back to newest-first.
+    """
+    return sorted(
+        docs,
+        key=lambda row: (
+            row.get("rank") if isinstance(row.get("rank"), int) else 10**6,
+            str(row.get("created_at") or ""),
+        ),
+    )
 
 
 @api.get("/recommendations")
 async def list_recs(user: User = Depends(get_current_user)):
+    visible = {"user_id": user.user_id, "dismissed": {"$ne": True}}
+    main_job = f"content_to_watch:{user.user_id}"
     docs = await db.recommendations.find(
-        {"user_id": user.user_id, "dismissed": {"$ne": True}},
+        {**visible, "job_id": main_job},
         {"_id": 0, "user_id": 0},
-    ).to_list(50)
+    ).sort("created_at", -1).to_list(50)
     if not docs:
-        # auto-seed demo
-        seeded = [{**r, "id": str(uuid.uuid4()), "saved": False, "dismissed": False, "user_id": user.user_id} for r in DEMO_RECS]
-        await db.recommendations.insert_many(seeded)
-        docs = [{k: v for k, v in d.items() if k not in ("user_id", "_id")} for d in seeded]
-    return await backfill_posters(user.user_id, docs)
+        docs = await db.recommendations.find(
+            visible, {"_id": 0, "user_id": 0},
+        ).sort("created_at", -1).to_list(50)
+    return await backfill_posters(user.user_id, by_rank(docs))
 
 
 @api.post("/recommendations/{rec_id}/save")

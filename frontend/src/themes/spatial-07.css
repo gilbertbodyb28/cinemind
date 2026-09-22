@@ -1,0 +1,277 @@
+/* Spatial 07 — Amber Hall.
+   Reference: the Avengers spatial concept shot in an autumn room. Low orange
+   light, a dark warm pane, a badge sitting above the rail outside the pane,
+   a wide hero and a landscape trending shelf. Red-orange is the accent. */
+
+html[data-theme="spatial-07"] {
+  --bg: #120c08;
+  --surface: #1e1510;
+  --gold: #e8532a;
+  --gold-soft: #ff8a5c;
+  --text: #f7efe9;
+  --muted: #c4b1a5;
+  --subtle: #96837a;
+
+  --s7-gap: clamp(18px, 2.4vw, 46px);
+  --s7-rail: 104px;
+  --s7-pad: clamp(18px, 1.9vw, 32px);
+  --s7-radius: 30px;
+  --s7-pane: rgba(26, 17, 12, 0.6);
+  --s7-line: rgba(255, 196, 150, 0.16);
+  --s7-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: #2a1a10 !important;
+  color-scheme: dark;
+}
+
+/* :root outranks html[data-wallpaper=…] from wallpapers.css, so the
+   theme's own room wins over the wallpaper picker in this theme. */
+html[data-theme="spatial-07"]:root body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif !important;
+  background:
+    radial-gradient(1200px 800px at 10% 12%, rgba(255, 140, 60, 0.4), rgba(255, 140, 60, 0) 58%),
+    radial-gradient(1000px 900px at 92% 88%, rgba(180, 70, 30, 0.34), rgba(180, 70, 30, 0) 60%),
+    linear-gradient(165deg, #4a2a16 0%, #2e1a10 50%, #150c07 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-07"] .cm-ambient {
+  filter: blur(140px) saturate(120%) brightness(0.55) !important;
+  opacity: 0.28 !important;
+}
+
+/* wallpapers.css dims the room through .ambient-scrim with a selector of
+   its own; in this collection the room belongs to the theme, so this one
+   outranks it. */
+html[data-theme="spatial-07"]:root[data-wallpaper] .ambient-scrim {
+  background: radial-gradient(1500px 1000px at 50% 40%, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.42) 92%);
+}
+
+/* ---- the pane ---- */
+
+html[data-theme="spatial-07"] div:has(> .glass-shell) {
+  padding: var(--s7-gap) !important;
+}
+
+@media (min-width: 1100px) {
+  html[data-theme="spatial-07"] div:has(> .glass-shell) {
+    padding-left: var(--s7-rail) !important;
+  }
+}
+
+html[data-theme="spatial-07"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--s7-radius) !important;
+  padding: var(--s7-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--s7-gap)) !important;
+}
+
+html[data-theme="spatial-07"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--s7-gap);
+  z-index: 0;
+  border-radius: var(--s7-radius);
+  background: var(--s7-pane);
+  backdrop-filter: blur(42px) saturate(160%);
+  -webkit-backdrop-filter: blur(42px) saturate(160%);
+  border: 1px solid var(--s7-line);
+  box-shadow: 0 64px 140px -46px rgba(0, 0, 0, 0.88), inset 0 1px 0 rgba(255, 200, 160, 0.18);
+  pointer-events: none;
+}
+
+@media (min-width: 1100px) {
+  html[data-theme="spatial-07"] .glass-shell::after {
+    left: var(--s7-rail);
+  }
+}
+
+html[data-theme="spatial-07"] .grain::before {
+  z-index: 1;
+  opacity: 0.12;
+}
+
+html[data-theme="spatial-07"] .glass {
+  background: rgba(255, 220, 200, 0.055) !important;
+  border: 1px solid rgba(255, 196, 150, 0.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 210, 180, 0.13) !important;
+}
+
+html[data-theme="spatial-07"] .glass-strong {
+  background: rgba(34, 22, 16, 0.86) !important;
+  border: 1px solid rgba(255, 196, 150, 0.18) !important;
+}
+
+/* ---- badge above the rail, both outside the pane ---- */
+
+@media (min-width: 1100px) {
+  html[data-theme="spatial-07"] header > div:has(> nav[data-testid="icon-rail"]) {
+    position: static !important;
+    width: 0 !important;
+    height: 0 !important;
+    transform: none !important;
+  }
+
+  html[data-theme="spatial-07"] nav[data-testid="icon-rail"] {
+    position: fixed;
+    left: calc(var(--s7-gap) * 0.55);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 14px 10px;
+    border-radius: 999px;
+    background: rgba(40, 26, 18, 0.62);
+    backdrop-filter: blur(26px) saturate(160%);
+    -webkit-backdrop-filter: blur(26px) saturate(160%);
+    border: 1px solid rgba(255, 196, 150, 0.2);
+    box-shadow: 0 30px 60px -22px rgba(0, 0, 0, 0.85);
+  }
+
+  /* The mark the reference hangs above its rail. */
+  html[data-theme="spatial-07"] nav[data-testid="icon-rail"]::before {
+    content: "";
+    display: block;
+    width: var(--rail-icon, 40px);
+    height: var(--rail-icon, 40px);
+    margin-bottom: 10px;
+    border-radius: 999px;
+    background: linear-gradient(140deg, #ff8a4c, #e8532a 55%, #a5300f);
+    box-shadow: 0 10px 26px -8px rgba(232, 83, 42, 0.8), inset 0 1px 0 rgba(255, 220, 200, 0.5);
+  }
+
+  html[data-theme="spatial-07"] nav[data-testid="icon-rail"] a {
+    border-radius: 999px;
+    transition: background 150ms var(--s7-ease), transform 150ms var(--s7-ease), color 150ms var(--s7-ease);
+  }
+
+  html[data-theme="spatial-07"] nav[data-testid="icon-rail"] a:hover {
+    background: rgba(232, 83, 42, 0.25) !important;
+    color: var(--gold-soft) !important;
+    transform: scale(1.08);
+  }
+
+  html[data-theme="spatial-07"] nav[data-testid="icon-rail"] a.active,
+  html[data-theme="spatial-07"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+    background: rgba(255, 245, 240, 0.94) !important;
+    color: #2a1409 !important;
+  }
+}
+
+/* ---- pills ---- */
+
+html[data-theme="spatial-07"] [data-testid="category-tabs"] {
+  justify-content: center;
+}
+
+html[data-theme="spatial-07"] [data-testid="category-tabs"] > * {
+  border-radius: 999px !important;
+  padding: 9px 19px !important;
+  background: rgba(255, 220, 200, 0.06) !important;
+  border: 1px solid rgba(255, 196, 150, 0.14) !important;
+  color: var(--muted) !important;
+}
+
+html[data-theme="spatial-07"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(255, 244, 238, 0.92) !important;
+  border-color: rgba(255, 244, 238, 0.95) !important;
+  color: #2a1409 !important;
+}
+
+/* ---- hero ---- */
+
+html[data-theme="spatial-07"] [data-testid="hero-panel"] {
+  border-radius: 22px !important;
+  border: 1px solid rgba(255, 196, 150, 0.16) !important;
+  min-height: clamp(340px, 44vh, 500px) !important;
+  box-shadow: 0 36px 72px -28px rgba(0, 0, 0, 0.8) !important;
+}
+
+html[data-theme="spatial-07"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(340px, 44vh, 500px) !important;
+  padding: clamp(24px, 2.3vw, 42px) !important;
+  max-width: min(48rem, 76%) !important;
+}
+
+html[data-theme="spatial-07"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(96deg, rgba(14, 8, 5, 0.9) 0%, rgba(14, 8, 5, 0.48) 40%, rgba(14, 8, 5, 0) 76%) !important;
+}
+
+html[data-theme="spatial-07"] [data-testid="hero-title"] {
+  font-size: clamp(2.2rem, 3.5vw, 3.5rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em;
+}
+
+html[data-theme="spatial-07"] [data-testid="hero-watch-button"] {
+  background: #fff6f1 !important;
+  border: 1px solid #fff6f1 !important;
+  color: #2a1409 !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme="spatial-07"] [data-testid="hero-watch-button"] svg {
+  color: #e8532a !important;
+}
+
+html[data-theme="spatial-07"] [data-testid="hero-panel"] .chip.glass-strong {
+  background: rgba(232, 83, 42, 0.92) !important;
+  border-color: rgba(255, 220, 200, 0.28) !important;
+  color: #fff6f1 !important;
+}
+
+/* ---- landscape trending shelf ---- */
+
+@media (min-width: 1024px) {
+  html[data-theme="spatial-07"] [data-testid="upcoming-panel"] > .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  html[data-theme="spatial-07"] [data-testid="upcoming-panel"] .poster-frame img {
+    aspect-ratio: 16 / 10 !important;
+    object-fit: cover;
+    object-position: center 22%;
+  }
+}
+
+html[data-theme="spatial-07"] .poster-frame {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 196, 150, 0.16) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 26px 54px -22px rgba(0, 0, 0, 0.82) !important;
+  transition: transform 300ms var(--s7-ease), box-shadow 300ms var(--s7-ease);
+}
+
+html[data-theme="spatial-07"] .poster-frame img {
+  border-radius: 17px !important;
+}
+
+html[data-theme="spatial-07"] .poster-frame:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 44px 82px -26px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(232, 83, 42, 0.45) !important;
+}
+
+html[data-theme="spatial-07"] .chip-rose {
+  border-color: rgba(232, 83, 42, 0.5);
+  background: rgba(232, 83, 42, 0.18);
+  color: var(--gold-soft);
+}
+
+/* ---- swatch ---- */
+
+.theme-swatch-spatial-07 .preview-circle {
+  background: rgba(232, 83, 42, 0.3);
+  border: 1px solid rgba(255, 170, 130, 0.55);
+}
+
+.theme-swatch-spatial-07 .preview-circle-dot {
+  border-color: rgba(255, 200, 175, 0.8);
+}

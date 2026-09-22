@@ -1,0 +1,9 @@
+{
+  "short_name": "CineMind AI",
+  "name": "CineMind AI — Cinematic Taste & Recommendations",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#08090E",
+  "background_color": "#08090E"
+}

@@ -74,27 +74,28 @@ class TestSimklPin:
         r = auth_client.post(f"{BASE_URL}/api/simkl/pin/start", timeout=40)
         assert r.status_code == 200, r.text
         d = r.json()
-        assert isinstance(d["user_code"], str) and len(d["user_code"]) == 5, d
+        assert isinstance(d["user_code"], str) and len(d["user_code"]) >= 5, d
+        assert isinstance(d["device_code"], str) and len(d["device_code"]) >= 10, d
         assert "simkl.com/pin" in d["verification_url"], d
         assert isinstance(d["expires_in"], int) and d["expires_in"] > 0
         assert isinstance(d["interval"], int) and d["interval"] > 0
-        TestSimklPin.codes["real"] = d["user_code"]
+        TestSimklPin.codes["device"] = d["device_code"]
 
     def test_pin_start_unauth(self, api_client):
         r = api_client.post(f"{BASE_URL}/api/simkl/pin/start", timeout=30)
         assert r.status_code == 401
 
     def test_pin_poll_pending(self, auth_client):
-        code = TestSimklPin.codes.get("real")
+        code = TestSimklPin.codes.get("device")
         assert code, "pin/start must run first"
         time.sleep(6)
-        r = auth_client.post(f"{BASE_URL}/api/simkl/pin/poll", json={"user_code": code}, timeout=40)
+        r = auth_client.post(f"{BASE_URL}/api/simkl/pin/poll", json={"device_code": code}, timeout=40)
         assert r.status_code == 200, r.text
         assert r.json().get("status") == "pending", r.text
 
     def test_pin_poll_bogus_code(self, auth_client):
         time.sleep(6)
-        r = auth_client.post(f"{BASE_URL}/api/simkl/pin/poll", json={"user_code": "ZZZZZ"}, timeout=40)
+        r = auth_client.post(f"{BASE_URL}/api/simkl/pin/poll", json={"device_code": "0000000000deadbeef"}, timeout=40)
         assert r.status_code == 200, r.text
         assert r.json().get("status") in ("expired", "invalid", "pending"), r.text
 

@@ -1,10 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { SPATIAL_THEME_IDS } from "@/themes/catalog";
 
 export const THEME_STORAGE_KEY = "cinemind-ui-theme";
+export const MODE_STORAGE_KEY = "cinemind-ui-mode";
+/* Every theme comes in both. Dark is the default, so an account that never
+   touches the switch looks exactly as it did before the switch existed. */
+export const MODES = ["dark", "light"];
 export const GLASS_STORAGE_KEY = "cinemind-glass-intensity";
-export const THEMES = ["vision", "apple"];
+export const THEMES = ["vision", "apple", "spatial", ...SPATIAL_THEME_IDS];
 export const WALLPAPER_STORAGE_KEY = "cinemind-wallpaper";
 /** "poster" keeps the original poster-lit background; the rest are gradients. */
 export const WALLPAPERS = ["poster", "midnight", "ember", "dusk", "mocha", "aurora", "graphite"];
@@ -16,13 +21,38 @@ export const MIN_ICON_SIZE = 16;
 export const MAX_ICON_SIZE = 98;
 
 export function normalizeTheme(value) {
-  return String(value || "").trim().toLowerCase() === "apple" ? "apple" : "vision";
+  const name = String(value || "").trim().toLowerCase();
+  return THEMES.includes(name) ? name : "vision";
 }
 
 export function normalizeGlassIntensity(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return DEFAULT_GLASS_INTENSITY;
   return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+export function normalizeMode(value) {
+  const name = String(value || "").trim().toLowerCase();
+  return MODES.includes(name) ? name : "dark";
+}
+
+export function applyMode(value) {
+  const next = normalizeMode(value);
+  document.documentElement.dataset.mode = next;
+  try {
+    localStorage.setItem(MODE_STORAGE_KEY, next);
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
+export function readStoredMode() {
+  try {
+    return normalizeMode(localStorage.getItem(MODE_STORAGE_KEY));
+  } catch {
+    return "dark";
+  }
 }
 
 export function applyTheme(theme) {
@@ -135,6 +165,7 @@ const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const { user } = useAuth();
   const [theme, setThemeState] = useState(readStoredTheme);
+  const [mode, setModeState] = useState(readStoredMode);
   const [glassIntensity, setGlassState] = useState(readStoredGlass);
   const [wallpaper, setWallpaperState] = useState(readStoredWallpaper);
   // The rail size previews live but only reaches the server on Save.
@@ -144,6 +175,10 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    applyMode(mode);
+  }, [mode]);
 
   useEffect(() => {
     applyGlassIntensity(glassIntensity);
@@ -164,6 +199,7 @@ export function ThemeProvider({ children }) {
       .then((r) => {
         if (cancelled) return;
         setThemeState(normalizeTheme(r.data?.ui_theme));
+        setModeState(normalizeMode(r.data?.ui_mode));
         if (r.data?.glass_intensity != null) {
           setGlassState(normalizeGlassIntensity(r.data.glass_intensity));
         }
@@ -188,6 +224,18 @@ export function ThemeProvider({ children }) {
     if (!user) return resolved;
     try {
       await api.put("/connections", { ui_theme: resolved });
+    } catch {
+      /* keep local choice */
+    }
+    return resolved;
+  }, [user]);
+
+  const setMode = useCallback(async (next) => {
+    const resolved = applyMode(next);
+    setModeState(resolved);
+    if (!user) return resolved;
+    try {
+      await api.put("/connections", { ui_mode: resolved });
     } catch {
       /* keep local choice */
     }
@@ -237,6 +285,9 @@ export function ThemeProvider({ children }) {
     () => ({
       theme,
       setTheme,
+      mode,
+      setMode,
+      isLight: mode === "light",
       isApple: theme === "apple",
       glassIntensity,
       setGlassIntensity,
@@ -249,6 +300,8 @@ export function ThemeProvider({ children }) {
     [
       theme,
       setTheme,
+      mode,
+      setMode,
       glassIntensity,
       setGlassIntensity,
       wallpaper,

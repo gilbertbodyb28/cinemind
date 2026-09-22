@@ -1,0 +1,358 @@
+/* Light mode — the second half of every theme.
+   Imported last, so it may answer any theme file. Everything is scoped to
+   html[data-mode="light"], and dark is the default, which is what keeps the
+   themes that existed before this file looking exactly as they did.
+
+   The idea is one shared light foundation — ink, glass, chips, rails — plus
+   one small room per theme at the bottom of the file. Artwork is the
+   exception: a hero backdrop and a poster print bring their own light type,
+   so anything lying on them keeps the dark treatment. */
+
+/* ============================================================ foundation ==== */
+
+html[data-mode="light"] {
+  --text: #1c2028;
+  --muted: #5a626e;
+  --subtle: #848c98;
+  color-scheme: light;
+}
+
+html[data-mode="light"],
+html[data-mode="light"] body,
+html[data-mode="light"] #root {
+  color: #1c2028 !important;
+}
+
+/* ---- ink ---- */
+
+html[data-mode="light"] .text-slate-200,
+html[data-mode="light"] .text-slate-300 { color: #2b313a !important; }
+html[data-mode="light"] .text-slate-400 { color: #545c68 !important; }
+html[data-mode="light"] .text-slate-500 { color: #6d7683 !important; }
+html[data-mode="light"] .text-slate-600 { color: #838c99 !important; }
+html[data-mode="light"] .text-\[\#F6EFE4\] { color: #171b21 !important; }
+html[data-mode="light"] .text-\[\#DCCFBC\] { color: #333a44 !important; }
+html[data-mode="light"] .text-\[\#BFB09A\] { color: #4c5561 !important; }
+html[data-mode="light"] .text-\[\#A5987F\] { color: #626b78 !important; }
+html[data-mode="light"] .text-\[\#8C7F6D\] { color: #7c8593 !important; }
+html[data-mode="light"] .text-\[\#6E6355\] { color: #909aa6 !important; }
+
+html[data-mode="light"] input,
+html[data-mode="light"] textarea,
+html[data-mode="light"] select { color: #1c2028 !important; }
+
+html[data-mode="light"] input::placeholder,
+html[data-mode="light"] textarea::placeholder { color: #8a929e !important; }
+
+html[data-mode="light"] select,
+html[data-mode="light"] option {
+  background-color: #ffffff;
+  color: #1c2028;
+}
+
+html[data-mode="light"] ::selection {
+  background: rgba(30, 40, 55, 0.2);
+  color: #10141a;
+}
+
+html[data-mode="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(30, 40, 55, 0.18);
+}
+
+html[data-mode="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 40, 55, 0.3);
+}
+
+/* ---- surfaces ---- */
+
+html[data-mode="light"] .glass {
+  background: rgba(255, 255, 255, 0.74) !important;
+  border: 1px solid rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 14px 34px -18px rgba(70, 85, 105, 0.38), inset 0 1px 0 #ffffff !important;
+}
+
+html[data-mode="light"] .glass-strong {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 26px 56px -24px rgba(70, 85, 105, 0.42) !important;
+}
+
+/* The pane: themes that paint it on ::after, and the three that paint it on
+   the element itself, are both answered here. */
+html[data-mode="light"] .glass-shell::after {
+  background: rgba(255, 255, 255, 0.56) !important;
+  border-color: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 54px 116px -46px rgba(70, 85, 105, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+html[data-mode="light"][data-theme="vision"] .glass-shell,
+html[data-mode="light"][data-theme="apple"] .glass-shell {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 44px 100px -40px rgba(70, 85, 105, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+html[data-mode="light"] .grain::before {
+  opacity: 0.05 !important;
+  mix-blend-mode: multiply;
+}
+
+html[data-mode="light"] .divider {
+  background: linear-gradient(90deg, rgba(30, 40, 55, 0), rgba(30, 40, 55, 0.14), rgba(30, 40, 55, 0));
+}
+
+html[data-mode="light"] .hover\:bg-white\/\[0\.03\]:hover,
+html[data-mode="light"] .hover\:bg-white\/\[0\.04\]:hover,
+html[data-mode="light"] .hover\:bg-white\/\[0\.05\]:hover,
+html[data-mode="light"] .hover\:bg-white\/\[0\.06\]:hover,
+html[data-mode="light"] .hover\:bg-white\/\[0\.07\]:hover,
+html[data-mode="light"] .hover\:bg-white\/\[0\.12\]:hover {
+  background-color: rgba(28, 38, 52, 0.07) !important;
+}
+
+html[data-mode="light"] .chip {
+  border: 1px solid rgba(30, 40, 55, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  color: #4d5663;
+}
+
+html[data-mode="light"] .chip-rose {
+  border-color: rgba(30, 40, 55, 0.2);
+  background: rgba(30, 40, 55, 0.1);
+  color: #262d37;
+}
+
+html[data-mode="light"] .brutal-shadow-rose,
+html[data-mode="light"] .brutal-shadow-cyan {
+  box-shadow: 0 0 0 1px rgba(30, 40, 55, 0.2), 0 16px 34px -14px rgba(70, 85, 105, 0.45);
+}
+
+/* ---- the room's own haze ---- */
+
+html[data-mode="light"]:root[data-wallpaper] .cm-ambient {
+  filter: blur(160px) saturate(30%) brightness(1.55) !important;
+  opacity: 0.13 !important;
+}
+
+html[data-mode="light"]:root[data-wallpaper] .ambient-scrim {
+  background: radial-gradient(1600px 1100px at 50% 40%, rgba(255, 255, 255, 0), rgba(120, 132, 148, 0.12) 94%);
+}
+
+/* ---- artwork keeps its own light type ---- */
+
+html[data-mode="light"] [data-testid="hero-panel"],
+html[data-mode="light"] .poster-frame {
+  color: #f7f8fa !important;
+}
+
+html[data-mode="light"] [data-testid="hero-panel"] .text-slate-200,
+html[data-mode="light"] [data-testid="hero-panel"] .text-slate-300,
+html[data-mode="light"] [data-testid="hero-panel"] .text-slate-400,
+html[data-mode="light"] [data-testid="hero-panel"] .text-slate-500,
+html[data-mode="light"] [data-testid="hero-panel"] .text-\[\#F6EFE4\],
+html[data-mode="light"] [data-testid="hero-panel"] .text-\[\#DCCFBC\],
+html[data-mode="light"] [data-testid="hero-panel"] .text-\[\#BFB09A\],
+html[data-mode="light"] [data-testid="hero-panel"] .text-\[\#A5987F\],
+html[data-mode="light"] [data-testid="hero-panel"] .text-\[\#8C7F6D\],
+html[data-mode="light"] .poster-frame .text-slate-400,
+html[data-mode="light"] .poster-frame .text-slate-500,
+html[data-mode="light"] .poster-frame .text-\[\#8C7F6D\],
+html[data-mode="light"] .poster-frame .text-\[\#A5987F\] {
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+html[data-mode="light"] [data-testid="hero-panel"] .glass,
+html[data-mode="light"] [data-testid="hero-panel"] .glass-strong,
+html[data-mode="light"] [data-testid="hero-panel"] .chip,
+html[data-mode="light"] [data-testid="new-trailer-panel"] .glass-strong,
+html[data-mode="light"] .poster-frame .glass,
+html[data-mode="light"] .poster-frame .glass-strong,
+html[data-mode="light"] .poster-frame .chip {
+  background: rgba(18, 21, 26, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html[data-mode="light"] [data-testid="hero-panel"] .glass *,
+html[data-mode="light"] .poster-frame .glass *,
+html[data-mode="light"] .poster-frame .glass-strong * {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+/* The plate the print sits on turns white; the print does not. */
+html[data-mode="light"] .poster-frame {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 22px 46px -20px rgba(70, 85, 105, 0.42) !important;
+}
+
+/* ---- rails that the theme gave a body of their own ---- */
+
+html[data-mode="light"] nav[data-testid="icon-rail"] a {
+  color: #5b636f !important;
+}
+
+html[data-mode="light"] nav[data-testid="icon-rail"] a:hover {
+  background: rgba(28, 38, 52, 0.1) !important;
+  color: #1d232b !important;
+}
+
+html[data-mode="light"] nav[data-testid="icon-rail"] a.active,
+html[data-mode="light"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+  background: #23292f !important;
+  color: #ffffff !important;
+}
+
+html[data-mode="light"][data-theme="spatial"] nav[data-testid="icon-rail"],
+html[data-mode="light"][data-theme="spatial-02"] nav[data-testid="icon-rail"],
+html[data-mode="light"][data-theme="spatial-03"] nav[data-testid="icon-rail"],
+html[data-mode="light"][data-theme="spatial-04"] nav[data-testid="icon-rail"],
+html[data-mode="light"][data-theme="spatial-05"] nav[data-testid="icon-rail"],
+html[data-mode="light"][data-theme="spatial-06"] nav[data-testid="icon-rail"],
+html[data-mode="light"][data-theme="spatial-07"] nav[data-testid="icon-rail"],
+html[data-mode="light"][data-theme="spatial-08"] nav[data-testid="icon-rail"] {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 20px 44px -20px rgba(70, 85, 105, 0.4) !important;
+}
+
+/* ---- pills ---- */
+
+html[data-mode="light"] [data-testid="category-tabs"] > * {
+  background: rgba(255, 255, 255, 0.74) !important;
+  border-color: rgba(255, 255, 255, 0.92) !important;
+  color: #5b636f !important;
+}
+
+html[data-mode="light"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: #23292f !important;
+  border-color: #23292f !important;
+  color: #ffffff !important;
+}
+
+/* ---- the hero's own buttons ---- */
+
+html[data-mode="light"] [data-testid="hero-watch-button"] {
+  background: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  color: #1b1e22 !important;
+  font-weight: 600 !important;
+}
+
+/* ================================================================ rooms ==== */
+
+/* One room per theme. Two attributes plus :root outrank both the theme's own
+   room and the wallpaper picker. */
+
+html[data-mode="light"][data-theme="vision"] { background: #efe7db !important; }
+html[data-mode="light"][data-theme="vision"]:root body {
+  background:
+    radial-gradient(1200px 800px at 18% 0%, rgba(255, 250, 240, 0.95), rgba(255, 250, 240, 0) 58%),
+    linear-gradient(170deg, #f8f2e8 0%, #ece2d3 52%, #d8ccb9 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="apple"] { background: #e8ecf2 !important; }
+html[data-mode="light"][data-theme="apple"]:root body {
+  background:
+    radial-gradient(1200px 800px at 16% -4%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0) 56%),
+    radial-gradient(1000px 700px at 90% 24%, rgba(214, 232, 255, 0.8), rgba(214, 232, 255, 0) 58%),
+    linear-gradient(170deg, #f7fafd 0%, #e6edf6 54%, #ccd8e6 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial"] { background: #dfe3e8 !important; }
+html[data-mode="light"][data-theme="spatial"]:root body {
+  background:
+    radial-gradient(1400px 900px at 50% -18%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #f2f4f7 0%, #e0e4ea 46%, #c7cdd6 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial-01"] { background: #efe7d9 !important; }
+html[data-mode="light"][data-theme="spatial-01"]:root body {
+  background:
+    radial-gradient(1500px 900px at 50% -22%, rgba(255, 246, 228, 0.98), rgba(255, 246, 228, 0) 60%),
+    linear-gradient(180deg, #faf4e9 0%, #eee4d2 48%, #d6c8b1 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial-02"] { background: #e2e2e5 !important; }
+html[data-mode="light"][data-theme="spatial-02"]:root body {
+  background:
+    radial-gradient(1400px 800px at 50% -8%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(180deg, #f4f4f6 0%, #e6e6e9 58%, #cfcfd3 74%, #b9b9bd 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial-03"] { background: #e9ddcb !important; }
+html[data-mode="light"][data-theme="spatial-03"]:root body {
+  background:
+    radial-gradient(1200px 900px at 12% 8%, rgba(255, 249, 236, 0.95), rgba(255, 249, 236, 0) 58%),
+    radial-gradient(1000px 800px at 96% 70%, rgba(240, 220, 194, 0.85), rgba(240, 220, 194, 0) 60%),
+    linear-gradient(160deg, #f6ecdc 0%, #e6d7c1 50%, #cdb99e 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial-04"] { background: #e4e6ea !important; }
+html[data-mode="light"][data-theme="spatial-04"]:root body {
+  background:
+    radial-gradient(900px 700px at 8% 16%, rgba(255, 238, 205, 0.85), rgba(255, 238, 205, 0) 58%),
+    radial-gradient(1100px 800px at 92% 84%, rgba(222, 230, 242, 0.9), rgba(222, 230, 242, 0) 62%),
+    linear-gradient(170deg, #f6f7f9 0%, #e7e9ee 52%, #ced2da 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial-05"] { background: #e3e6ea !important; }
+html[data-mode="light"][data-theme="spatial-05"]:root body {
+  background:
+    radial-gradient(1300px 900px at 30% 0%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(175deg, #f5f7f9 0%, #e5e8ec 48%, #cbd0d7 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* Daylight is already the bright one; its room only needs the wallpaper
+   picker outranked so it stays bright. */
+html[data-mode="light"][data-theme="spatial-06"] { background: #dfe3e8 !important; }
+html[data-mode="light"][data-theme="spatial-06"]:root body {
+  background:
+    radial-gradient(1200px 800px at 18% 2%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(1000px 700px at 88% 30%, rgba(238, 243, 248, 0.9), rgba(238, 243, 248, 0) 58%),
+    linear-gradient(170deg, #f4f6f9 0%, #e3e8ee 52%, #ccd3dc 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial-07"] { background: #f0dfd0 !important; }
+html[data-mode="light"][data-theme="spatial-07"]:root body {
+  background:
+    radial-gradient(1200px 800px at 10% 10%, rgba(255, 216, 180, 0.95), rgba(255, 216, 180, 0) 58%),
+    radial-gradient(1000px 900px at 92% 88%, rgba(246, 205, 180, 0.8), rgba(246, 205, 180, 0) 60%),
+    linear-gradient(165deg, #fdf0e4 0%, #f2dccb 50%, #dcbda4 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-mode="light"][data-theme="spatial-08"] { background: #ece5d9 !important; }
+html[data-mode="light"][data-theme="spatial-08"]:root body {
+  background:
+    radial-gradient(900px 700px at 12% 24%, rgba(255, 246, 226, 0.98), rgba(255, 246, 226, 0) 56%),
+    radial-gradient(1100px 800px at 82% 6%, rgba(255, 252, 245, 0.8), rgba(255, 252, 245, 0) 58%),
+    linear-gradient(168deg, #f9f4ea 0%, #ebe3d5 52%, #d2c8b8 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* ---- accents that must not be lost on white ---- */
+
+html[data-mode="light"][data-theme="spatial-04"] [data-testid="hero-watch-button"] {
+  background: #e79a10 !important;
+  border-color: #e79a10 !important;
+  color: #1a1305 !important;
+}
+
+html[data-mode="light"][data-theme="spatial-07"] [data-testid="hero-watch-button"] svg {
+  color: #d8431c !important;
+}
+
+html[data-mode="light"][data-theme="spatial-07"] nav[data-testid="icon-rail"]::before {
+  box-shadow: 0 10px 26px -10px rgba(216, 67, 28, 0.6), inset 0 1px 0 rgba(255, 235, 225, 0.6);
+}

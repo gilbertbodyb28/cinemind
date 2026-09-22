@@ -1,0 +1,244 @@
+/* Spatial 05 — Studio Grey.
+   Reference: the steary concept. Cool grey glass in a soft grey room, a tight
+   left column of trailers above Continue Watching, a dark hero card with a
+   white primary button, and a shelf of near-square picture cards. */
+
+html[data-theme="spatial-05"] {
+  --bg: #1a1c20;
+  --surface: #24272c;
+  --gold: #e6eaf0;
+  --gold-soft: #ffffff;
+  --text: #f1f3f6;
+  --muted: #b8bec7;
+  --subtle: #8b929c;
+
+  --s5-gap: clamp(20px, 3vw, 64px);
+  --s5-pad: clamp(16px, 1.7vw, 28px);
+  --s5-radius: 32px;
+  --s5-pane: rgba(72, 76, 82, 0.44);
+  --s5-line: rgba(255, 255, 255, 0.2);
+  --s5-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: #8c9099 !important;
+  color-scheme: dark;
+}
+
+/* :root outranks html[data-wallpaper=…] from wallpapers.css, so the
+   theme's own room wins over the wallpaper picker in this theme. */
+html[data-theme="spatial-05"]:root body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif !important;
+  background:
+    radial-gradient(1300px 900px at 30% 4%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(175deg, #a9adb5 0%, #8e939b 46%, #6b7078 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme="spatial-05"] .cm-ambient {
+  filter: blur(150px) saturate(35%) brightness(1.05) !important;
+  opacity: 0.2 !important;
+}
+
+/* wallpapers.css dims the room through .ambient-scrim with a selector of
+   its own; in this collection the room belongs to the theme, so this one
+   outranks it. */
+html[data-theme="spatial-05"]:root[data-wallpaper] .ambient-scrim {
+  background: radial-gradient(1500px 1000px at 50% 40%, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.12) 92%);
+}
+
+/* ---- the pane ---- */
+
+html[data-theme="spatial-05"] div:has(> .glass-shell) {
+  padding: var(--s5-gap) !important;
+}
+
+html[data-theme="spatial-05"] .glass-shell {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--s5-radius) !important;
+  padding: var(--s5-pad) !important;
+  max-width: none;
+  min-height: calc(100vh - 2 * var(--s5-gap)) !important;
+}
+
+html[data-theme="spatial-05"] .glass-shell::after {
+  content: "";
+  position: fixed;
+  inset: var(--s5-gap);
+  z-index: 0;
+  border-radius: var(--s5-radius);
+  background: var(--s5-pane);
+  backdrop-filter: blur(48px) saturate(125%);
+  -webkit-backdrop-filter: blur(48px) saturate(125%);
+  border: 1px solid var(--s5-line);
+  box-shadow: 0 60px 130px -46px rgba(30, 33, 38, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  pointer-events: none;
+}
+
+html[data-theme="spatial-05"] .grain::before {
+  display: none;
+}
+
+html[data-theme="spatial-05"] .glass {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+html[data-theme="spatial-05"] .glass-strong {
+  background: rgba(40, 43, 48, 0.84) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* ---- rail inside the pane, circular buttons on a slab ---- */
+
+@media (min-width: 1200px) {
+  html[data-theme="spatial-05"] header > div:has(> nav[data-testid="icon-rail"]) {
+    position: static !important;
+    width: 0 !important;
+    height: 0 !important;
+    transform: none !important;
+  }
+
+  html[data-theme="spatial-05"] nav[data-testid="icon-rail"] {
+    position: absolute;
+    left: calc(6px - var(--s5-pad));
+    top: calc(var(--rail-icon, 40px) + 34px);
+    z-index: 40;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 12px 8px;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(26px) saturate(140%);
+    -webkit-backdrop-filter: blur(26px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow: 0 22px 46px -20px rgba(0, 0, 0, 0.5);
+  }
+
+  html[data-theme="spatial-05"] nav[data-testid="icon-rail"] a {
+    border-radius: 999px;
+    /* The warm grey the glyphs inherit disappears against grey glass. */
+    color: rgba(255, 255, 255, 0.84) !important;
+    background: rgba(255, 255, 255, 0.1);
+    transition: background 150ms var(--s5-ease), transform 150ms var(--s5-ease);
+  }
+
+  html[data-theme="spatial-05"] nav[data-testid="icon-rail"] a:hover {
+    background: rgba(255, 255, 255, 0.28) !important;
+    transform: scale(1.08);
+  }
+
+  html[data-theme="spatial-05"] nav[data-testid="icon-rail"] a.active,
+  html[data-theme="spatial-05"] nav[data-testid="icon-rail"] a[aria-current="page"] {
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: #23262b !important;
+  }
+
+  html[data-theme="spatial-05"] .glass-shell > div:last-child {
+    padding-left: calc(var(--rail-icon, 40px) + 18px);
+  }
+}
+
+/* ---- pills ---- */
+
+html[data-theme="spatial-05"] [data-testid="category-tabs"] {
+  justify-content: center;
+}
+
+html[data-theme="spatial-05"] [data-testid="category-tabs"] > * {
+  border-radius: 999px !important;
+  padding: 9px 19px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+html[data-theme="spatial-05"] [data-testid="category-tabs"] > .bg-\[rgba\(216\,178\,106\,0\.18\)\] {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: #ffffff !important;
+  color: #23262b !important;
+}
+
+/* ---- hero ---- */
+
+html[data-theme="spatial-05"] [data-testid="hero-panel"] {
+  border-radius: 22px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  min-height: clamp(340px, 42vh, 470px) !important;
+  box-shadow: 0 34px 66px -26px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-theme="spatial-05"] [data-testid="hero-panel"] > div[class*="justify-end"] {
+  min-height: clamp(340px, 42vh, 470px) !important;
+  padding: clamp(22px, 2.2vw, 38px) !important;
+  max-width: min(42rem, 62%) !important;
+}
+
+html[data-theme="spatial-05"] [data-testid="hero-panel"] > .bg-gradient-to-r {
+  background: linear-gradient(96deg, rgba(12, 14, 17, 0.9) 0%, rgba(12, 14, 17, 0.52) 40%, rgba(12, 14, 17, 0) 76%) !important;
+}
+
+html[data-theme="spatial-05"] [data-testid="hero-title"] {
+  font-size: clamp(2rem, 3.1vw, 3.1rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em;
+  line-height: 1.04;
+}
+
+html[data-theme="spatial-05"] [data-testid="hero-watch-button"] {
+  background: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  color: #1b1e22 !important;
+  font-weight: 600 !important;
+}
+
+/* ---- near-square picture cards ---- */
+
+@media (min-width: 1024px) {
+  html[data-theme="spatial-05"] [data-testid="upcoming-panel"] > .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  html[data-theme="spatial-05"] [data-testid="upcoming-panel"] .poster-frame img {
+    aspect-ratio: 4 / 5 !important;
+    object-fit: cover;
+  }
+}
+
+html[data-theme="spatial-05"] .poster-frame {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.55) !important;
+  transition: transform 300ms var(--s5-ease);
+}
+
+html[data-theme="spatial-05"] .poster-frame img {
+  border-radius: 19px !important;
+}
+
+html[data-theme="spatial-05"] .poster-frame:hover {
+  transform: translateY(-6px) scale(1.015);
+}
+
+html[data-theme="spatial-05"] .chip-rose {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+/* ---- swatch ---- */
+
+.theme-swatch-spatial-05 .preview-circle {
+  background: rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.theme-swatch-spatial-05 .preview-circle-dot {
+  border-color: rgba(255, 255, 255, 0.75);
+}

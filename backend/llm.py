@@ -50,6 +50,8 @@ async def generate_with_llm(
     user_id: str = "",
     action: str = "generate",
     model_override: Optional[str] = None,
+    options: Optional[Dict[str, Any]] = None,
+    response_schema: Optional[Dict[str, Any]] = None,
 ) -> tuple[Optional[Any], str, str]:
     """Ask Ollama for structured JSON, retrying once on unparseable output.
 
@@ -59,7 +61,9 @@ async def generate_with_llm(
     del session_id  # reserved for later request tracing
     url, model = resolve_model(conn, model_override)
     for attempt in (1, 2):
-        raw = await call_ollama(url, model, prompt, system)
+        raw = await call_ollama(
+            url, model, prompt, system, options=options, response_schema=response_schema
+        )
         if raw is None:
             break
         parsed = extract_json(raw)

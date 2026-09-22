@@ -38,6 +38,7 @@ class ConnectionsUpdate(BaseModel):
     tmdb_api_key: Optional[str] = None
     tvdb_api_key: Optional[str] = None
     ui_theme: Optional[str] = None
+    ui_mode: Optional[str] = None
     glass_intensity: Optional[int] = None
 
 

@@ -435,6 +435,33 @@ async def _keyword_ids(names: Optional[List[str]], api_key: Optional[str] = None
 #: TMDb refuses page numbers above this.
 TMDB_MAX_PAGE = 500
 
+# Unscripted TV formats. TMDb tags a late-night or sketch show simply "Comedy",
+# so no ranking signal separates it from scripted comedy - it has to be kept out
+# of the lane in the first place, and only for viewers whose own history shows
+# no interest in it.
+UNSCRIPTED_TV_GENRE_IDS = {
+    10767: ("talk", "talk show", "talk-show"),
+    10763: ("news",),
+    10764: ("reality",),
+    10766: ("soap",),
+}
+
+
+def unwanted_tv_genres(taste: Optional[Dict[str, Any]]) -> str:
+    """TMDb `without_genres` for formats this viewer has never engaged with."""
+    if not taste:
+        return ""
+    profile = {str(name).casefold(): row for name, row in (taste.get("genres") or {}).items()}
+    if not profile:
+        return ""
+    unwanted = []
+    for genre_id, aliases in UNSCRIPTED_TV_GENRE_IDS.items():
+        rows = [profile[alias] for alias in aliases if alias in profile]
+        # "Never watched" and "watched once by accident" both count as no interest.
+        if not rows or all(row.get("affinity", 0) <= 0.02 for row in rows):
+            unwanted.append(str(genre_id))
+    return ",".join(unwanted)
+
 
 def _window_is_upcoming(filters: Dict[str, Any]) -> bool:
     """True when the job asks for titles that have not been released yet."""
@@ -460,6 +487,7 @@ async def tmdb_discover(
     media_type: str,
     api_key: Optional[str] = None,
     start_page: int = 1,
+    taste: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     filters = job.get("filters") or {}
     endpoint = "tv" if media_type in {"tv", "show", "anime"} else "movie"
@@ -471,6 +499,10 @@ async def tmdb_discover(
     # accepts nothing no matter how long it runs.
     first_page = max(1, int(start_page or 1))
     base: Dict[str, Any] = {"sort_by": "popularity.desc", "include_adult": "false"}
+    if endpoint == "tv":
+        excluded = unwanted_tv_genres(taste)
+        if excluded:
+            base["without_genres"] = excluded
     genre_ids = _genre_ids(filters.get("include_genres"), endpoint)
     if genre_ids:
         base["with_genres"] = genre_ids
@@ -581,22 +613,92 @@ async def tmdb_discover(
     return collected[:limit]
 
 
-async def tmdb_related(history: List[Dict[str, Any]], kind: str, api_key: Optional[str] = None) -> List[Dict[str, Any]]:
+def related_seeds(
+    history: List[Dict[str, Any]],
+    taste: Optional[Dict[str, Any]] = None,
+    limit: int = 10,
+) -> List[Dict[str, Any]]:
+    """The titles worth asking TMDb "more like this" about.
+
+    Taking the first rows of `history` seeded every similarity query from
+    whatever the database returned first. The taste profile knows which titles
+    actually carry evidence, so ask about those instead.
+    """
     seeds: List[Dict[str, Any]] = []
     seen = set()
-    for item in history:
+    for item in list((taste or {}).get("seed_docs") or []) + list(history or []):
         tid = item.get("tmdb_id")
         if not tid or tid in seen:
             continue
         seen.add(tid)
         seeds.append(item)
-        if len(seeds) >= 8:
+        if len(seeds) >= limit:
             break
+    return seeds
+
+
+async def tmdb_related(
+    history: List[Dict[str, Any]],
+    kind: str,
+    api_key: Optional[str] = None,
+    taste: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    seeds = related_seeds(history, taste)
     out: List[Dict[str, Any]] = []
     for item in seeds:
         endpoint = "tv" if (item.get("type") or item.get("media_type")) in {"show", "tv", "anime"} else "movie"
         rows = await _tmdb_list(f"{endpoint}/{item['tmdb_id']}/{kind}", {"page": 1}, api_key=api_key)
-        out.extend(_normalize_tmdb_result(row, endpoint, f"tmdb_{kind}") for row in rows[:12])
+        for row in rows[:12]:
+            normalized = _normalize_tmdb_result(row, endpoint, f"tmdb_{kind}")
+            normalized["source_seed"] = item.get("title")
+            normalized["why"] = ""
+            out.append(normalized)
+    return out
+
+
+async def taste_seeded_discover(
+    job: Dict[str, Any],
+    taste: Dict[str, Any],
+    api_key: Optional[str] = None,
+    per_lane: int = 20,
+) -> List[Dict[str, Any]]:
+    """Discover lanes built from the profile's strongest genre combinations.
+
+    Plain popularity.desc with no genre constraint is how a taste profile full
+    of fantasy and anime ended up being served talk shows and a news bulletin.
+    """
+    pairs = sorted(
+        ((name, row) for name, row in (taste.get("genre_pairs") or {}).items() if row.get("affinity", 0) > 0),
+        key=lambda pair: -(pair[1]["affinity"] * pair[1].get("confidence", 0)),
+    )[:4]
+    if not pairs:
+        return []
+    media_types = job.get("media_types") or ["movie", "tv"]
+    endpoints = []
+    if any(item in media_types for item in ("movie", "movies")):
+        endpoints.append("movie")
+    if any(item in media_types for item in ("tv", "show", "anime")):
+        endpoints.append("tv")
+    out: List[Dict[str, Any]] = []
+    for name, _row in pairs:
+        wanted = [part for part in str(name).split("|") if part]
+        for endpoint in endpoints:
+            ids = _genre_ids(wanted, endpoint)
+            if not ids or "," not in ids:
+                continue
+            params = {
+                "sort_by": "popularity.desc",
+                "include_adult": "false",
+                "vote_count.gte": 80,
+                # Comma means AND on TMDb: the combination, not either label.
+                "with_genres": ids,
+                "page": 1,
+            }
+            rows, _ = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)
+            for row in rows[:per_lane]:
+                normalized = _normalize_tmdb_result(row, endpoint, "taste_seeded_discover")
+                normalized["source_seed"] = name
+                out.append(normalized)
     return out
 
 
@@ -605,6 +707,7 @@ async def fetch_job_candidates(
     history: List[Dict[str, Any]],
     api_key: Optional[str] = None,
     start_page: int = 1,
+    taste: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     key = api_key or TMDB_KEY
     if not key:
@@ -639,6 +742,7 @@ async def fetch_job_candidates(
                     kind,
                     api_key=key,
                     start_page=start_page,
+                    taste=taste,
                 )
             )
         include = {str(g).casefold() for g in (filters.get("include_genres") or [])}
@@ -659,11 +763,29 @@ async def fetch_job_candidates(
                     "language": None,
                 },
             }
-            extra.extend(await tmdb_discover(anime_job, "tv", api_key=key, start_page=start_page))
+            extra.extend(await tmdb_discover(anime_job, "tv", api_key=key, start_page=start_page, taste=taste))
+            # Anime films are their own lane: an anime movie ranks nothing like
+            # a 300-episode series, and nothing else in the pipeline produced one.
+            anime_movie_job = {
+                **anime_job,
+                "candidate_limit": max(12, min(per // 2, 30)),
+                "filters": {
+                    **anime_job["filters"],
+                    "include_genres": ["animation"],
+                    "languages": anime_langs,
+                },
+            }
+            for row in await tmdb_discover(anime_movie_job, "movie", api_key=key, start_page=start_page, taste=taste):
+                row["media_type"] = "anime"
+                row["type"] = "anime"
+                row["format"] = "MOVIE"
+                extra.append(row)
+        if taste and (taste.get("genre_pairs") or {}):
+            extra.extend(await taste_seeded_discover(discover_job, taste, api_key=key))
     if "tmdb_similar" in wanted or "tmdb_discover" in wanted:
-        extra.extend(await tmdb_related(history, "similar", api_key=key))
+        extra.extend(await tmdb_related(history, "similar", api_key=key, taste=taste))
     if "tmdb_recommendations" in wanted or "tmdb_discover" in wanted:
-        extra.extend(await tmdb_related(history, "recommendations", api_key=key))
+        extra.extend(await tmdb_related(history, "recommendations", api_key=key, taste=taste))
     return extra
 
 

@@ -6,7 +6,7 @@ from .candidate_engine import expand_from_seeds, merge_candidate_sources
 from .exclusion_engine import apply_exclusions, build_exclusion_context
 from .filter_engine import apply_filters
 from .media_identity import title_key
-from .ranking_engine import apply_rerank, score_candidates
+from .ranking_engine import apply_diversity, apply_rerank, score_candidates
 from .taste_engine import build_taste_snapshot
 
 
@@ -46,18 +46,23 @@ def run_pipeline(
     catalog: Optional[List[Dict[str, Any]]] = None,
     extra_candidates: Optional[List[Dict[str, Any]]] = None,
     rerank_ids: Optional[List[str]] = None,
+    personal_history: Optional[List[Dict[str, Any]]] = None,
+    taste: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     spec = {**default_job(), **job}
-    taste = build_taste_snapshot(
+    # Callers that generate candidates from the profile pass the snapshot they
+    # already built, so it is not computed twice per run.
+    taste = taste or build_taste_snapshot(
         history,
         feedback=feedback,
         provider_weights=spec.get("provider_weights"),
         taste_sources=spec.get("taste_sources"),
+        personal_history=personal_history,
     )
     generated = []
     sources = spec.get("candidate_sources") or ["seed_expand"]
-    if "seed_expand" in sources or spec.get("job_type") in {"personalized", "discover"}:
-        generated.append(expand_from_seeds(history, catalog or [], spec.get("media_types"), spec.get("candidate_limit", 40)))
+    if ("seed_expand" in sources or spec.get("job_type") in {"personalized", "discover"}) and catalog:
+        generated.append(expand_from_seeds(history, catalog, spec.get("media_types"), spec.get("candidate_limit", 40), taste=taste))
     if extra_candidates:
         generated.append(extra_candidates)
 
@@ -78,12 +83,13 @@ def run_pipeline(
             continue
         accepted.append({**candidate, "filter_outcome": "accepted"})
 
-    ranked = score_candidates(accepted, taste)
+    ranked = score_candidates(accepted, taste, weights=spec.get("score_weights"))
     ranked = apply_rerank(ranked, rerank_ids)
     limit = int(spec.get("final_recommendation_limit") or 8)
+    selected = apply_diversity(ranked, limit) if spec.get("diversity", True) else ranked[:limit]
     return {
         "taste": taste,
-        "accepted": ranked[:limit],
+        "accepted": selected,
         "ranked": ranked,
         "rejected": rejected,
         "candidate_count": len(accepted) + len(rejected),

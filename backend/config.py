@@ -33,7 +33,7 @@ DEMO_MODE = env_flag("DEMO_MODE", "true")
 
 # Server-wide Ollama defaults; per-user overrides live in the `connections` collection.
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:14b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen-suggestarr")
 
 TMDB_KEY = os.environ.get("TMDB_API_KEY")
 TVDB_API_KEY = os.environ.get("TVDB_API_KEY")
@@ -85,7 +85,14 @@ CLAUDE_MODEL_KEYS = frozenset({
     "claude-opus-5",
     "claude-haiku-4-5-20251001",
 })
-LEGACY_OLLAMA_MODELS = frozenset({"llama3.2", "llama3.2:latest", "llama3"})
+# Models that were once the shipped default but are no longer offered in the UI.
+# A connection still pinned to one of these cannot be changed by the user - the
+# picker does not list it - so it silently overrides the configured default for
+# ever. qwen3:14b is here because benchmarking on real history put it last:
+# NDCG@10 0.353 against 0.628 for the current default (evaluation/model_bench.py).
+LEGACY_OLLAMA_MODELS = frozenset({
+    "llama3.2", "llama3.2:latest", "llama3", "qwen3:14b", "qwen3:14b-latest",
+})
 
 
 def is_claude_model(name: Optional[str]) -> bool:
@@ -96,7 +103,7 @@ def is_claude_model(name: Optional[str]) -> bool:
 
 
 def effective_ollama_model(conn: Dict[str, Any], override: Optional[str] = None) -> str:
-    """Pick the Ollama model. Claude keys and the old llama3.2 default become qwen3:14b."""
+    """Pick the Ollama model. Claude keys and the old llama3.2 default become OLLAMA_MODEL."""
     raw = (override or conn.get("ollama_model") or OLLAMA_MODEL or "").strip()
     if not raw or is_claude_model(raw) or raw.lower() in LEGACY_OLLAMA_MODELS:
         return OLLAMA_MODEL

@@ -5,7 +5,7 @@ import time
 import pytest
 import requests
 
-from conftest import BASE_URL, SESSION_TOKEN
+from conftest import BASE_URL, OLLAMA_MODEL, SESSION_TOKEN
 
 TMDB_PREFIX = "https://image.tmdb.org/"
 PLACEHOLDER = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500"
@@ -32,10 +32,10 @@ def _generate(client, body, retries=2):
 # ---------- Feature 2: model toggle (per-action override) + Feature 1: TMDB enrichment ----------
 class TestRecsModelOverrideAndTmdb:
     def test_generate_with_qwen_override(self, auth_client, no_ollama):
-        data = _generate(auth_client, {"model": "qwen3:14b"})
+        data = _generate(auth_client, {"model": OLLAMA_MODEL})
         assert data["provider"] in ("ollama", "demo", "fallback"), f"expected ollama, got {data}"
         if data["provider"] == "ollama":
-            assert data["model"] == "qwen3:14b", data
+            assert data["model"] == OLLAMA_MODEL, data
             assert data["count"] == 8, data
             assert data["demo"] is False, data
 
@@ -48,7 +48,7 @@ class TestRecsModelOverrideAndTmdb:
         # multiple generate tests in the same session accumulate recs
         assert len(gen) >= 8, f"expected >=8 ollama recs, got {len(gen)}"
         for d in gen:
-            assert d["model"] == "qwen3:14b", d
+            assert d["model"] == OLLAMA_MODEL, d
         tmdb = [d for d in gen if str(d.get("poster", "")).startswith(TMDB_PREFIX)]
         assert len(tmdb) >= 6, [(d["title"], d["poster"]) for d in gen]
         # distinct posters (no all-identical placeholder grid)
@@ -90,7 +90,7 @@ class TestStreamingReason:
         rec_id = state.get("rec_id")
         if not rec_id:
             pytest.skip("no generated rec available")
-        url = f"{BASE_URL}/api/recommendations/{rec_id}/reason/stream?model=qwen3:14b"
+        url = f"{BASE_URL}/api/recommendations/{rec_id}/reason/stream?model={OLLAMA_MODEL}"
         headers = {"Authorization": f"Bearer {SESSION_TOKEN}"}
 
         frames = self._frames(url, headers)
@@ -98,7 +98,7 @@ class TestStreamingReason:
         done = [f for f in frames if f.get("done")]
         assert not [f for f in frames if f.get("error")], frames[-3:]
         assert len(token_frames) > 3, f"expected token streaming, got {len(token_frames)} frames"
-        assert done and done[-1]["model"] == "qwen3:14b", done
+        assert done and done[-1]["model"] == OLLAMA_MODEL, done
         text = "".join(f["t"] for f in token_frames).strip()
         assert len(text) > 100, text
 
@@ -114,12 +114,12 @@ class TestStreamingReason:
 class TestTasteModel:
     def test_taste_with_qwen_override(self, auth_client, no_ollama):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate",
-                             json={"model": "qwen3:14b"}, timeout=LLM_TIMEOUT)
+                             json={"model": OLLAMA_MODEL}, timeout=LLM_TIMEOUT)
         assert r.status_code == 200, r.text
         data = r.json()
         assert data["provider"] in ("ollama", "demo", "fallback"), data
         if data["provider"] == "ollama":
-            assert data["model"] == "qwen3:14b", data
+            assert data["model"] == OLLAMA_MODEL, data
         assert data["cinematic_dna"]
 
     def test_taste_with_no_body_defaults(self, auth_client):
@@ -128,29 +128,29 @@ class TestTasteModel:
         data = r.json()
         assert data["provider"] != "claude", data
         if data["provider"] == "ollama":
-            assert data["model"] == "qwen3:14b", data
+            assert data["model"] == OLLAMA_MODEL, data
 
 
 # ---------- Feature 2: global default via connections.llm_model ----------
 class TestGlobalModelDefault:
     def test_put_and_get_ollama_model(self, auth_client):
-        r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_model": "qwen3:14b"}, timeout=60)
+        r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_model": OLLAMA_MODEL}, timeout=60)
         assert r.status_code == 200, r.text
         g = auth_client.get(f"{BASE_URL}/api/connections", timeout=60)
         assert g.status_code == 200
-        assert g.json().get("ollama_model") == "qwen3:14b", g.json()
+        assert g.json().get("ollama_model") == OLLAMA_MODEL, g.json()
 
     def test_generate_uses_global_default(self, auth_client):
         data = _generate(auth_client, None, retries=2)
         if data.get("provider") == "ollama":
-            assert data["model"] == "qwen3:14b", data
+            assert data["model"] == OLLAMA_MODEL, data
         else:
             assert data["provider"] in ("demo", "fallback"), data
 
     def test_reset_ollama_model(self, auth_client):
-        r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_model": "qwen3:14b"}, timeout=60)
+        r = auth_client.put(f"{BASE_URL}/api/connections", json={"ollama_model": OLLAMA_MODEL}, timeout=60)
         assert r.status_code == 200
-        assert auth_client.get(f"{BASE_URL}/api/connections", timeout=60).json()["ollama_model"] == "qwen3:14b"
+        assert auth_client.get(f"{BASE_URL}/api/connections", timeout=60).json()["ollama_model"] == OLLAMA_MODEL
 
     def test_claude_model_falls_back_to_qwen(self, auth_client):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate",
@@ -158,7 +158,7 @@ class TestGlobalModelDefault:
         assert r.status_code == 200, r.text
         assert r.json()["model"] != "sonnet-5", r.json()
         if r.json()["provider"] == "ollama":
-            assert r.json()["model"] == "qwen3:14b", r.json()
+            assert r.json()["model"] == OLLAMA_MODEL, r.json()
 
 
 # ---------- Feature 4: usage meter ----------
@@ -175,7 +175,11 @@ class TestUsage:
         assert d["month"]
         assert d["last_call_at"]
         models = {m["model"] for m in d["by_model"]}
-        assert {"haiku-4.5", "sonnet-5", "opus-5"} <= models, models
+        # Claude keys are remapped to the Ollama model before any call is made
+        # (config.effective_ollama_model), so usage only ever records real Ollama
+        # models. Asserting the opposite could never pass.
+        assert OLLAMA_MODEL in models, models
+        assert not ({"haiku-4.5", "sonnet-5", "opus-5"} & models), models
         for m in d["by_model"]:
             assert m["calls"] > 0 and m["est_tokens"] > 0, m
 
