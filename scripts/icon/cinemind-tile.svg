@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="824" height="824" viewBox="0 0 824 824">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#231B14"/>
+      <stop offset="0.55" stop-color="#130F0B"/>
+      <stop offset="1" stop-color="#0B0907"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.44" r="0.52">
+      <stop offset="0" stop-color="#D8B26A" stop-opacity="0.24"/>
+      <stop offset="0.6" stop-color="#D8B26A" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#D8B26A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#F3DFB6"/>
+      <stop offset="0.45" stop-color="#D8B26A"/>
+      <stop offset="1" stop-color="#A8752F"/>
+    </linearGradient>
+    <linearGradient id="goldsoft" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#F8F2E8"/>
+      <stop offset="1" stop-color="#D8B26A"/>
+    </linearGradient>
+    <mask id="perf">
+      <rect width="824" height="824" fill="#000"/>
+      <circle cx="412" cy="412" r="250" fill="#fff"/>
+      <g fill="#000">
+        <g transform="rotate(0 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(30 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(60 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(90 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(120 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(150 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(180 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(210 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(240 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(270 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(300 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+        <g transform="rotate(330 412 412)"><rect x="399" y="186" width="26" height="42" rx="10"/></g>
+      </g>
+    </mask>
+  </defs>
+  <rect width="824" height="824" fill="url(#tile)"/>
+  <circle cx="412" cy="400" r="300" fill="url(#glow)"/>
+  <rect x="2.5" y="2.5" width="819" height="819" rx="183" fill="none" stroke="#D8B26A" stroke-opacity="0.32" stroke-width="5"/>
+  <g mask="url(#perf)">
+    <circle cx="412" cy="412" r="207" fill="none" stroke="url(#gold)" stroke-width="26"/>
+  </g>
+  <path d="M 378 336 L 378 488 L 508 412 Z" fill="url(#goldsoft)" stroke="url(#goldsoft)" stroke-width="20" stroke-linejoin="round"/>
+</svg>

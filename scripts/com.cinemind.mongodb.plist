@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Template. __RUNTIME__ is replaced by scripts/install_cinemind_app.sh. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.cinemind.mongodb</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__RUNTIME__/scripts/run_mongod_local.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__RUNTIME__</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>__RUNTIME__/.runtime/mongod.log</string>
+  <key>StandardErrorPath</key>
+  <string>__RUNTIME__/.runtime/mongod.error.log</string>
+  <key>SoftResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>64000</integer>
+  </dict>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>CINEMIND_APP_DIR</key>
+    <string>__RUNTIME__</string>
+  </dict>
+</dict>
+</plist>

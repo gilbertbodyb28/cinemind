@@ -1,80 +1,110 @@
-# CineMind autostart
+# CineMind — autostart och app-ikon
 
-## What runs today
+## Så här ser uppsättningen ut
 
-- **LaunchAgent `com.cinemind.app`** (`~/Library/LaunchAgents/com.cinemind.app.plist`)
-  starts CineMind at every login and restarts it if the process dies.
-  One uvicorn process serves the API, the built frontend and the job scheduler
-  on <http://localhost:8001>.
-- **MongoDB** starts on its own through `brew services` (also at login).
-- **CineMind.app on the Desktop** — double-click to open the app. If the
-  service is down it loads and starts the agent first, waits for it to answer,
-  then opens the browser.
+Två LaunchAgents, båda med `RunAtLoad` och `KeepAlive`: de startar vid varje
+inloggning och startas om automatiskt om processen dör.
 
-### Handy commands
+| Agent | Vad den kör | Port |
+|---|---|---|
+| `com.cinemind.mongodb` | `~/CineMind/.runtime/mongodb/bin/mongod` mot `~/CineMind/data/mongo` | 127.0.0.1:27017 |
+| `com.cinemind.local` | uvicorn med API:t och den byggda frontenden | 0.0.0.0:8001 |
+
+Dessutom `/Applications/CineMind.app` — ikonen du klickar på. Den kollar om
+tjänsten svarar, startar den annars, väntar in den och öppnar webbläsaren.
+Svarar den inte inom 30 sekunder visas en ruta med sökvägen till loggen.
+
+CineMind-agenten väntar in port 27017 innan uvicorn startar, så att
+jobbschemaläggaren inte når efter databasen innan den finns.
+
+### Varför en kopia av koden i ~/CineMind?
+
+macOS nekar launchd-processer åtkomst till `~/Documents`. En LaunchAgent som
+pekar rakt in i arbetskopian får `Operation not permitted` och startar aldrig.
+Därför ligger den kod tjänsten kör i `~/CineMind`, utanför Documents, och
+arbetskopian i `~/Documents/CineMind` förblir git-repot du utvecklar i.
+
+Det betyder att **en ändring i repot syns inte förrän du synkar**:
+
+```bash
+./scripts/sync_runtime.sh
+```
+
+Skriptet speglar `backend/`, `frontend/build/` och `.runtime/python/` till
+`~/CineMind`, startar om tjänsten och väntar tills den svarar. Efter en
+frontend-ändring: `cd frontend && yarn build` först.
+
+## Databasen
+
+Den levande databasen ligger i `~/CineMind/data/mongo`. Den kopierades dit en
+gång från `data/mongo/` i repot och synkas aldrig därifrån igen — kopian i
+repot är bara den backup den föddes ur.
+
+MongoDB 8.3.7 (samma version som skrev filerna) ligger uppackad i
+`~/CineMind/.runtime/mongodb`. Det finns ingen Homebrew på maskinen, så
+servern hämtas som tarball direkt från fastdl.mongodb.org, checksummeras och
+packas upp i hemkatalogen — inget installeras systemvitt och inget
+admin-lösenord behövs:
+
+```bash
+./scripts/install_mongodb.sh
+```
+
+mongod lyssnar bara på 127.0.0.1 och har ingen autentisering, precis som förut.
+
+## Installera om allt från grunden
+
+```bash
+./scripts/install_cinemind_app.sh
+```
+
+Ett kommando som synkar runtime-kopian, ser till att MongoDB finns, installerar
+båda LaunchAgents och bygger om `/Applications/CineMind.app`. Det går att köra
+hur många gånger som helst och rör aldrig en databas som redan finns.
+Kör det från Terminal — inte från launchd — så att macOS får läsa `~/Documents`.
+
+## Handgrepp
 
 ```bash
 # status
-launchctl print gui/$(id -u)/com.cinemind.app | head -20
+launchctl print gui/$(id -u)/com.cinemind.local   | head -20
+launchctl print gui/$(id -u)/com.cinemind.mongodb | head -20
 
-# restart after a rebuild
-launchctl kickstart -k gui/$(id -u)/com.cinemind.app
+# starta om
+launchctl kickstart -k gui/$(id -u)/com.cinemind.local
+launchctl kickstart -k gui/$(id -u)/com.cinemind.mongodb
 
-# stop until next login
-launchctl bootout gui/$(id -u)/com.cinemind.app
+# stoppa till nästa inloggning
+launchctl bootout gui/$(id -u)/com.cinemind.local
 
-# logs
-tail -f ~/Library/Logs/cinemind.log
+# loggar
+tail -f ~/CineMind/.runtime/cinemind.log
+tail -f ~/CineMind/.runtime/cinemind.error.log
+tail -f ~/CineMind/.runtime/mongod.log
 ```
 
-After changing frontend code: `cd frontend && yarn build`, then kickstart.
+## Ikonen
 
-## Running from boot, before anyone logs in
-
-A LaunchAgent belongs to a login session, so CineMind is up from the moment you
-log in. To have it running at the login screen too, install the system daemon.
-It touches `/Library/LaunchDaemons`, so it needs an admin password — run it
-yourself, in one command:
+Källan ligger i `scripts/icon/`: `cinemind-tile.svg` ritar brickan,
+`round_corners.py` rundar hörnen och centrerar den på 1024×1024, och
+`make_icon.sh` bygger om `CineMind.icns`:
 
 ```bash
-sudo /Users/gilbert/CineMind/scripts/install_boot_daemon.sh
+./scripts/icon/make_icon.sh
+./scripts/install_cinemind_app.sh   # lägger in den nya ikonen i appen
 ```
 
-That single script does everything:
+## Att köra före inloggning
 
-1. stops and deletes the per-login LaunchAgent, so nothing starts twice,
-2. moves MongoDB from a login service to a boot service,
-3. installs `com.cinemind.boot` in `/Library/LaunchDaemons` (root:wheel, 644),
-4. bootstraps it into the system domain and enables it,
-5. waits for <http://localhost:8001> and prints the status of all three parts.
+En LaunchAgent hör till en inloggningssession, så CineMind är uppe från det att
+du loggar in. Ska den svara redan vid inloggningsrutan krävs LaunchDaemons i
+`/Library/LaunchDaemons`, vilket kräver admin-lösenord. Med automatisk
+inloggning påslagen spelar skillnaden ingen roll i praktiken.
 
-To go back to the login-only agent:
+## Gamla skript
 
-```bash
-sudo /Users/gilbert/CineMind/scripts/uninstall_boot_daemon.sh
-```
-
-### MongoDB also has to start at boot
-
-`brew services` refuses to run as root ("Formula mongodb-community has not
-implemented #plist"), so the installer cannot move MongoDB on its own. Run this
-once, after the CineMind daemon is in place:
-
-```bash
-sudo /Users/gilbert/CineMind/scripts/install_mongo_daemon.sh
-```
-
-It writes `/Library/LaunchDaemons/homebrew.mxcl.mongodb-community.plist`
-(mongod still runs as `gilbert`, which owns `/opt/homebrew/var/mongodb`),
-removes the login agent, then restarts CineMind against it.
-
-### Checking it afterwards
-
-```bash
-sudo launchctl print system/com.cinemind.boot | head -20   # state = running
-brew services list | grep mongodb                          # started as root
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8001/api/
-```
-
-A real proof that it starts before login is a reboot: log out, and the app
-still answers; reboot, and it answers from the login screen.
+`enable_autostart.sh`, `run_cinemind.sh`, `install_boot_daemon.sh`,
+`install_mongo_daemon.sh`, `open_cinemind.sh` och plist-filerna
+`com.cinemind.app.plist` / `com.cinemind.boot.plist` hör till den tidigare
+uppsättningen, när projektet låg i `~/CineMind` och hade ett venv och en
+brew-installerad MongoDB. De fungerar inte som de står.
