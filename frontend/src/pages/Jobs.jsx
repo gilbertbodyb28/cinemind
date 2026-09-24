@@ -156,12 +156,21 @@ export default function Jobs() {
   const [runs, setRuns] = useState([]);
   const [busy, setBusy] = useState(false);
 
-  const reload = async () => {
+  // A failed request is not an empty list. Turning every error into [] made
+  // saved jobs "disappear" whenever the page loaded while the backend was
+  // restarting (runtime sync, 2026-09-24 08:33), with nothing on screen to say so.
+  const reload = async (attempt = 0) => {
     try {
       const r = await api.get("/jobs");
       setJobs(r.data || []);
-    } catch {
-      setJobs([]);
+    } catch (error) {
+      if (error?.status === undefined && attempt < 5) {
+        await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+        return reload(attempt + 1);
+      }
+      toast.error(error?.message || "Could not load jobs", {
+        description: "Your saved jobs are not deleted — the server did not answer. Reload the page to try again.",
+      });
     }
   };
 

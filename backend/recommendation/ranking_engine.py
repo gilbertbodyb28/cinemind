@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 import math
 
-from .media_identity import coerce_int
+from .media_identity import coerce_int, content_lane
 from .similarity import (
     best_similarity,
     franchise_affinity,
@@ -400,6 +400,98 @@ def apply_diversity(
             chosen.append(row)
             picked.add(id(row))
     return chosen[:limit]
+
+
+def selection_lane(row: Dict[str, Any]) -> str:
+    """anime / donghua / animation / live_action, split into series and films."""
+    kind = "movie" if media_bucket(row) in {"movie", "anime_movie"} else "series"
+    return "%s:%s" % (content_lane(row), kind)
+
+
+def apply_lane_balance(
+    candidates: List[Dict[str, Any]],
+    limit: int,
+    per_franchise: int = 2,
+    lane_share: float = 0.5,
+    lane_floor: float = 0.75,
+    pool_floor: float = 0.5,
+    relevance_floor: float = 0.75,
+) -> List[Dict[str, Any]]:
+    """Give every lane the job's filters let through a share of a job's slots.
+
+    apply_diversity measures every pick against the single best score. For a
+    viewer whose history is mostly anime that best score is always an anime
+    film, the floor below it sits above every live-action series, donghua and
+    Western animation, and a job asking for Anime + Fantasy + Sci-Fi + Action +
+    Adventure came back as anime films and nothing else - 35 of 37 picks for
+    Gilbert's "Tv" job on 2026-09-24.
+
+    Here each lane is measured against its own best instead: up to
+    `lane_share` of the slots are handed out round-robin to the lanes, taking
+    only picks within `lane_floor` of that lane's best, and only lanes whose best
+    reaches `pool_floor` of the overall best, so a lane with nothing good in it
+    stays empty. Further slots go round-robin to the rest of those strong picks;
+    anything still open goes to pure relevance under apply_diversity's rule. The list keeps its relevance order (or the model's), so the first
+    pick is exactly what it would have been without balancing.
+    """
+    if not candidates or limit <= 0:
+        return candidates[:limit]
+    best = max(row.get("rank_score", 0.0) for row in candidates)
+    pool_cut = best - abs(best) * (1.0 - pool_floor)
+    lanes: Dict[str, List[Dict[str, Any]]] = {}
+    for row in candidates:
+        lanes.setdefault(selection_lane(row), []).append(row)
+    eligible: List[List[Dict[str, Any]]] = []
+    for rows in lanes.values():
+        lane_best = rows[0].get("rank_score", 0.0)
+        if lane_best < pool_cut:
+            continue
+        cut = lane_best - abs(lane_best) * (1.0 - lane_floor)
+        eligible.append([row for row in rows if row.get("rank_score", 0.0) >= cut])
+    if len(eligible) <= 1:
+        return apply_diversity(candidates, limit, per_franchise=per_franchise, relevance_floor=relevance_floor)
+    eligible.sort(key=lambda rows: -rows[0].get("rank_score", 0.0))
+    quota = max(1, int(limit * lane_share) // len(eligible))
+    picked: Dict[int, Dict[str, Any]] = {}
+    franchises: Dict[str, int] = {}
+
+    def _take(row: Dict[str, Any]) -> bool:
+        franchise = _franchise_key(row)
+        if id(row) in picked or franchises.get(franchise, 0) >= per_franchise:
+            return False
+        franchises[franchise] = franchises.get(franchise, 0) + 1
+        picked[id(row)] = row
+        return True
+
+    taken = {index: 0 for index in range(len(eligible))}
+    cursors = {index: 0 for index in range(len(eligible))}
+
+    def _round_robin(cap: Optional[int]) -> None:
+        progressed = True
+        while progressed and len(picked) < limit:
+            progressed = False
+            for index, rows in enumerate(eligible):
+                if len(picked) >= limit or (cap is not None and taken[index] >= cap):
+                    continue
+                while cursors[index] < len(rows):
+                    row = rows[cursors[index]]
+                    cursors[index] += 1
+                    if _take(row):
+                        taken[index] += 1
+                        progressed = True
+                        break
+
+    # Guaranteed share first, then the rest of every lane's strong picks, which
+    # are strong by the same 75% rule apply_diversity uses, just per lane.
+    _round_robin(quota)
+    _round_robin(None)
+    if len(picked) < limit:
+        remaining = [row for row in candidates if id(row) not in picked]
+        for row in apply_diversity(remaining, limit - len(picked), per_franchise=per_franchise,
+                                   relevance_floor=relevance_floor):
+            picked[id(row)] = row
+    order = {id(row): index for index, row in enumerate(candidates)}
+    return sorted(picked.values(), key=lambda row: order[id(row)])[:limit]
 
 
 def apply_rerank(candidates: List[Dict[str, Any]], ordered_ids: Optional[List[str]]) -> List[Dict[str, Any]]:

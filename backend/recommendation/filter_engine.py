@@ -1,8 +1,9 @@
 """Deterministic job filters with explicit reason codes."""
 
 from typing import Any, Dict, List, Optional, Set, Tuple
+import re
 
-from .media_identity import normalize_media_type
+from .media_identity import content_lane, normalize_media_type
 
 # TMDb tags almost every scripted show as Drama (and many as Comedy). Hard-excluding
 # those when the user also asked for Action/Sci-Fi/etc. wipes the catalogue.
@@ -92,20 +93,84 @@ def _media_bucket(candidate: Dict[str, Any]) -> str:
     return media
 
 
-ANIMATION_GENRES = {"animation", "anime"}
+# One spelling per genre. Trakt says "Science-Fiction" and "Talk-Show", TMDb TV
+# says "Sci-Fi & Fantasy" and "Action & Adventure", AniList and TMDb movies say
+# "Sci-Fi". Compared as raw strings, a job asking for sci-fi rejected every Trakt
+# title and a job asking for fantasy or adventure rejected every TMDb TV show.
+GENRE_ALIASES = {
+    "science fiction": "sci-fi",
+    "science-fiction": "sci-fi",
+    "scifi": "sci-fi",
+    "sci fi": "sci-fi",
+    "animated": "animation",
+    "talk": "talk show",
+    "talk-show": "talk show",
+    "game-show": "game show",
+    "kid": "kids",
+    "children": "kids",
+    "chinese animation": "donghua",
+}
+
+# TMDb's TV-only combined genres. providers/tmdb.py names them after their first
+# half ("Action", "Sci-Fi"); the id says both halves.
+TMDB_COMBINED_GENRE_IDS = {
+    10759: ("action", "adventure"),
+    10765: ("sci-fi", "fantasy"),
+    10768: ("war", "politics"),
+}
+
+ANIMATION_GENRES = {"animation", "anime", "donghua"}
 
 
-def _anime_covers_animation(candidate: Dict[str, Any], include: set) -> bool:
-    """An anime is animated whether or not its source says so.
+def canonical_genres(values: Any) -> Set[str]:
+    """Casefolded, alias-resolved genre names, with "A & B" split into both."""
+    found: Set[str] = set()
+    for value in _as_list(values):
+        for part in re.split(r"\s*[&/]\s*", str(value).strip().casefold()):
+            part = part.strip()
+            if part:
+                found.add(GENRE_ALIASES.get(part, part))
+    return found
 
-    AniList never tags a title "Animation" - everything there is anime already,
-    so its genres are Action, Fantasy and the like. A job asking for animation
-    therefore rejected every single anime it was handed, which is the exact
-    opposite of what the filter was for.
+
+def candidate_genres(candidate: Dict[str, Any]) -> Set[str]:
+    """Every genre a candidate can be matched or excluded on.
+
+    Besides its own labels it carries its lane: every animated title is
+    "animation", Japanese animation is also "anime", Chinese animation is also
+    "donghua". AniList never tags anything "Animation" and no source tags a title
+    "Donghua" reliably, so the lane is the only dependable way to ask for them.
     """
-    if not (include & ANIMATION_GENRES):
-        return False
-    return _media_bucket(candidate) == "anime"
+    genres = canonical_genres(candidate.get("genres") or [])
+    for raw in candidate.get("tmdb_genre_ids") or []:
+        try:
+            genres.update(TMDB_COMBINED_GENRE_IDS.get(int(raw), ()))
+        except (TypeError, ValueError):
+            continue
+    lane = content_lane(candidate)
+    if lane != "live_action":
+        genres.add("animation")
+    if lane in {"anime", "donghua"}:
+        genres.add(lane)
+    return genres
+
+
+def genre_matches(candidate: Dict[str, Any], include: Set[str], keywords: Optional[Set[str]] = None) -> bool:
+    """True when the candidate satisfies at least one include genre (OR, never AND)."""
+    wanted = canonical_genres(list(include or []))
+    if not wanted:
+        return True
+    if candidate_genres(candidate) & wanted:
+        return True
+    tags = {str(item).casefold() for item in (candidate.get("tags") or [])}
+    return bool(keywords and (tags & keywords))
+
+
+def wants_animation_lane(filters: Dict[str, Any]) -> bool:
+    """The job asked for anime, donghua or animation, by genre or by media type."""
+    include = canonical_genres(filters.get("include_genres") or [])
+    media = {normalize_media_type(item) for item in _as_list(filters.get("media_types") or filters.get("media_type"))}
+    return bool(include & ANIMATION_GENRES) or "anime" in media
 
 
 def _merge_media_filters(filters: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, Any]:
@@ -145,8 +210,27 @@ def _never_rated_yet(candidate: Dict[str, Any], rating: Any, votes: Any) -> bool
         return False
 
 
+def _animation_exempt_from_origin(job_filters: Dict[str, Any], candidate: Dict[str, Any]) -> bool:
+    """Anime and donghua are defined by where they come from.
+
+    The TMDb anime lane already queries ja/zh on its own, whatever language the
+    job names, so a job-wide "en" filter then rejected every title that lane
+    found — donghua for being zh, anime for being ja. The exemption is for
+    animation only: a Chinese live-action drama still meets the language filter.
+    An explicit language on the anime overlay (by_media_type.anime) still wins.
+    """
+    if content_lane(candidate) not in {"anime", "donghua"}:
+        return False
+    if not wants_animation_lane(job_filters):
+        return False
+    overlay = (job_filters.get("by_media_type") or {}).get("anime") or {}
+    return not (isinstance(overlay, dict) and (overlay.get("languages") or overlay.get("language")))
+
+
 def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
-    filters = _merge_media_filters(filters or {}, candidate)
+    job_filters = filters or {}
+    origin_exempt = _animation_exempt_from_origin(job_filters, candidate)
+    filters = _merge_media_filters(job_filters, candidate)
     media_types = filters.get("media_types") or filters.get("media_type")
     if media_types:
         allowed = {normalize_media_type(item) for item in (media_types if isinstance(media_types, list) else [media_types])}
@@ -157,18 +241,12 @@ def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) 
             if not (bucket == "anime" and ("tv" in allowed or "show" in allowed)):
                 return False, "rejected_media_type"
 
-    genres = {genre.casefold() for genre in (candidate.get("genres") or []) if genre}
-    include = {genre.casefold() for genre in (filters.get("include_genres") or [])}
-    exclude = {genre.casefold() for genre in (filters.get("exclude_genres") or [])}
+    genres = candidate_genres(candidate)
+    include = canonical_genres(filters.get("include_genres") or [])
+    exclude = canonical_genres(filters.get("exclude_genres") or [])
     keyword_tags = {str(item).casefold() for item in (filters.get("keywords") or [])}
-    candidate_tags = {str(item).casefold() for item in (candidate.get("tags") or [])}
     # A keyword hit (e.g. lgbt) counts as an include on its own, next to the genres.
-    if (
-        include
-        and not (genres & include)
-        and not (keyword_tags and (candidate_tags & keyword_tags))
-        and not _anime_covers_animation(candidate, include)
-    ):
+    if not genre_matches(candidate, include, keyword_tags):
         return False, "rejected_genre"
     effective_exclude = _effective_exclude(include, exclude, genres)
     if effective_exclude and (genres & effective_exclude):
@@ -214,13 +292,13 @@ def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) 
         return False, "rejected_runtime"
 
     languages = [item.casefold() for item in _as_list(filters.get("languages") or filters.get("language"))]
-    if languages:
+    if languages and not origin_exempt:
         actual_langs = _candidate_languages(candidate)
         if not actual_langs or not (actual_langs & set(languages)):
             return False, "rejected_language"
 
     countries = _as_list(filters.get("countries") or filters.get("country"))
-    if countries:
+    if countries and not origin_exempt:
         actual_countries = _candidate_countries(candidate)
         if actual_countries:
             if not _countries_match(countries, actual_countries):

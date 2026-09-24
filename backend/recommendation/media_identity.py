@@ -36,6 +36,44 @@ def normalize_media_type(value: Optional[str]) -> str:
     return "movie"
 
 
+DONGHUA_LANGUAGES = {"zh", "cn", "zh-cn", "zh-tw", "zh-hk", "yue", "chinese", "mandarin", "cantonese"}
+DONGHUA_COUNTRIES = {"cn", "tw", "hk", "china", "taiwan", "hong kong"}
+ANIME_LANGUAGES = {"ja", "japanese"}
+ANIME_COUNTRIES = {"jp", "japan"}
+
+
+def _lower_set(values: Iterable[Any]) -> set:
+    return {str(item).strip().casefold() for item in values if item not in (None, "")}
+
+
+def content_lane(candidate: Dict[str, Any]) -> str:
+    """Which of the four lanes a title belongs to: anime, donghua, animation or live_action.
+
+    Anime and donghua are both animation; they are told apart by origin, not by
+    genre, because neither TMDb nor AniList tags a title "Donghua". A Chinese
+    live-action drama is live_action — origin alone never makes a title donghua.
+    """
+    genres = _lower_set(candidate.get("genres") or [])
+    media = normalize_media_type(candidate.get("media_type") or candidate.get("type"))
+    animated = bool(genres & {"animation", "anime", "donghua"}) or media == "anime"
+    if not animated:
+        return "live_action"
+    languages = _lower_set([candidate.get("original_language"), *(candidate.get("languages") or [])])
+    countries = _lower_set([
+        candidate.get("country"),
+        candidate.get("country_of_origin"),
+        *(candidate.get("origin_countries") or []),
+    ])
+    if "donghua" in genres or languages & DONGHUA_LANGUAGES or countries & DONGHUA_COUNTRIES:
+        return "donghua"
+    if "anime" in genres or languages & ANIME_LANGUAGES or countries & ANIME_COUNTRIES:
+        return "anime"
+    # AniList only lists anime-style media; without an origin it is Japanese by default.
+    if media == "anime" and not languages and not countries:
+        return "anime"
+    return "animation"
+
+
 def title_key(title: Optional[str]) -> str:
     text = (title or "").lower().strip()
     text = re.sub(r"[^\w\s]", "", text)

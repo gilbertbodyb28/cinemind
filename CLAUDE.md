@@ -47,6 +47,20 @@ anything below.
   best-first with increasing timestamps; sorting by time reverses them and the
   worst pick becomes the hero card. `server.by_rank` guards this, and
   `recommendation_tests/test_content_to_watch.py` regression-tests it.
+- **Genres are matched canonically and with OR.** `filter_engine.candidate_genres`
+  resolves "Science-Fiction", "Sci-Fi & Fantasy", TMDb ids 10759/10765 and adds
+  the lane (`media_identity.content_lane`: anime / donghua / animation /
+  live_action). Anime = Japanese, donghua = Chinese animation; origin alone never
+  makes live action donghua. Donghua needs its own TMDb vote floor (only 19 zh
+  animated series have 50 votes).
+- **Saved jobs balance their final slots across lanes** (`apply_lane_balance`);
+  Content to Watch sets `lane_balance: False` and keeps the measured selection.
+  Before this, an anime-heavy profile turned every job into anime films.
+- **Trace a job before changing discovery:** `python3 -m evaluation.job_trace
+  --user <id> --job <id> [--include a,b] [--llm]` shows candidates per stage and
+  lane (before/after filtering, scoring, LLM) without writing anything.
+- **A failed `GET /jobs` is not an empty list.** Jobs.jsx retries and says so;
+  it used to show "no jobs" whenever the backend was restarting.
 
 ## Changing weights, prompts or the model
 

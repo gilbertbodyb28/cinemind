@@ -1563,6 +1563,9 @@ async def generate_recs(payload: Optional[GenerateBody] = None, user: User = Dep
         "final_recommendation_limit": 8,
         "ai_enabled": True,
         "action_mode": "recommendations_only",
+        # The home feed keeps the measured single-floor diversity; lane balancing
+        # is for saved jobs, which name the categories they want.
+        "lane_balance": False,
     })
     job["exclusions"] = {
         **job["exclusions"],

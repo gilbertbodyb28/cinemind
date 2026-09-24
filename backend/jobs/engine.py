@@ -742,6 +742,91 @@ def empty_result_warnings(
     return rows
 
 
+async def gather_job_candidates(
+    user_id: str,
+    job: Dict[str, Any],
+    trigger: str,
+    warnings: List[Dict[str, Any]],
+) -> Tuple[Dict[str, List[Dict[str, Any]]], Dict[str, Any], List[Dict[str, Any]]]:
+    """Everything a run does before the pipeline: inputs, taste profile, candidates.
+
+    Split out of execute_job so evaluation/job_trace.py can walk exactly the
+    same code and report where candidates are lost. Previews never move the
+    discover page cursor.
+    """
+    inputs = await load_pipeline_inputs(user_id)
+    warnings.extend(await required_history_warnings(user_id, job))
+    # Keywords, cast, creators and language for the titles behind the
+    # profile. Without them the profile is genre names and nothing else, and
+    # every title sharing one label scores identically.
+    from providers.keys import resolve_tmdb_api_key
+    from providers.tmdb_enrich import enrich_rows
+
+    connection = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
+    tmdb_key = resolve_tmdb_api_key(connection)
+    if tmdb_key:
+        await enrich_rows(inputs.get("history") or [], tmdb_key)
+        await enrich_rows(inputs.get("personal_history") or [], tmdb_key)
+    # Build the profile before generating candidates: the similarity and
+    # discover lanes are seeded from the titles the user actually rated.
+    from recommendation.taste_engine import build_taste_snapshot
+
+    taste = build_taste_snapshot(
+        inputs["history"],
+        feedback=inputs.get("feedback"),
+        provider_weights=job.get("provider_weights"),
+        taste_sources=job.get("taste_sources"),
+        personal_history=inputs.get("personal_history"),
+    )
+    extra: List[Dict[str, Any]] = []
+    sources = set(job.get("candidate_sources") or [])
+    required = _required_sources(job)
+    tmdb_wanted = sources & {"tmdb_discover", "tmdb_similar", "tmdb_recommendations"}
+    if tmdb_wanted:
+        from providers.tmdb import fetch_job_candidates
+
+        if not tmdb_key:
+            warnings.append({"code": "tmdb_not_configured", "source": "tmdb"})
+            if tmdb_wanted & required:
+                raise ValueError("Required TMDb source is not configured")
+        else:
+            # Walk the discover pages forward every run. Staying on page 1
+            # meant the same titles came back for ever, all of them already
+            # requested, so the job accepted nothing.
+            from providers.tmdb import TMDB_CURSOR_PAGES, discover_page_span
+
+            span = discover_page_span(job)
+            start_page = max(1, int(job.get("tmdb_page_cursor") or 1))
+            if start_page > TMDB_CURSOR_PAGES:
+                start_page = ((start_page - 1) % TMDB_CURSOR_PAGES) + 1
+            try:
+                extra = await fetch_job_candidates(
+                    job, inputs["history"], api_key=tmdb_key, start_page=start_page, taste=taste
+                )
+                if trigger != "preview":
+                    next_page = start_page + span
+                    if next_page > TMDB_CURSOR_PAGES:
+                        next_page = 1
+                    await db.jobs.update_one(
+                        {"user_id": user_id, "id": job["id"]},
+                        {"$set": {"tmdb_page_cursor": next_page}},
+                    )
+            except Exception as exc:
+                warnings.append({"code": "tmdb_failed", "source": "tmdb", "detail": safe_provider_error(exc)})
+                if tmdb_wanted & required:
+                    raise
+    linked_wanted = sources & {"trakt", "simkl", "anilist"}
+    if linked_wanted:
+        linked, linked_warnings = await fetch_linked_provider_candidates(
+            user_id, sources, required, job=job
+        )
+        extra.extend(linked)
+        warnings.extend(linked_warnings)
+    if tmdb_key and extra:
+        await enrich_rows(extra, tmdb_key)
+    return inputs, taste, extra
+
+
 async def execute_job(
     user_id: str,
     job: Dict[str, Any],
@@ -756,76 +841,7 @@ async def execute_job(
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     warnings: List[Dict[str, Any]] = []
     try:
-        inputs = await load_pipeline_inputs(user_id)
-        warnings.extend(await required_history_warnings(user_id, job))
-        # Keywords, cast, creators and language for the titles behind the
-        # profile. Without them the profile is genre names and nothing else, and
-        # every title sharing one label scores identically.
-        from providers.keys import resolve_tmdb_api_key
-        from providers.tmdb_enrich import enrich_rows
-
-        connection = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
-        tmdb_key = resolve_tmdb_api_key(connection)
-        if tmdb_key:
-            await enrich_rows(inputs.get("history") or [], tmdb_key)
-            await enrich_rows(inputs.get("personal_history") or [], tmdb_key)
-        # Build the profile before generating candidates: the similarity and
-        # discover lanes are seeded from the titles the user actually rated.
-        from recommendation.taste_engine import build_taste_snapshot
-
-        taste = build_taste_snapshot(
-            inputs["history"],
-            feedback=inputs.get("feedback"),
-            provider_weights=job.get("provider_weights"),
-            taste_sources=job.get("taste_sources"),
-            personal_history=inputs.get("personal_history"),
-        )
-        extra: List[Dict[str, Any]] = []
-        sources = set(job.get("candidate_sources") or [])
-        required = _required_sources(job)
-        tmdb_wanted = sources & {"tmdb_discover", "tmdb_similar", "tmdb_recommendations"}
-        if tmdb_wanted:
-            from providers.tmdb import fetch_job_candidates
-
-            if not tmdb_key:
-                warnings.append({"code": "tmdb_not_configured", "source": "tmdb"})
-                if tmdb_wanted & required:
-                    raise ValueError("Required TMDb source is not configured")
-            else:
-                # Walk the discover pages forward every run. Staying on page 1
-                # meant the same titles came back for ever, all of them already
-                # requested, so the job accepted nothing.
-                from providers.tmdb import TMDB_CURSOR_PAGES, discover_page_span
-
-                span = discover_page_span(job)
-                start_page = max(1, int(job.get("tmdb_page_cursor") or 1))
-                if start_page > TMDB_CURSOR_PAGES:
-                    start_page = ((start_page - 1) % TMDB_CURSOR_PAGES) + 1
-                try:
-                    extra = await fetch_job_candidates(
-                        job, inputs["history"], api_key=tmdb_key, start_page=start_page, taste=taste
-                    )
-                    if trigger != "preview":
-                        next_page = start_page + span
-                        if next_page > TMDB_CURSOR_PAGES:
-                            next_page = 1
-                        await db.jobs.update_one(
-                            {"user_id": user_id, "id": job["id"]},
-                            {"$set": {"tmdb_page_cursor": next_page}},
-                        )
-                except Exception as exc:
-                    warnings.append({"code": "tmdb_failed", "source": "tmdb", "detail": safe_provider_error(exc)})
-                    if tmdb_wanted & required:
-                        raise
-        linked_wanted = sources & {"trakt", "simkl", "anilist"}
-        if linked_wanted:
-            linked, linked_warnings = await fetch_linked_provider_candidates(
-                user_id, sources, required, job=job
-            )
-            extra.extend(linked)
-            warnings.extend(linked_warnings)
-        if tmdb_key and extra:
-            await enrich_rows(extra, tmdb_key)
+        inputs, taste, extra = await gather_job_candidates(user_id, job, trigger, warnings)
         result = run_pipeline(job, catalog=catalog or [], extra_candidates=extra, taste=taste, **inputs)
         ranked = result.get("ranked") or result["accepted"]
         provider = "pipeline"
@@ -849,11 +865,10 @@ async def execute_job(
                 logging.warning("Ollama rerank skipped (%s); using deterministic order", provider)
                 provider = "pipeline"
                 model = "deterministic"
-        limit = int((result.get("job") or job).get("final_recommendation_limit") or 8)
         if ai_reranked:
-            from recommendation.ranking_engine import apply_diversity
+            from recommendation.pipeline import select_final
 
-            result["accepted"] = apply_diversity(ranked, limit)
+            result["accepted"] = select_final(ranked, result.get("job") or job)
         warnings.extend(empty_result_warnings(job, result, extra))
         result["ai_reranked"] = ai_reranked
         action_warnings = await persist_run_results(
@@ -1029,8 +1044,8 @@ async def fetch_linked_provider_candidates(
             await _required_or_warn("anilist", "anilist_not_connected")
         else:
             try:
-                from providers.anilist import fetch_recommendations, fetch_upcoming
-                from providers.tmdb import _window_is_upcoming
+                from providers.anilist import fetch_by_origin, fetch_recommendations, fetch_upcoming
+                from providers.tmdb import _window_is_upcoming, animation_lane_languages
 
                 history = await db.history.find(
                     {"user_id": user_id, "source": "anilist"},
@@ -1038,6 +1053,15 @@ async def fetch_linked_provider_candidates(
                 ).sort("watched_at", -1).to_list(40)
                 extra.extend(await fetch_recommendations(conn["anilist_access_token"], history))
                 filters = (job or {}).get("filters") or {}
+                if "zh" in animation_lane_languages(filters.get("include_genres"), (job or {}).get("media_types")):
+                    # The recommendation feeds follow the viewer's own, Japanese,
+                    # list; donghua has to be asked for by origin.
+                    extra.extend(await fetch_by_origin(
+                        "CN",
+                        conn["anilist_access_token"],
+                        min_year=filters.get("min_year"),
+                        max_year=filters.get("max_year"),
+                    ))
                 if _window_is_upcoming(filters):
                     # Recommendations are built from titles that already aired, so a
                     # job asking for future years got nothing it could ever accept.

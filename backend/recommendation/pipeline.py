@@ -6,7 +6,7 @@ from .candidate_engine import expand_from_seeds, merge_candidate_sources
 from .exclusion_engine import apply_exclusions, build_exclusion_context
 from .filter_engine import apply_filters
 from .media_identity import title_key
-from .ranking_engine import apply_diversity, apply_rerank, score_candidates
+from .ranking_engine import apply_diversity, apply_lane_balance, apply_rerank, score_candidates
 from .taste_engine import build_taste_snapshot
 
 
@@ -32,6 +32,21 @@ def default_job() -> Dict[str, Any]:
         "final_recommendation_limit": 8,
         "action_mode": "require_approval",
     }
+
+
+def select_final(ranked: List[Dict[str, Any]], spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The final slots, after scoring or after the model's re-rank.
+
+    Saved jobs balance their slots across lanes (anime, donghua, animation,
+    live action; series and films). Content to Watch opts out with
+    lane_balance=False: its top-eight ranking is the measured one in HANDOFF.md.
+    """
+    limit = int(spec.get("final_recommendation_limit") or 8)
+    if not spec.get("diversity", True):
+        return ranked[:limit]
+    if spec.get("lane_balance", True):
+        return apply_lane_balance(ranked, limit)
+    return apply_diversity(ranked, limit)
 
 
 def run_pipeline(
@@ -85,8 +100,7 @@ def run_pipeline(
 
     ranked = score_candidates(accepted, taste, weights=spec.get("score_weights"))
     ranked = apply_rerank(ranked, rerank_ids)
-    limit = int(spec.get("final_recommendation_limit") or 8)
-    selected = apply_diversity(ranked, limit) if spec.get("diversity", True) else ranked[:limit]
+    selected = select_final(ranked, spec)
     return {
         "taste": taste,
         "accepted": selected,

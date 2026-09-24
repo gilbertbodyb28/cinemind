@@ -158,7 +158,7 @@ def parse_recommendation_media(media: Dict[str, Any]) -> Optional[Dict[str, Any]
     title = (media.get("title") or {}).get("english") or (media.get("title") or {}).get("romaji")
     if not title:
         return None
-    return {
+    row = {
         "title": title,
         "year": media.get("seasonYear") or ((media.get("startDate") or {}).get("year")),
         "type": "anime",
@@ -169,6 +169,14 @@ def parse_recommendation_media(media: Dict[str, Any]) -> Optional[Dict[str, Any]
         "candidate_score": float(media.get("averageScore") or 0) / 10.0,
         "why": "Suggested from AniList recommendations.",
     }
+    # AniList lists donghua (CN) and aeni (KR) next to anime. Without the origin
+    # every one of them looked Japanese. Only the country is set: the ranking
+    # reads original_language, and this fix is about lanes, not scores.
+    origin = str(media.get("countryOfOrigin") or "").upper()
+    if origin:
+        row["country"] = origin
+        row["origin_countries"] = [origin]
+    return row
 
 
 RECOMMENDATIONS_QUERY = """
@@ -184,6 +192,7 @@ query ($page: Int) {
         averageScore
         title { english romaji }
         format
+        countryOfOrigin
       }
     }
   }
@@ -205,6 +214,7 @@ query ($ids: [Int]) {
             averageScore
             title { english romaji }
             format
+            countryOfOrigin
           }
         }
       }
@@ -399,4 +409,71 @@ async def fetch_upcoming(
                     break
     except Exception as exc:
         logging.warning("AniList upcoming failed: %s", exc)
+    return rows
+
+
+ORIGIN_QUERY = """
+query ($page: Int, $country: CountryCode, $from: FuzzyDateInt, $to: FuzzyDateInt) {
+  Page(page: $page, perPage: 50) {
+    pageInfo { hasNextPage }
+    media(type: ANIME, countryOfOrigin: $country, isAdult: false, sort: POPULARITY_DESC,
+          startDate_greater: $from, startDate_lesser: $to) {
+      id
+      seasonYear
+      startDate { year month day }
+      genres
+      averageScore
+      format
+      countryOfOrigin
+      title { english romaji }
+    }
+  }
+}
+"""
+
+
+async def fetch_by_origin(
+    country: str,
+    access_token: Optional[str] = None,
+    min_year: Optional[int] = None,
+    max_year: Optional[int] = None,
+    limit: int = 50,
+    max_pages: int = 2,
+) -> List[Dict[str, Any]]:
+    """Popular anime-style titles from one country, e.g. CN for donghua.
+
+    AniList's recommendation feeds are built from the viewer's own list, which
+    for almost everyone is Japanese, so a job asking for donghua got nothing
+    from AniList at all. AniList tracks donghua by origin; ask it directly.
+    """
+    rows: List[Dict[str, Any]] = []
+    headers = {"Authorization": f"Bearer {access_token}"} if access_token else {}
+    variables: Dict[str, Any] = {"country": country}
+    if min_year:
+        variables["from"] = int(min_year) * 10000
+    if max_year:
+        variables["to"] = (int(max_year) + 1) * 10000
+    try:
+        async with httpx.AsyncClient(timeout=25) as client:
+            for page in range(1, max_pages + 1):
+                response = await client.post(
+                    ANILIST_GRAPHQL,
+                    json={"query": ORIGIN_QUERY, "variables": {**variables, "page": page}},
+                    headers=headers,
+                )
+                if response.status_code != 200:
+                    break
+                payload = ((response.json().get("data") or {}).get("Page")) or {}
+                for media in payload.get("media") or []:
+                    parsed = parse_recommendation_media(media)
+                    if not parsed:
+                        continue
+                    parsed["why"] = "Popular donghua on AniList." if country == "CN" else "Popular on AniList."
+                    rows.append(parsed)
+                    if len(rows) >= limit:
+                        return rows
+                if not ((payload.get("pageInfo") or {}).get("hasNextPage")):
+                    break
+    except Exception as exc:
+        logging.warning("AniList origin %s failed: %s", country, exc)
     return rows

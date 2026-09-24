@@ -181,6 +181,7 @@ TMDB_MOVIE_GENRES = {
     "adventure": 12,
     "animation": 16,
     "anime": 16,
+    "donghua": 16,
     "comedy": 35,
     "crime": 80,
     "documentary": 99,
@@ -208,6 +209,7 @@ TMDB_TV_GENRES = {
     "adventure": 10759,
     "animation": 16,
     "anime": 16,
+    "donghua": 16,
     "comedy": 35,
     "crime": 80,
     "documentary": 99,
@@ -266,15 +268,33 @@ def _genre_ids(names: Optional[List[str]], media_type: str = "movie") -> str:
     TMDb treats comma as AND and pipe as OR. Include lists are OR — requiring
     Action AND Sci-Fi AND Animation simultaneously returns almost nothing.
     """
+    from recommendation.filter_engine import canonical_genres
+
     table = TMDB_TV_GENRES if media_type in {"tv", "show", "anime"} else TMDB_MOVIE_GENRES
     ids: List[str] = []
     seen = set()
     for name in names or []:
-        mapped = table.get(str(name).casefold())
-        if mapped and mapped not in seen:
-            seen.add(mapped)
-            ids.append(str(mapped))
+        # "Science-Fiction" (Trakt) and "Sci-Fi & Fantasy" (TMDb TV) must map too.
+        for part in sorted(canonical_genres([name])):
+            mapped = table.get(part)
+            if mapped and mapped not in seen:
+                seen.add(mapped)
+                ids.append(str(mapped))
     return "|".join(ids)
+
+
+def _raw_genre_ids(row: Dict[str, Any]) -> List[int]:
+    """TMDb genre ids as sent. 10759 and 10765 name two genres each, which the
+    display names above cannot hold; the filter reads both halves from the id."""
+    ids: List[int] = []
+    for raw in list(row.get("genre_ids") or []) + [item.get("id") for item in row.get("genres") or [] if isinstance(item, dict)]:
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if value not in ids:
+            ids.append(value)
+    return ids
 
 
 def _genres_from_ids(row: Dict[str, Any]) -> List[str]:
@@ -316,6 +336,7 @@ def _normalize_tmdb_result(row: Dict[str, Any], media_type: str, source: str) ->
         "type": "anime" if is_anime else ("show" if media_type == "tv" else "movie"),
         "media_type": "anime" if is_anime else ("tv" if media_type == "tv" else "movie"),
         "genres": genres,
+        "tmdb_genre_ids": _raw_genre_ids(row),
         "synopsis": row.get("overview") or "",
         "tmdb_rating": round(vote_average, 1),
         "vote_count": row.get("vote_count"),
@@ -484,6 +505,33 @@ def _window_is_upcoming(filters: Dict[str, Any]) -> bool:
     return str(start)[:10] > today.date().isoformat()
 
 
+def default_vote_floor(filters: Dict[str, Any]) -> Optional[int]:
+    """vote_count.gte for a discover query whose job names no vote floor.
+
+    Established catalogue skips zero-vote noise at 50 votes. That rule used to
+    compare against the literal year 2025, so in 2026 a window opening in 2024
+    still demanded 50 votes: 176 sci-fi/fantasy series instead of 468. The
+    window is now measured against the current year. A lane can lower the floor
+    (`discover_vote_floor`): only 19 Chinese animated series on all of TMDb have
+    50 votes, so donghua could not come through it at all.
+    """
+    from datetime import datetime, timezone
+
+    if filters.get("discover_vote_floor") is not None:
+        return int(filters["discover_vote_floor"]) or None
+    if filters.get("min_release_date"):
+        return None
+    min_year = filters.get("min_year")
+    if not min_year:
+        return 50
+    this_year = datetime.now(timezone.utc).year
+    if int(min_year) >= this_year - 1:
+        return None
+    if int(min_year) >= this_year - 2:
+        return 10
+    return 50
+
+
 def discover_page_span(job: Dict[str, Any]) -> int:
     """How many pages one run walks — 20 rows per page."""
     limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
@@ -534,9 +582,10 @@ async def tmdb_discover(
         base["vote_average.gte"] = filters["min_rating"]
     if filters.get("min_vote_count") is not None:
         base["vote_count.gte"] = filters["min_vote_count"]
-    elif not min_date and (not filters.get("min_year") or int(filters.get("min_year") or 0) < 2025):
-        # Established catalogue: skip zero-vote noise unless the job is explicitly "upcoming".
-        base["vote_count.gte"] = 50
+    else:
+        floor = default_vote_floor(filters)
+        if floor:
+            base["vote_count.gte"] = floor
     languages = []
     if filters.get("languages"):
         languages = [str(item) for item in filters["languages"] if item]
@@ -597,27 +646,34 @@ async def tmdb_discover(
 
     keyword_ids = await _keyword_ids(filters.get("keywords"), api_key=api_key)
 
-    async def _lanes(extra: Dict[str, Any]) -> None:
+    async def _collect_lanes(extra: Dict[str, Any], cap: Optional[int] = None) -> None:
         # Keywords widen the job: the keyword lane runs first with a reserved
         # quota so the popular genre lane cannot fill the limit on its own.
         if keyword_ids:
             without_genres = {"with_keywords": keyword_ids}
             if "with_genres" in base:
                 without_genres["with_genres"] = None
+            keyword_cap = len(collected) + max(5, limit // 4)
             await _collect(
                 {**extra, **without_genres},
-                cap=len(collected) + max(5, limit // 4),
+                cap=min(keyword_cap, cap) if cap else keyword_cap,
                 tags=[str(item).casefold() for item in (filters.get("keywords") or [])],
             )
-        await _collect(extra)
+        await _collect(extra, cap=cap)
 
     if languages:
+        # Each language gets its share first. Walking them in order let the first
+        # one fill the whole limit: the anime lane asks for ja then zh, Japanese
+        # animation always has enough pages, and donghua was never fetched at all.
+        share = max(1, -(-limit // len(languages)))
+        for lang in languages:
+            await _collect_lanes({"with_original_language": lang}, cap=len(collected) + share)
         for lang in languages:
             if len(collected) >= limit:
                 break
-            await _lanes({"with_original_language": lang})
+            await _collect_lanes({"with_original_language": lang})
     else:
-        await _lanes({})
+        await _collect_lanes({})
     return collected[:limit]
 
 
@@ -710,6 +766,41 @@ async def taste_seeded_discover(
     return out
 
 
+#: TMDb original_language codes for Chinese: zh Mandarin, cn Cantonese.
+DONGHUA_TMDB_LANGUAGES = {"zh", "cn"}
+#: 196 Chinese animated series on TMDb have 5+ votes; 19 have 50+.
+DONGHUA_VOTE_FLOOR = 5
+
+
+def animation_lane_languages(include_genres: Optional[List[str]], media_types: Optional[List[str]]) -> List[str]:
+    """Original languages the anime/donghua discover lanes should query.
+
+    Anime is Japanese, donghua is Chinese (TMDb: zh Mandarin, cn Cantonese).
+    Asking for "anime" alone no longer fetches donghua, asking for "donghua"
+    finally fetches something, and "animation" or an anime media type with no
+    narrower genre asks for both. Empty means no anime/donghua lane.
+    """
+    from recommendation.filter_engine import canonical_genres
+
+    include = canonical_genres(list(include_genres or []))
+    media = {str(item).casefold() for item in (media_types or [])}
+    if include:
+        anime = bool(include & {"anime", "animation"})
+        donghua = bool(include & {"donghua", "animation"})
+        if not (anime or donghua) and "anime" in media:
+            # Anime is a selected media type but the genres are e.g. fantasy/action:
+            # anime and donghua in those genres are still wanted.
+            anime = donghua = True
+    else:
+        anime = donghua = "anime" in media
+    languages: List[str] = []
+    if anime:
+        languages.append("ja")
+    if donghua:
+        languages.extend(["zh", "cn"])
+    return languages
+
+
 async def fetch_job_candidates(
     job: Dict[str, Any],
     history: List[Dict[str, Any]],
@@ -753,41 +844,42 @@ async def fetch_job_candidates(
                     taste=taste,
                 )
             )
-        include = {str(g).casefold() for g in (filters.get("include_genres") or [])}
-        want_anime = "anime" in include or "anime" in media_types or bool(by_media.get("anime"))
-        if want_anime:
+        anime_langs_default = animation_lane_languages(filters.get("include_genres"), media_types)
+        if anime_langs_default or by_media.get("anime"):
             anime_overlay = dict(by_media.get("anime") or {})
-            anime_langs = anime_overlay.get("languages") or ["ja", "zh"]
-            anime_job = {
-                **discover_job,
-                "candidate_limit": min(per, 60),
-                "filters": {
+            anime_langs = anime_overlay.get("languages") or anime_langs_default or ["ja", "zh"]
+            # Anime and donghua are queried apart: Japanese animation would
+            # otherwise fill the lane before a Chinese title was ever asked for,
+            # and donghua needs its own vote floor (see default_vote_floor).
+            groups = [[lang for lang in anime_langs if lang not in DONGHUA_TMDB_LANGUAGES],
+                      [lang for lang in anime_langs if lang in DONGHUA_TMDB_LANGUAGES]]
+            for group in (group for group in groups if group):
+                donghua = group[0] in DONGHUA_TMDB_LANGUAGES
+                lane_filters = {
                     **{k: v for k, v in filters.items() if k != "by_media_type"},
                     **anime_overlay,
                     "include_genres": anime_overlay.get("include_genres") or ["animation"],
-                    "languages": anime_langs,
+                    "languages": group,
                     "countries": None,
                     "country": None,
                     "language": None,
-                },
-            }
-            extra.extend(await tmdb_discover(anime_job, "tv", api_key=key, start_page=start_page, taste=taste))
-            # Anime films are their own lane: an anime movie ranks nothing like
-            # a 300-episode series, and nothing else in the pipeline produced one.
-            anime_movie_job = {
-                **anime_job,
-                "candidate_limit": max(12, min(per // 2, 30)),
-                "filters": {
-                    **anime_job["filters"],
-                    "include_genres": ["animation"],
-                    "languages": anime_langs,
-                },
-            }
-            for row in await tmdb_discover(anime_movie_job, "movie", api_key=key, start_page=start_page, taste=taste):
-                row["media_type"] = "anime"
-                row["type"] = "anime"
-                row["format"] = "MOVIE"
-                extra.append(row)
+                }
+                if donghua and filters.get("min_vote_count") is None:
+                    lane_filters["discover_vote_floor"] = DONGHUA_VOTE_FLOOR
+                anime_job = {**discover_job, "candidate_limit": min(per, 60), "filters": lane_filters}
+                extra.extend(await tmdb_discover(anime_job, "tv", api_key=key, start_page=start_page, taste=taste))
+                # Anime films are their own lane: an anime movie ranks nothing like
+                # a 300-episode series, and nothing else in the pipeline produced one.
+                anime_movie_job = {
+                    **anime_job,
+                    "candidate_limit": max(12, min(per // 2, 30)),
+                    "filters": {**lane_filters, "include_genres": ["animation"]},
+                }
+                for row in await tmdb_discover(anime_movie_job, "movie", api_key=key, start_page=start_page, taste=taste):
+                    row["media_type"] = "anime"
+                    row["type"] = "anime"
+                    row["format"] = "MOVIE"
+                    extra.append(row)
         if taste and (taste.get("genre_pairs") or {}):
             extra.extend(await taste_seeded_discover(discover_job, taste, api_key=key))
     if "tmdb_similar" in wanted or "tmdb_discover" in wanted:
