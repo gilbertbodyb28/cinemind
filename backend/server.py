@@ -1866,8 +1866,10 @@ async def approve_to_mediamanager(
 
 PENDING_STATUSES = ["pending_approval", "pending", "requested"]
 # One queue page. Matches the tally in /requests/stats so the header count and
-# the list on screen cannot disagree.
-REQUEST_LIST_CAP = 5000
+# the list on screen cannot disagree. Was 5000: jobs had queued 9,881 pending
+# titles by 2026-09-24, so half of them never reached the tab. The page renders
+# 40 at a time, so only the JSON grows (~0.5 MB per 1,000 rows).
+REQUEST_LIST_CAP = 30000
 
 
 @api.get("/requests")
@@ -1934,7 +1936,7 @@ async def request_stats(user: User = Depends(get_current_user)):
     """
     rows = await db.requests.find(
         {"user_id": user.user_id}, {"_id": 0, "status": 1}
-    ).to_list(5000)
+    ).to_list(REQUEST_LIST_CAP)
     pending = {"pending_approval", "pending", "requested"}
     approved = {"approved", "available", "completed"}
     tally = {"total": len(rows), "pending": 0, "approved": 0, "rejected": 0, "failed": 0}
