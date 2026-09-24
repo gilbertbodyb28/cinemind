@@ -1566,6 +1566,9 @@ async def generate_recs(payload: Optional[GenerateBody] = None, user: User = Dep
         # The home feed keeps the measured single-floor diversity; lane balancing
         # is for saved jobs, which name the categories they want.
         "lane_balance": False,
+        # Same reason: the home feed has no job form behind it, so there is no
+        # job intent to serve (recommendation.job_intent).
+        "job_intent": False,
     })
     job["exclusions"] = {
         **job["exclusions"],
@@ -1891,6 +1894,85 @@ async def list_requests(user: User = Depends(get_current_user)):
         {"_id": 0, "user_id": 0},
     ).sort("updated_at", -1).to_list(REQUEST_LIST_CAP)
     return await attach_request_match_scores(user.user_id, pending_rows + other_rows)
+
+
+@api.get("/requests/page")
+async def list_requests_page(
+    view: str = "queue",
+    q: str = "",
+    types: str = "",
+    release: str = "",
+    genre: str = "all",
+    from_year: Optional[str] = None,
+    to_year: Optional[str] = None,
+    from_rating: Optional[str] = None,
+    to_rating: Optional[str] = None,
+    sort: Optional[str] = None,
+    today: Optional[str] = None,
+    offset: int = 0,
+    limit: int = 40,
+    with_ids: bool = False,
+    user: User = Depends(get_current_user),
+):
+    """One page of the queue (or the Approved tab), filtered and sorted here.
+
+    The tab used to pull every request - 4.7 MB for 9,936 rows - and do this
+    in the browser. Only the fields the filters need are read for the whole
+    tab; posters and the rest are read for the rows on this page. Facets and
+    pending_count cover the whole filter, so counts and "select all" still mean
+    everything, not just what has been scrolled into view. The ids themselves
+    (about 180 KB for the full queue) only come with with_ids=true.
+    """
+    import request_queue as rq
+
+    if view not in rq.VIEWS:
+        raise HTTPException(status_code=422, detail="view must be queue or approved")
+    day = (today or datetime.now(timezone.utc).date().isoformat())[:10]
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
+        raise HTTPException(status_code=422, detail="today must be YYYY-MM-DD")
+    offset = max(0, int(offset))
+    limit = max(1, min(int(limit), rq.MAX_PAGE))
+    base = {"user_id": user.user_id}
+    light = {"_id": 0, **{name: 1 for name in rq.LIGHT_FIELDS}}
+    if view == "queue":
+        rows = await db.requests.find(
+            {**base, "status": {"$in": list(rq.PENDING_STATUSES)}}, light,
+        ).sort("updated_at", -1).to_list(None)
+        rows += await db.requests.find(
+            {**base, "status": {"$nin": [*rq.PENDING_STATUSES, *rq.QUEUE_HIDDEN]}}, light,
+        ).sort("updated_at", -1).to_list(None)
+    else:
+        rows = await db.requests.find(
+            {**base, "status": {"$in": list(rq.APPROVED_STATUSES)}}, light,
+        ).sort("updated_at", -1).to_list(None)
+    # Match % and borrowed genres decide sorting and the genre filter, so they
+    # are filled for the whole tab, exactly as GET /requests fills them.
+    rows = await attach_request_match_scores(user.user_id, rows)
+    params = {
+        "q": q, "types": types, "release": release, "genre": genre,
+        "from_year": from_year, "to_year": to_year,
+        "from_rating": from_rating, "to_rating": to_rating, "sort": sort,
+    }
+    page, total, pending_ids = rq.page_rows(rows, params, day, offset, limit)
+    ids = [row["id"] for row in page]
+    full = await db.requests.find({**base, "id": {"$in": ids}}, {"_id": 0, "user_id": 0}).to_list(len(ids) or 1)
+    by_id = {doc["id"]: doc for doc in full}
+    items = []
+    for row in page:
+        doc = by_id.get(row["id"])
+        if doc:
+            # Keep the scored fields; the stored document may not carry them.
+            items.append({**doc, "match_score": row.get("match_score"), "genres": row.get("genres") or doc.get("genres") or []})
+    return {
+        "items": items,
+        "total": total,
+        "view_total": len(rows),
+        "offset": offset,
+        "limit": limit,
+        "facets": rq.facets(rows, day),
+        "pending_count": len(pending_ids),
+        **({"pending_ids": pending_ids} if with_ids else {}),
+    }
 
 
 @api.get("/build")

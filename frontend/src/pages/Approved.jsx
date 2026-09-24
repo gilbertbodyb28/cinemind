@@ -10,39 +10,56 @@ import {
 } from "@/components/ApproveRejectOverlay";
 import TitleDetailModal from "@/components/TitleDetailModal";
 import ReleaseTypeFilters from "@/components/ReleaseTypeFilters";
-import {
-  bucketCounts,
-  matchesChecks,
-  releaseBucket,
-  toggleInSet,
-  typeBucket,
-} from "@/lib/mediaFilters";
+import { todayKey, toggleInSet } from "@/lib/mediaFilters";
 
-const APPROVED = new Set(["approved", "available", "completed"]);
 /** The queue's footprint, so both tabs show the same card. */
 const POSTER_SLOT = "w-11 h-11 sm:w-12 sm:h-12 shrink-0";
 const POSTER_PILL = `${POSTER_SLOT} z-30 rounded-full glass grid place-items-center flex-col !gap-0 pointer-events-none`;
 const PAGE = 40;
 
-function isApproved(item) {
-  return APPROVED.has(item?.status);
-}
-
 export default function Approved() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Same chunked rendering as the queue, so a long list still scrolls at 60fps.
-  const [limit, setLimit] = useState(PAGE);
+  // Paged by the server (GET /requests/page?view=approved), like the queue.
+  const [total, setTotal] = useState(0);
+  const [viewTotal, setViewTotal] = useState(0);
+  const [facets, setFacets] = useState({ type_counts: {}, release_counts: {}, kind_counts: {}, undelivered: 0 });
   const [detailItem, setDetailItem] = useState(null);
   // Same tick boxes as the queue, so both tabs filter release and type alike.
   const [types, setTypes] = useState(() => new Set());
   const [release, setRelease] = useState(() => new Set());
   const sentinel = useRef(null);
+  const requestSeq = useRef(0);
+  const pagingRef = useRef(false);
+  const itemsRef = useRef([]);
+  itemsRef.current = items;
+
+  const params = useMemo(() => ({
+    view: "approved",
+    types: [...types].join(","),
+    release: [...release].join(","),
+    today: todayKey(),
+  }), [types, release]);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
+  const applyPage = (data, replace) => {
+    const rows = data?.items || [];
+    setItems((current) => {
+      if (replace) return rows;
+      const have = new Set(current.map((row) => row.id));
+      return [...current, ...rows.filter((row) => !have.has(row.id))];
+    });
+    setTotal(data?.total || 0);
+    setViewTotal(data?.view_total || 0);
+    if (data?.facets) setFacets(data.facets);
+  };
 
   const load = async () => {
+    const seq = ++requestSeq.current;
     try {
-      const r = await api.get("/requests");
-      setItems((r.data || []).filter(isApproved));
+      const r = await api.get("/requests/page", { params: { ...paramsRef.current, offset: 0, limit: PAGE } });
+      if (seq === requestSeq.current) applyPage(r.data, true);
     } catch (error) {
       toast.error(error.message || "Could not load approved titles");
     } finally {
@@ -50,27 +67,29 @@ export default function Approved() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  const loadMore = async () => {
+    if (pagingRef.current) return;
+    pagingRef.current = true;
+    const seq = requestSeq.current;
+    try {
+      const r = await api.get("/requests/page", {
+        params: { ...paramsRef.current, offset: itemsRef.current.length, limit: PAGE },
+      });
+      if (seq === requestSeq.current) applyPage(r.data, false);
+    } catch (error) {
+      toast.error(error.message || "Could not load more approved titles");
+    } finally {
+      pagingRef.current = false;
+    }
+  };
 
-  const counts = useMemo(() => {
-    const tally = { movie: 0, show: 0, anime: 0, undelivered: 0 };
-    items.forEach((row) => {
-      const kind = String(row.type || "movie").toLowerCase();
-      if (kind in tally) tally[kind] += 1;
-      else tally.show += 1;
-      if (row.delivery_status === "not_delivered") tally.undelivered += 1;
-    });
-    return tally;
-  }, [items]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [params]);
 
-  // Counted on everything approved, so each box shows what ticking it would leave.
-  const releaseCounts = useMemo(() => bucketCounts(items, (row) => releaseBucket(row)), [items]);
-  const typeCounts = useMemo(() => bucketCounts(items, typeBucket), [items]);
-
-  const visible = useMemo(
-    () => items.filter((row) => matchesChecks(typeBucket(row), types) && matchesChecks(releaseBucket(row), release)),
-    [items, types, release],
-  );
+  // Counted by the server on everything approved, so each box shows what ticking it would leave.
+  const counts = { movie: 0, show: 0, anime: 0, ...(facets.kind_counts || {}), undelivered: facets.undelivered || 0 };
+  const releaseCounts = facets.release_counts || {};
+  const typeCounts = facets.type_counts || {};
 
   const filtersActive = types.size > 0 || release.size > 0;
 
@@ -78,10 +97,6 @@ export default function Approved() {
     setTypes(new Set());
     setRelease(new Set());
   };
-
-  useEffect(() => { setLimit(PAGE); }, [types, release]);
-
-  const shown = useMemo(() => visible.slice(0, limit), [visible, limit]);
 
   // The send button owns the request itself; this only folds its answer back in.
   const applyDelivery = (id, data) => {
@@ -92,12 +107,13 @@ export default function Approved() {
     const node = sentinel.current;
     if (!node) return undefined;
     const io = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) setLimit((n) => n + PAGE); },
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
       { rootMargin: "1200px 0px" },
     );
     io.observe(node);
     return () => io.disconnect();
-  }, [shown.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, total]);
 
   return (
     <div data-testid="approved-page" className="px-1 sm:px-2 pb-4 w-full float-in">
@@ -110,8 +126,8 @@ export default function Approved() {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <span data-testid="approved-results" className="chip chip-cyan">{visible.length} results</span>
-        <span data-testid="approved-total" className="chip">{items.length} total</span>
+        <span data-testid="approved-results" className="chip chip-cyan">{total} results</span>
+        <span data-testid="approved-total" className="chip">{viewTotal} total</span>
         <span className="chip">{counts.movie} movies</span>
         <span className="chip">{counts.show} shows</span>
         <span className="chip">{counts.anime} anime</span>
@@ -136,7 +152,7 @@ export default function Approved() {
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">Tick what is out and what is still coming, and keep only the media types you want.</p>
           </div>
-          <span data-testid="approved-visible-count" className="chip shrink-0">{visible.length} of {items.length}</span>
+          <span data-testid="approved-visible-count" className="chip shrink-0">{total} of {viewTotal}</span>
         </div>
 
         <ReleaseTypeFilters
@@ -162,18 +178,18 @@ export default function Approved() {
       </div>
 
       <div className={`mt-10 ${POSTER_GRID}`}>
-        {shown.map((item, index) => (
+        {items.map((item, index) => (
           <ApprovedPoster key={item.id} item={item} index={index} onDelivered={applyDelivery} onOpenDetails={() => setDetailItem(item)} />
         ))}
       </div>
 
-      {shown.length < visible.length && (
+      {items.length < total && (
         <div ref={sentinel} data-testid="approved-sentinel" className="py-8 text-center text-xs text-[#8C7F6D]">
-          Showing {shown.length} of {visible.length} — keep scrolling
+          Showing {items.length} of {total} — keep scrolling
         </div>
       )}
 
-      {!loading && !visible.length && (
+      {!loading && !total && (
         <div className="glass rounded-2xl p-16 text-center mt-10">
           <CheckCheck className="w-10 h-10 mx-auto text-slate-600 mb-4" />
           {filtersActive ? (

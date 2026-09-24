@@ -17,13 +17,7 @@ import ModelPicker from "@/components/ModelPicker";
 import TitleDetailModal from "@/components/TitleDetailModal";
 import ReleaseTypeFilters from "@/components/ReleaseTypeFilters";
 import { DEFAULT_MODEL } from "@/lib/models";
-import {
-  bucketCounts,
-  matchesChecks,
-  releaseBucket,
-  toggleInSet,
-  typeBucket,
-} from "@/lib/mediaFilters";
+import { todayKey, toggleInSet } from "@/lib/mediaFilters";
 
 const PENDING = new Set(["pending_approval", "pending", "requested"]);
 /** Approved titles move to their own tab, so the queue only shows what still needs a decision. */
@@ -46,19 +40,13 @@ const FIELD =
   "glass rounded-full box-border h-11 w-full px-4 text-sm inline-flex items-center gap-2 bg-transparent outline-none focus-within:border-[rgba(216,178,106,0.5)] transition-colors";
 const SELECT = "bg-transparent outline-none w-full text-sm text-[#F6EFE4] [&>option]:bg-[#17130F]";
 
-/** When the job put the title in the queue. Blank rows sort last, never first. */
-function addedKey(item) {
-  return String(item?.updated_at || item?.created_at || "");
-}
-
-/** Release day, falling back to the year so undated rows still sort sensibly. */
-function releaseKey(item) {
-  if (item?.release_date) return String(item.release_date).slice(0, 10);
-  if (item?.year != null) return `${item.year}-00-00`;
-  return "";
-}
-
+/** One server page. Filtering, sorting and counting happen in GET /requests/page. */
 const PAGE = 40;
+/** A background refresh reloads what is on screen, up to the server's page cap. */
+const MAX_REFRESH = 200;
+/** POST /requests/bulk takes at most this many ids per call. */
+const BULK_BATCH = 50;
+const EMPTY_FACETS = { genres: [], years: [], type_counts: {}, release_counts: {} };
 /** How often the queue asks whether anything changed. The check is a tiny
  *  count + timestamp, so this can be short without refetching the whole list. */
 const POLL_MS = 5000;
@@ -90,8 +78,14 @@ export default function Requests() {
   // The account's Ollama model. Seeded from the saved value so the picker opens
   // on what this account actually uses, not on the build-time fallback.
   const [model, setModel] = useState(DEFAULT_MODEL);
-  // Render the queue in chunks: 400+ poster cards at once is what made scrolling jank.
-  const [limit, setLimit] = useState(PAGE);
+  // The server holds the queue; this is only what has been paged in so far.
+  // Downloading all of it was 4.7 MB for 9,936 rows, capped at 5,000 at that.
+  const [total, setTotal] = useState(0);
+  const [viewTotal, setViewTotal] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [facets, setFacets] = useState(EMPTY_FACETS);
+  const [loaded, setLoaded] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   // GET /requests hides rejected rows, so the tally comes from its own endpoint.
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, blacklisted: 0 });
   const sentinel = useRef(null);
@@ -99,6 +93,11 @@ export default function Requests() {
   const workingRef = useRef(false);
   // Last count+timestamp seen from the server; null until the first check lands.
   const versionRef = useRef(null);
+  // Answers to an older filter must not land on top of a newer one.
+  const requestSeq = useRef(0);
+  const pagingRef = useRef(false);
+  const itemsRef = useRef([]);
+  const paramsRef = useRef(null);
 
   const loadStats = async () => {
     try {
@@ -109,20 +108,83 @@ export default function Requests() {
     }
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const pageParams = useMemo(() => ({
+    view: "queue",
+    q: debouncedQuery,
+    types: [...types].join(","),
+    release: [...release].join(","),
+    genre,
+    from_year: fromYear === "any" ? "" : fromYear,
+    to_year: toYear === "any" ? "" : toYear,
+    from_rating: fromRating === "any" ? "" : fromRating,
+    to_rating: toRating === "any" ? "" : toRating,
+    sort,
+    // "Upcoming" follows the viewer's own calendar, as it did in the browser.
+    today: todayKey(),
+  }), [debouncedQuery, types, release, genre, fromYear, toYear, fromRating, toRating, sort]);
+  paramsRef.current = pageParams;
+  itemsRef.current = items;
+
+  const applyPage = (data, replace) => {
+    const rows = data?.items || [];
+    setItems((current) => {
+      if (replace) return rows;
+      const have = new Set(current.map((row) => row.id));
+      return [...current, ...rows.filter((row) => !have.has(row.id))];
+    });
+    setTotal(data?.total || 0);
+    setViewTotal(data?.view_total || 0);
+    setPendingCount(data?.pending_count || 0);
+    setFacets({ ...EMPTY_FACETS, ...(data?.facets || {}) });
+    setLoaded(true);
+  };
+
   // quiet = background poll: a failed refresh must not spam toasts while the tab sits open.
-  const load = async ({ quiet = false } = {}) => {
+  // keep = reload as many rows as are already on screen, so a refresh does not
+  // throw the viewer back to the top.
+  const load = async ({ quiet = false, keep = false } = {}) => {
+    const seq = ++requestSeq.current;
+    const size = keep ? Math.min(Math.max(itemsRef.current.length, PAGE), MAX_REFRESH) : PAGE;
     try {
-      const r = await api.get("/requests");
-      setItems((r.data || []).filter((row) => !DONE.has(row.status)));
+      const r = await api.get("/requests/page", { params: { ...paramsRef.current, offset: 0, limit: size } });
+      if (seq === requestSeq.current) applyPage(r.data, true);
     } catch (error) {
       if (!quiet) toast.error(error.message || "Could not load requests");
+    }
+  };
+
+  const loadMore = async () => {
+    if (pagingRef.current) return;
+    pagingRef.current = true;
+    const seq = requestSeq.current;
+    try {
+      const r = await api.get("/requests/page", {
+        params: { ...paramsRef.current, offset: itemsRef.current.length, limit: PAGE },
+      });
+      if (seq === requestSeq.current) applyPage(r.data, false);
+    } catch (error) {
+      toast.error(error.message || "Could not load more requests");
+    } finally {
+      pagingRef.current = false;
     }
   };
 
   const refresh = async (options) => { await Promise.all([load(options), loadStats()]); };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { loadStats(); }, []);
+
+  // A new filter is a new list: first page, and a selection that only means what is in it.
+  useEffect(() => {
+    setSelected(new Set());
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageParams]);
 
   useEffect(() => {
     api.get("/connections")
@@ -146,7 +208,7 @@ export default function Requests() {
         // First tick after mount only records the token; the initial load is fresh.
         const first = versionRef.current === null;
         versionRef.current = token;
-        if (!first) await refresh({ quiet: true });
+        if (!first) await refresh({ quiet: true, keep: true });
       } catch {
         // A dropped check is harmless; the next tick tries again.
       }
@@ -164,67 +226,23 @@ export default function Requests() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Approving flips a row to approved before the next refresh; it leaves the queue at once.
   const queued = useMemo(
     () => items.filter((row) => !DONE.has(row.status)),
     [items],
   );
 
-  const genreOptions = useMemo(() => {
-    const found = new Set();
-    queued.forEach((row) => (row.genres || []).forEach((g) => found.add(g)));
-    return [...found].sort((a, b) => a.localeCompare(b));
-  }, [queued]);
+  const genreOptions = facets.genres || [];
 
   // Tenths, the precision TMDb actually scores in. Whole steps could only ask
   // for a band; 7.0 to 7.9 now says that outright, and 7.4 to 7.4 asks for 7.4.
   const RATING_OPTIONS = Array.from({ length: 101 }, (_, i) => ((100 - i) / 10).toFixed(1));
 
-  const yearOptions = useMemo(() => {
-    const found = new Set();
-    queued.forEach((row) => { if (row.year != null) found.add(Number(row.year)); });
-    return [...found].sort((a, b) => b - a);
-  }, [queued]);
+  const yearOptions = facets.years || [];
 
-  // Counted on the queue itself, so each box keeps showing what it would leave.
-  const releaseCounts = useMemo(() => bucketCounts(queued, (row) => releaseBucket(row)), [queued]);
-  const typeCounts = useMemo(() => bucketCounts(queued, typeBucket), [queued]);
-
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    const from = fromYear === "any" ? null : Number(fromYear);
-    const to = toYear === "any" ? null : Number(toYear);
-    // Compared in tenths, so 7.1 never loses to a float that is really 7.09999.
-    const tenths = (value) => Math.round(Number(value) * 10);
-    const ratingFrom = fromRating === "any" ? null : tenths(fromRating);
-    const ratingTo = toRating === "any" ? null : tenths(toRating);
-    const rows = queued.filter((row) => {
-      if (needle && !String(row.title || "").toLowerCase().includes(needle)) return false;
-      if (!matchesChecks(typeBucket(row), types)) return false;
-      if (!matchesChecks(releaseBucket(row), release)) return false;
-      if (genre !== "all" && !(row.genres || []).some((g) => g === genre)) return false;
-      if (from != null && (row.year == null || Number(row.year) < from)) return false;
-      if (to != null && (row.year == null || Number(row.year) > to)) return false;
-      if (ratingFrom != null && (row.rating == null || tenths(row.rating) < ratingFrom)) return false;
-      if (ratingTo != null && (row.rating == null || tenths(row.rating) > ratingTo)) return false;
-      return true;
-    });
-    const sorted = [...rows];
-    if (sort === "added_desc") sorted.sort((a, b) => addedKey(b).localeCompare(addedKey(a)));
-    else if (sort === "added_asc") sorted.sort((a, b) => {
-      const left = addedKey(a);
-      const right = addedKey(b);
-      if (!left) return 1;
-      if (!right) return -1;
-      return left.localeCompare(right);
-    });
-    else if (sort === "release_desc") sorted.sort((a, b) => releaseKey(b).localeCompare(releaseKey(a)));
-    else if (sort === "release_asc") sorted.sort((a, b) => releaseKey(a).localeCompare(releaseKey(b)));
-    else if (sort === "match_desc") sorted.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
-    else sorted.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
-    return sorted;
-  }, [queued, query, types, release, genre, fromYear, toYear, fromRating, toRating, sort]);
-
-  useEffect(() => { setLimit(PAGE); }, [query, types, release, genre, fromYear, toYear, fromRating, toRating, sort]);
+  // Counted by the server on the whole queue, so each box keeps showing what it would leave.
+  const releaseCounts = facets.release_counts || {};
+  const typeCounts = facets.type_counts || {};
 
   const resetFilters = () => {
     setQuery("");
@@ -244,13 +262,19 @@ export default function Requests() {
 
   useEffect(() => { workingRef.current = Boolean(busyId) || bulkBusy; }, [busyId, bulkBusy]);
 
-  const shown = useMemo(() => visible.slice(0, limit), [visible, limit]);
-  const pendingItems = useMemo(() => visible.filter(isPending), [visible]);
-  const selectedItems = pendingItems.filter((row) => selected.has(row.id));
+  const selectedIds = [...selected];
+
+  // Rows that left the queue (rejected or approved) leave the server's counts too.
+  const dropCounts = (count) => {
+    setTotal((n) => Math.max(0, n - count));
+    setViewTotal((n) => Math.max(0, n - count));
+    setPendingCount((n) => Math.max(0, n - count));
+  };
 
   const removeItems = (ids) => {
     const gone = new Set(ids);
     setItems((rows) => rows.filter((row) => !gone.has(row.id)));
+    dropCounts(ids.length);
     setSelected((current) => {
       const next = new Set(current);
       ids.forEach((id) => next.delete(id));
@@ -271,8 +295,14 @@ export default function Requests() {
     });
   };
 
-  const selectAllPending = () => {
-    setSelected(new Set(pendingItems.map((row) => row.id)));
+  // Every pending title in the filter, not only the ones scrolled into view.
+  const selectAllPending = async () => {
+    try {
+      const r = await api.get("/requests/page", { params: { ...paramsRef.current, offset: 0, limit: 1, with_ids: true } });
+      setSelected(new Set(r.data?.pending_ids || []));
+    } catch (error) {
+      toast.error(error.message || "Could not select the queue");
+    }
   };
 
   const clearSelected = () => setSelected(new Set());
@@ -285,6 +315,7 @@ export default function Requests() {
     try {
       const data = await sendToMediaManager(item, { requestId: item.id, options });
       patchItem(item.id, data?.request || { status: "approved", tmdb_id: data?.tmdb_id });
+      dropCounts(1);
       setStats((n) => ({ ...n, approved: n.approved + 1, pending: Math.max(0, n.pending - 1) }));
       setSelected((current) => {
         const next = new Set(current);
@@ -310,6 +341,7 @@ export default function Requests() {
       toast.success(`${item.title} removed`);
     } catch (error) {
       setItems((rows) => [previous, ...rows.filter((row) => row.id !== previous.id)]);
+      load({ quiet: true, keep: true });
       toast.error(error.message || "Could not reject");
     } finally {
       setBusyId(null);
@@ -330,45 +362,63 @@ export default function Requests() {
     }
   };
 
+  // POST /requests/bulk handles 50 ids per call and silently ignored the rest,
+  // while the page removed every selected title. Send the selection in batches
+  // and count only what the server confirmed.
+  const inBatches = async (ids, send) => {
+    for (let start = 0; start < ids.length; start += BULK_BATCH) {
+      // eslint-disable-next-line no-await-in-loop
+      await send(ids.slice(start, start + BULK_BATCH));
+    }
+  };
+
   const bulkReject = async () => {
-    const targets = selectedItems;
-    if (!targets.length || bulkBusy) return;
-    const ids = targets.map((row) => row.id);
-    const snapshot = targets;
+    const ids = selectedIds;
+    if (!ids.length || bulkBusy) return;
     setBulkBusy(true);
-    removeItems(ids);
+    const done = [];
     try {
-      await api.post("/requests/bulk", { ids, action: "reject" });
-      setStats((n) => ({ ...n, rejected: n.rejected + ids.length, pending: Math.max(0, n.pending - ids.length) }));
-      toast.success(`Removed ${ids.length} title${ids.length === 1 ? "" : "s"}`);
+      await inBatches(ids, async (batch) => {
+        const r = await api.post("/requests/bulk", { ids: batch, action: "reject" });
+        const confirmed = r.data?.ids || [];
+        done.push(...confirmed);
+        removeItems(confirmed);
+      });
+      toast.success(`Removed ${done.length} title${done.length === 1 ? "" : "s"}`);
     } catch (error) {
-      setItems((rows) => [...snapshot, ...rows]);
+      load({ quiet: true, keep: true });
       toast.error(error.message || "Could not reject");
     } finally {
+      if (done.length) {
+        setStats((n) => ({ ...n, rejected: n.rejected + done.length, pending: Math.max(0, n.pending - done.length) }));
+      }
       setBulkBusy(false);
     }
   };
 
   const bulkApprove = async (options) => {
-    const targets = selectedItems;
-    if (!targets.length || bulkBusy) return;
-    const ids = targets.map((row) => row.id);
+    const ids = selectedIds;
+    if (!ids.length || bulkBusy) return;
     setBulkBusy(true);
+    const okIds = [];
+    const failed = new Set();
     try {
-      const r = await api.post("/requests/bulk", { ids, action: "approve", options });
-      const results = r.data?.results || [];
-      const failed = new Set(results.filter((row) => row.ok === false).map((row) => row.id));
-      const okIds = ids.filter((id) => !failed.has(id));
-      setItems((rows) => rows.map((row) => (
-        okIds.includes(row.id) ? { ...row, status: "approved" } : row
-      )));
-      setSelected(failed);
-      setStats((n) => ({ ...n, approved: n.approved + okIds.length, pending: Math.max(0, n.pending - okIds.length) }));
-      if (okIds.length) toast.success(`Sent ${okIds.length} to MediaManager`);
-      if (failed.size) toast.error(`${failed.size} could not be added`);
+      await inBatches(ids, async (batch) => {
+        const r = await api.post("/requests/bulk", { ids: batch, action: "approve", options });
+        (r.data?.results || []).forEach((row) => (row.ok === false ? failed.add(row.id) : okIds.push(row.id)));
+        const ok = new Set(okIds);
+        setItems((rows) => rows.map((row) => (ok.has(row.id) ? { ...row, status: "approved" } : row)));
+      });
     } catch (error) {
       handleApproveError(error, navigate);
     } finally {
+      setSelected(failed);
+      if (okIds.length) {
+        dropCounts(okIds.length);
+        setStats((n) => ({ ...n, approved: n.approved + okIds.length, pending: Math.max(0, n.pending - okIds.length) }));
+        toast.success(`Sent ${okIds.length} to MediaManager`);
+      }
+      if (failed.size) toast.error(`${failed.size} could not be added`);
       setBulkBusy(false);
     }
   };
@@ -377,12 +427,13 @@ export default function Requests() {
     const node = sentinel.current;
     if (!node) return undefined;
     const io = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) setLimit((n) => n + PAGE); },
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
       { rootMargin: "1200px 0px" },
     );
     io.observe(node);
     return () => io.disconnect();
-  }, [visible.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, total]);
 
 
   return (
@@ -393,8 +444,8 @@ export default function Requests() {
       <p className="text-slate-400 mt-2 max-w-2xl">Jobs set to require approval land here. Approve or Send to MediaManager both add the title to Movies or TV immediately. Rejected titles leave the list at once.</p>
 
       <div data-testid="request-tally" className="mt-6 flex flex-wrap items-center gap-2">
-        <span data-testid="tally-results" className="chip chip-cyan">{visible.length} results</span>
-        <span data-testid="tally-queued" className="chip">{queued.length} awaiting decision</span>
+        <span data-testid="tally-results" className="chip chip-cyan">{total} results</span>
+        <span data-testid="tally-queued" className="chip">{viewTotal} awaiting decision</span>
         <span data-testid="tally-approved" className="chip chip-emerald">{stats.approved} approved</span>
         <span data-testid="tally-rejected" className="chip chip-rose">{stats.rejected} rejected</span>
         <span data-testid="tally-blacklisted" className="chip chip-amber">{stats.blacklisted} blacklisted</span>
@@ -428,7 +479,7 @@ export default function Requests() {
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">Tick what is out and what is still coming, keep only the media types you want, then search, narrow by genre and year, and choose the order.</p>
           </div>
-          <span data-testid="request-visible-count" className="chip shrink-0">{visible.length} of {queued.length}</span>
+          <span data-testid="request-visible-count" className="chip shrink-0">{total} of {viewTotal}</span>
         </div>
 
         <ReleaseTypeFilters
@@ -550,7 +601,7 @@ export default function Requests() {
         )}
       </div>
 
-      {pendingItems.length > 0 && (
+      {pendingCount > 0 && (
         <div data-testid="bulk-actions" className="mt-6 glass-strong rounded-2xl px-4 py-4 lg:px-5">
           <div className="mb-4">
             <h3 className="font-display text-lg font-bold">Bulk approve or reject</h3>
@@ -559,11 +610,11 @@ export default function Requests() {
           <div className="grid grid-cols-5 gap-2">
             <button type="button" data-testid="bulk-select-all-button" onClick={selectAllPending} className={BULK_CTRL}>Select all</button>
             <button type="button" data-testid="bulk-clear-button" onClick={clearSelected} className={BULK_CTRL}>Clear</button>
-            <span data-testid="bulk-selected-count" className={BULK_CTRL}>{selectedItems.length} selected</span>
+            <span data-testid="bulk-selected-count" className={BULK_CTRL}>{selected.size} selected</span>
             <button
               type="button"
               data-testid="bulk-approve-button"
-              disabled={!selectedItems.length || bulkBusy}
+              disabled={!selected.size || bulkBusy}
               onClick={() => bulkApprove()}
               className={BULK_CTRL}
             >
@@ -573,7 +624,7 @@ export default function Requests() {
             <button
               type="button"
               data-testid="bulk-reject-button"
-              disabled={!selectedItems.length || bulkBusy}
+              disabled={!selected.size || bulkBusy}
               onClick={bulkReject}
               className={BULK_CTRL}
             >
@@ -585,7 +636,7 @@ export default function Requests() {
       )}
 
       <div className={`mt-10 ${POSTER_GRID}`}>
-        {shown.map((item, index) => (
+        {queued.map((item, index) => (
           <RequestPoster
             key={item.id}
             item={item}
@@ -601,13 +652,13 @@ export default function Requests() {
         ))}
       </div>
 
-      {shown.length < visible.length && (
+      {items.length < total && (
         <div ref={sentinel} data-testid="requests-sentinel" className="py-8 text-center text-xs text-[#8C7F6D]">
-          Showing {shown.length} of {visible.length} — keep scrolling
+          Showing {queued.length} of {total} — keep scrolling
         </div>
       )}
 
-      {!visible.length && (
+      {loaded && !queued.length && !total && (
         <div className="glass rounded-2xl p-16 text-center mt-10">
           <Inbox className="w-10 h-10 mx-auto text-slate-600 mb-4" />
           {filtersActive ? (
