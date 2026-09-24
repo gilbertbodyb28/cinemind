@@ -5,7 +5,7 @@ import time
 import pytest
 import requests
 
-from conftest import BASE_URL
+from conftest import BASE_URL, DB_NAME
 
 FE_TOKEN = "test_session_fe_claude"
 FE_USER = "test-user-fe-claude"
@@ -13,10 +13,26 @@ FE_USER = "test-user-fe-claude"
 
 @pytest.fixture(scope="module")
 def fe_client():
-    """Persistent seeded UI session (per /app/memory/test_credentials.md)."""
+    """Persistent seeded UI session.
+
+    Seeds the pair rather than refreshing it: the old script only ran
+    `updateOne` on the session, so on a database that had never held this
+    token there was nothing to update and every test in the module failed
+    with `Invalid session`. It also wrote to a hard-coded `test_database`,
+    which is not the database the running server reads.
+    """
     script = f"""
-use('test_database');
-db.user_sessions.updateOne({{session_token:"{FE_TOKEN}"}},{{$set:{{expires_at:new Date(Date.now()+7*864e5).toISOString()}}}});
+use('{DB_NAME}');
+db.users.replaceOne(
+  {{user_id: '{FE_USER}'}},
+  {{user_id: '{FE_USER}', email: 'test.user.fe.claude@example.com', name: 'FE Test User', created_at: new Date()}},
+  {{upsert: true}}
+);
+db.user_sessions.replaceOne(
+  {{session_token: '{FE_TOKEN}'}},
+  {{user_id: '{FE_USER}', session_token: '{FE_TOKEN}', expires_at: new Date(Date.now() + 7*864e5), created_at: new Date()}},
+  {{upsert: true}}
+);
 """
     subprocess.run(["mongosh", "--quiet", "--eval", script], check=False, capture_output=True, timeout=60)
     s = requests.Session()

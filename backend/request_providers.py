@@ -11,6 +11,12 @@ from config import REQUEST_PROVIDER_API_KEY, REQUEST_PROVIDER_URL, env_flag
 from database import db
 
 
+# Once a title is approved it stays approved. A later job that recommends the
+# same title again must not push it back into the Requests queue.
+DECIDED_STATUSES = {"approved", "available", "completed"}
+QUEUE_STATUSES = {"pending_approval", "pending", "requested", "request_failed"}
+
+
 class LocalRequestProvider:
     name = "local"
 
@@ -21,8 +27,10 @@ class LocalRequestProvider:
             "title": item.get("title"),
             "year": item.get("year"),
         }
-        existing = await db.requests.find_one(query, {"id": 1}) or {}
+        existing = await db.requests.find_one(query, {"id": 1, "status": 1}) or {}
         request_id = request_id or existing.get("id") or f"req_{uuid.uuid4().hex[:12]}"
+        if existing.get("status") in DECIDED_STATUSES and status in QUEUE_STATUSES:
+            return {"ok": True, "status": existing["status"], "provider": self.name, "id": request_id}
         now = datetime.now(timezone.utc).isoformat()
         doc = {
             "user_id": user_id,

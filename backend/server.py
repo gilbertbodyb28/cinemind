@@ -80,6 +80,10 @@ TRAKT_CLIENT_ID = os.environ.get("TRAKT_CLIENT_ID")
 TRAKT_CLIENT_SECRET = os.environ.get("TRAKT_CLIENT_SECRET")
 TRAKT_API = "https://api.trakt.tv"
 SIMKL_CLIENT_ID = os.environ.get("SIMKL_CLIENT_ID")
+# Read alongside the client id: the device flow exchanges the code for a token
+# with both, and without this name the exchange raised NameError and answered
+# 500 instead of the 503 the missing-credentials path is meant to return.
+SIMKL_CLIENT_SECRET = os.environ.get("SIMKL_CLIENT_SECRET")
 SIMKL_API = "https://api.simkl.com"
 PLACEHOLDER_POSTER = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500"
 
@@ -1315,7 +1319,10 @@ async def get_history(user: User = Depends(get_current_user)):
         seeded = [{**h, "id": str(uuid.uuid4()), "watched_at": (datetime.now(timezone.utc) - timedelta(days=i*3)).isoformat(), "user_id": user.user_id} for i, h in enumerate(DEMO_HISTORY)]
         await db.history.insert_many(seeded)
         docs = [{k: v for k, v in d.items() if k not in ("user_id", "_id")} for d in seeded]
-    missing = [d for d in docs if not d.get("poster") and not d.get("poster_checked")][:24]
+    # A row seeded with a poster still needs its tmdb_id: the trailer lookup and
+    # the watchlist push both key off it, and selecting on a missing poster alone
+    # meant demo history - which ships with posters - never got one.
+    missing = [d for d in docs if (not d.get("poster") or not d.get("tmdb_id")) and not d.get("poster_checked")][:24]
     if missing:
         await enrich_history_posters(missing)
         for d in missing:
@@ -1421,7 +1428,7 @@ async def enrich_history_posters(items: List[Dict[str, Any]]) -> None:
     """Fill missing posters on history items via TMDB (by id when known, else title search)."""
     if not TMDB_KEY:
         return
-    targets = [it for it in items if not it.get("poster")]
+    targets = [it for it in items if not it.get("poster") or not it.get("tmdb_id")]
     if not targets:
         return
     sem = asyncio.Semaphore(6)
@@ -2169,10 +2176,15 @@ async def get_trailer(rec_id: str, user: User = Depends(get_current_user)):
                     key, name = best["key"], best.get("name")
             except Exception as e:
                 logging.warning(f"TMDB videos failed for {rec['title']}: {e}")
-    await db.recommendations.update_one(
-        {"user_id": user.user_id, "id": rec_id},
-        {"$set": {"trailer_key": key, "trailer_name": name, **({"tmdb_id": tmdb_id} if tmdb_id else {})}},
-    )
+    # Only a hit is cached. Storing a miss as `trailer_key: None` made the
+    # `"trailer_key" in rec` check above answer None for ever, so one transient
+    # TMDB failure left a title permanently trailerless. The tmdb_id is worth
+    # keeping either way - it is what the next lookup starts from.
+    stored: Dict[str, Any] = {"tmdb_id": tmdb_id} if tmdb_id else {}
+    if key:
+        stored.update({"trailer_key": key, "trailer_name": name})
+    if stored:
+        await db.recommendations.update_one({"user_id": user.user_id, "id": rec_id}, {"$set": stored})
     return {"key": key, "name": name, "cached": False}
 
 

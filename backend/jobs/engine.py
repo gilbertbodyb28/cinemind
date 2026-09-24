@@ -603,7 +603,10 @@ async def apply_job_action_mode(
             stored = await local.submit(user_id, payload, "pending_approval")
             await db.recommendations.update_one(
                 {"user_id": user_id, "id": row["id"]},
-                {"$set": {"request_id": stored["id"], "needs_approval": True}},
+                {"$set": {
+                    "request_id": stored["id"],
+                    "needs_approval": stored["status"] == "pending_approval",
+                }},
             )
             continue
 

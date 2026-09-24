@@ -56,6 +56,13 @@ print('seeded');
 def seeded_session():
     _seed_session()
     yield
+    # Every xdist worker runs this session-scoped fixture, so the worker that
+    # finishes first used to delete the shared user and session while the other
+    # was still making requests with them - the sibling's remaining tests then
+    # failed with 401 "Invalid session". The seed is an upsert and the rows are
+    # test-only, so under xdist the tidier thing is to leave them.
+    if os.environ.get("PYTEST_XDIST_WORKER"):
+        return
     cleanup = f"""
 use('{DB_NAME}');
 db.users.deleteMany({{user_id: '{USER_ID}'}});
