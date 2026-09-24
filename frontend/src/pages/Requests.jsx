@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Check, Filter, Inbox, Loader2, RefreshCw, Search, Star } from "lucide-react";
+import { Check, Cpu, Filter, Inbox, Loader2, RefreshCw, Search, Star } from "lucide-react";
 import {
   APPROVE_ICON,
   ActionIconButton,
@@ -13,9 +13,10 @@ import {
   handleApproveError,
   sendToMediaManager,
 } from "@/components/ApproveRejectOverlay";
-import AddToLibraryDialog from "@/components/AddToLibraryDialog";
+import ModelPicker from "@/components/ModelPicker";
 import TitleDetailModal from "@/components/TitleDetailModal";
 import ReleaseTypeFilters from "@/components/ReleaseTypeFilters";
+import { DEFAULT_MODEL } from "@/lib/models";
 import {
   bucketCounts,
   matchesChecks,
@@ -85,10 +86,10 @@ export default function Requests() {
   const [fromRating, setFromRating] = useState("any");
   const [toRating, setToRating] = useState("any");
   const [sort, setSort] = useState("added_desc");
-  // One dialog drives both single and bulk sends, so the options are identical.
-  const [dialogItems, setDialogItems] = useState([]);
-  const [dialogBusy, setDialogBusy] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
+  // The account's Ollama model. Seeded from the saved value so the picker opens
+  // on what this account actually uses, not on the build-time fallback.
+  const [model, setModel] = useState(DEFAULT_MODEL);
   // Render the queue in chunks: 400+ poster cards at once is what made scrolling jank.
   const [limit, setLimit] = useState(PAGE);
   // GET /requests hides rejected rows, so the tally comes from its own endpoint.
@@ -122,6 +123,12 @@ export default function Requests() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { refresh(); }, []);
+
+  useEffect(() => {
+    api.get("/connections")
+      .then((r) => r.data.ollama_model && setModel(r.data.ollama_model))
+      .catch(() => {});
+  }, []);
 
   // Job runs write straight into the queue, so the open tab has to go look for
   // them. Asking for the full list every few seconds would mean refetching a
@@ -359,7 +366,6 @@ export default function Requests() {
       setStats((n) => ({ ...n, approved: n.approved + okIds.length, pending: Math.max(0, n.pending - okIds.length) }));
       if (okIds.length) toast.success(`Sent ${okIds.length} to MediaManager`);
       if (failed.size) toast.error(`${failed.size} could not be added`);
-      setDialogItems([]);
     } catch (error) {
       handleApproveError(error, navigate);
     } finally {
@@ -378,32 +384,10 @@ export default function Requests() {
     return () => io.disconnect();
   }, [visible.length]);
 
-  const runDialog = async (options) => {
-    const targets = dialogItems;
-    if (!targets.length) return;
-    setDialogBusy(true);
-    try {
-      if (targets.length === 1) {
-        await approve(targets[0], options);
-        setDialogItems([]);
-      } else {
-        await bulkApprove(options);
-      }
-    } finally {
-      setDialogBusy(false);
-    }
-  };
 
   return (
     <div data-testid="requests-page" className="px-1 sm:px-2 pb-4 w-full float-in">
       <TitleDetailModal item={detailItem} onClose={() => setDetailItem(null)} />
-      <AddToLibraryDialog
-        open={dialogItems.length > 0}
-        items={dialogItems}
-        busy={dialogBusy}
-        onCancel={() => setDialogItems([])}
-        onConfirm={runDialog}
-      />
       <span className="chip chip-cyan mb-4">Requests</span>
       <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight">Approval queue</h1>
       <p className="text-slate-400 mt-2 max-w-2xl">Jobs set to require approval land here. Approve or Send to MediaManager both add the title to Movies or TV immediately. Rejected titles leave the list at once.</p>
@@ -422,6 +406,18 @@ export default function Requests() {
         >
           <RefreshCw className="w-3 h-3" /> Refresh
         </button>
+      </div>
+
+      <div data-testid="request-model" className="mt-6 glass-strong rounded-2xl px-4 py-4 lg:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-bold flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-[#D8B26A]" /> AI model
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Every model your Ollama host has pulled. Pick one and press Save to use it for this account.</p>
+          </div>
+          <ModelPicker value={model} onChange={setModel} testid="requests-model-picker" />
+        </div>
       </div>
 
       <div data-testid="request-filters" className="mt-6 glass-strong rounded-2xl px-4 py-4 lg:px-5">
@@ -568,7 +564,7 @@ export default function Requests() {
               type="button"
               data-testid="bulk-approve-button"
               disabled={!selectedItems.length || bulkBusy}
-              onClick={() => setDialogItems(selectedItems)}
+              onClick={() => bulkApprove()}
               className={BULK_CTRL}
             >
               {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <img src={APPROVE_ICON} alt="" className="w-5 h-5 object-contain" />}
@@ -598,7 +594,7 @@ export default function Requests() {
             selected={selected.has(item.id)}
             onToggleSelect={() => toggleSelected(item.id)}
             onOpenDetails={() => setDetailItem(item)}
-            onApprove={() => setDialogItems([item])}
+            onApprove={(options) => approve(item, options)}
             onReject={() => reject(item)}
             onRetry={() => retry(item)}
           />
@@ -707,7 +703,7 @@ function RequestPoster({ item, index, busy, selected, onToggleSelect, onOpenDeta
               testid={`approve-request-${item.id}`}
               label="Approve"
               src={APPROVE_ICON}
-              onClick={onApprove}
+              onClick={(event) => { event.preventDefault(); event.stopPropagation(); onApprove(); }}
               disabled={busy}
               className="!w-11 !h-11 sm:!w-12 sm:!h-12"
             />

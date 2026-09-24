@@ -16,6 +16,7 @@ from recommendation.ranking_engine import apply_rerank
 
 HISTORY_PROVIDERS = {"plex", "trakt", "simkl", "anilist"}
 HISTORY_STALE_AFTER = timedelta(hours=24)
+HISTORY_CAP = 200000
 
 # Interval jobs share one 30-minute grid. Each job owns a 6-minute slot
 # (0, 6, 12, 18, 24) so two jobs never start on top of each other and every
@@ -376,17 +377,22 @@ async def release_job_lock(job_id: str, owner: str) -> None:
 
 
 async def load_pipeline_inputs(user_id: str) -> Dict[str, List[Dict[str, Any]]]:
-    history = await db.history.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(10000)
+    # Caps sized well above the real collections. Gilbert's history had grown to
+    # 10,210 rows against a 10,000 cap, so the 210 most recent watch events were
+    # dropped from every run - exactly the rows `recent_interest` is built from -
+    # and 4,000 of his 9,041 requests fell outside the request cap, which let
+    # already-requested titles come back as fresh recommendations.
+    history = await db.history.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(HISTORY_CAP)
     if not history:
-        history = await db.media_history.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(10000)
-    library = await db.media_library.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(20000)
-    recommended = await db.recommendations.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(2000)
+        history = await db.media_history.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(HISTORY_CAP)
+    library = await db.media_library.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(50000)
+    recommended = await db.recommendations.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(20000)
     # A delivery that failed is not a decision, so it must not block the title
     # for ever. Pending, approved and rejected rows all stay excluded.
     requested = await db.requests.find(
         {"user_id": user_id, "status": {"$nin": ["request_failed", "failed"]}},
         {"_id": 0, "user_id": 0},
-    ).to_list(5000)
+    ).to_list(50000)
     blacklist = await db.blacklist.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(500)
     feedback = await db.recommendation_feedback.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(500)
     # Personal ratings live in media_history, raw watch events in history. v1 read
@@ -458,6 +464,9 @@ async def rerank_verified_candidates(
             row.get("media_type") or row.get("type") or "",
             "genres=%s" % ",".join(row.get("genres") or []) if row.get("genres") else "",
         ]
+        themes = [str(name) for name in (row.get("tmdb_keywords") or [])[:5]]
+        if themes:
+            detail.append("themes=%s" % ",".join(themes))
         similar = [item.get("title") for item in (row.get("similar_to") or [])[:2] if item.get("title")]
         if similar:
             detail.append("resembles=%s" % "; ".join(similar))
@@ -746,6 +755,17 @@ async def execute_job(
     try:
         inputs = await load_pipeline_inputs(user_id)
         warnings.extend(await required_history_warnings(user_id, job))
+        # Keywords, cast, creators and language for the titles behind the
+        # profile. Without them the profile is genre names and nothing else, and
+        # every title sharing one label scores identically.
+        from providers.keys import resolve_tmdb_api_key
+        from providers.tmdb_enrich import enrich_rows
+
+        connection = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
+        tmdb_key = resolve_tmdb_api_key(connection)
+        if tmdb_key:
+            await enrich_rows(inputs.get("history") or [], tmdb_key)
+            await enrich_rows(inputs.get("personal_history") or [], tmdb_key)
         # Build the profile before generating candidates: the similarity and
         # discover lanes are seeded from the titles the user actually rated.
         from recommendation.taste_engine import build_taste_snapshot
@@ -762,11 +782,8 @@ async def execute_job(
         required = _required_sources(job)
         tmdb_wanted = sources & {"tmdb_discover", "tmdb_similar", "tmdb_recommendations"}
         if tmdb_wanted:
-            from providers.keys import resolve_tmdb_api_key
             from providers.tmdb import fetch_job_candidates
 
-            conn_for_key = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
-            tmdb_key = resolve_tmdb_api_key(conn_for_key)
             if not tmdb_key:
                 warnings.append({"code": "tmdb_not_configured", "source": "tmdb"})
                 if tmdb_wanted & required:
@@ -775,17 +792,19 @@ async def execute_job(
                 # Walk the discover pages forward every run. Staying on page 1
                 # meant the same titles came back for ever, all of them already
                 # requested, so the job accepted nothing.
-                from providers.tmdb import TMDB_MAX_PAGE, discover_page_span
+                from providers.tmdb import TMDB_CURSOR_PAGES, discover_page_span
 
                 span = discover_page_span(job)
                 start_page = max(1, int(job.get("tmdb_page_cursor") or 1))
+                if start_page > TMDB_CURSOR_PAGES:
+                    start_page = ((start_page - 1) % TMDB_CURSOR_PAGES) + 1
                 try:
                     extra = await fetch_job_candidates(
                         job, inputs["history"], api_key=tmdb_key, start_page=start_page, taste=taste
                     )
                     if trigger != "preview":
                         next_page = start_page + span
-                        if next_page > TMDB_MAX_PAGE:
+                        if next_page > TMDB_CURSOR_PAGES:
                             next_page = 1
                         await db.jobs.update_one(
                             {"user_id": user_id, "id": job["id"]},
@@ -802,6 +821,8 @@ async def execute_job(
             )
             extra.extend(linked)
             warnings.extend(linked_warnings)
+        if tmdb_key and extra:
+            await enrich_rows(extra, tmdb_key)
         result = run_pipeline(job, catalog=catalog or [], extra_candidates=extra, taste=taste, **inputs)
         ranked = result.get("ranked") or result["accepted"]
         provider = "pipeline"

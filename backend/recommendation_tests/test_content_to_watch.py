@@ -104,21 +104,24 @@ def test_job_rerank_honors_selected_model(monkeypatch):
         "taste": {}, "ranked": [candidate], "accepted": [candidate], "rejected": [],
         "candidate_count": 1, "job": job,
     })
-    rerank = AsyncMock(return_value=(["movie:123"], "ollama", "qwen-suggestarr"))
+    rerank = AsyncMock(return_value=(["movie:123"], "ollama", "gemma4:12b"))
     monkeypatch.setattr(jobs_engine, "rerank_verified_candidates", rerank)
     monkeypatch.setattr(jobs_engine, "persist_run_results", AsyncMock(return_value=[]))
     monkeypatch.setattr(jobs_engine, "_advance_schedule", AsyncMock())
     monkeypatch.setattr(jobs_engine, "db", SimpleNamespace(
         job_runs=SimpleNamespace(insert_one=AsyncMock()),
+        # Every run resolves the TMDb key so history and candidates can be
+        # enriched with keywords, cast and language before the profile is built.
+        connections=SimpleNamespace(find_one=AsyncMock(return_value={})),
     ))
 
     result = asyncio.run(jobs_engine.execute_job(
-        "test-user", job, "manual", catalog=[], model_override="qwen-suggestarr",
+        "test-user", job, "manual", catalog=[], model_override="gemma4:12b",
     ))
 
     assert result["status"] == "ok"
-    assert rerank.await_args.kwargs["model_override"] == "qwen-suggestarr"
-    assert result["run"]["model"] == "qwen-suggestarr"
+    assert rerank.await_args.kwargs["model_override"] == "gemma4:12b"
+    assert result["run"]["model"] == "gemma4:12b"
 
 
 def test_recommendations_are_returned_best_first():

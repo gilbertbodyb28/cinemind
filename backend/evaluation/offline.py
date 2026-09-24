@@ -27,6 +27,12 @@ BEHAVIOR_FIELDS = {
 def _kind(row: Dict[str, Any]) -> str:
     kind = str(row.get("media_type") or row.get("type") or "").lower()
     fmt = str(row.get("format") or row.get("media_format") or "").upper()
+    genres = {str(value).casefold() for value in (row.get("genres") or [])}
+    animated_origin = bool(genres & {"anime", "donghua", "aeni"})
+    if animated_origin and kind in {"movie", "film"}:
+        return "anime_movie"
+    if animated_origin and kind in {"show", "series", "tv"}:
+        return "anime"
     if kind in {"anime_movie", "anime-film"} or (kind == "anime" and fmt in {"MOVIE", "FILM"}):
         return "anime_movie"
     if kind in {"show", "series", "tv"}:

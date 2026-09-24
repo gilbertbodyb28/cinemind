@@ -434,6 +434,14 @@ async def _keyword_ids(names: Optional[List[str]], api_key: Optional[str] = None
 
 #: TMDb refuses page numbers above this.
 TMDB_MAX_PAGE = 500
+# How deep the rotating cursor is allowed to go. Walking forward every run keeps
+# a job from returning the same titles for ever, but nothing stopped it: Gilbert's
+# jobs had reached page 191 of a popularity-sorted query - roughly the
+# 3,800th most popular title - and were recommending Nigerian and Tagalog soaps
+# nobody had heard of. Freshness comes from the genre-combination, taste-seeded
+# and provider lanes, not from depth, so the cursor now cycles inside the part of
+# the catalogue where the ranking signals still mean something.
+TMDB_CURSOR_PAGES = 25
 
 # Unscripted TV formats. TMDb tags a late-night or sketch show simply "Comedy",
 # so no ranking signal separates it from scripted comedy - it has to be kept out
@@ -560,7 +568,7 @@ async def tmdb_discover(
         # Learned from the first response. Until then assume TMDb's hard ceiling.
         last_page = TMDB_MAX_PAGE
         for step in range(max_pages):
-            page = ((first_page - 1 + step) % max(1, min(last_page, TMDB_MAX_PAGE))) + 1
+            page = ((first_page - 1 + step) % max(1, min(last_page, TMDB_CURSOR_PAGES))) + 1
             params = {**base, **extra_params, "page": page}
             params = {key: value for key, value in params.items() if value is not None}
             rows, total_pages = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)
@@ -569,7 +577,7 @@ async def tmdb_discover(
             if not rows and step == 0 and total_pages and page > total_pages:
                 # The stored cursor had run past the end of this query. Wrap and retry
                 # once, so a job can never be stranded on a page that does not exist.
-                page = ((first_page - 1) % max(1, min(total_pages, TMDB_MAX_PAGE))) + 1
+                page = ((first_page - 1) % max(1, min(total_pages, TMDB_CURSOR_PAGES))) + 1
                 params = {**base, **extra_params, "page": page}
                 params = {key: value for key, value in params.items() if value is not None}
                 rows, _ = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)

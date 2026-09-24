@@ -32,8 +32,9 @@ SESSION_TTL_DAYS = int(os.environ.get("SESSION_TTL_DAYS", "7"))
 DEMO_MODE = env_flag("DEMO_MODE", "true")
 
 # Server-wide Ollama defaults; per-user overrides live in the `connections` collection.
+# Gemma 4 runs conservatively because providers/ollama.py fixes temperature at 0.
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen-suggestarr")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:12b-it-qat")
 
 TMDB_KEY = os.environ.get("TMDB_API_KEY")
 TVDB_API_KEY = os.environ.get("TVDB_API_KEY")
@@ -88,11 +89,36 @@ CLAUDE_MODEL_KEYS = frozenset({
 # Models that were once the shipped default but are no longer offered in the UI.
 # A connection still pinned to one of these cannot be changed by the user - the
 # picker does not list it - so it silently overrides the configured default for
-# ever. qwen3:14b is here because benchmarking on real history put it last:
-# NDCG@10 0.353 against 0.628 for the current default (evaluation/model_bench.py).
+# ever. The former Qwen defaults are included so a stored connection cannot
+# silently override the new Gemma default.
 LEGACY_OLLAMA_MODELS = frozenset({
-    "llama3.2", "llama3.2:latest", "llama3", "qwen3:14b", "qwen3:14b-latest",
+    "llama3.2", "llama3.2:latest", "llama3",
+    "qwen-suggestarr", "qwen2.5:7b-instruct-q6_k",
+    "qwen3:14b", "qwen3:14b-latest",
 })
+
+
+def ollama_model_key(name: Optional[str]) -> str:
+    """Normalise a model name for comparison.
+
+    `ollama pull qwen-suggestarr` installs a model the API then reports as
+    `qwen-suggestarr:latest`, so an exact-string check against the retired set
+    misses it and the retirement is silently bypassed. Comparing on the bare
+    name catches both spellings.
+    """
+    key = (name or "").strip().lower()
+    return key[: -len(":latest")] if key.endswith(":latest") else key
+
+
+# The retired names as they compare: `llama3.2` and `llama3.2:latest` are one
+# model, and the set is written with both spellings in places.
+_LEGACY_MODEL_KEYS = frozenset(ollama_model_key(name) for name in LEGACY_OLLAMA_MODELS)
+
+
+def is_legacy_ollama_model(name: Optional[str]) -> bool:
+    """True when this name is a retired default, in any tag spelling."""
+    key = ollama_model_key(name)
+    return bool(key) and key in _LEGACY_MODEL_KEYS
 
 
 def is_claude_model(name: Optional[str]) -> bool:
@@ -103,9 +129,9 @@ def is_claude_model(name: Optional[str]) -> bool:
 
 
 def effective_ollama_model(conn: Dict[str, Any], override: Optional[str] = None) -> str:
-    """Pick the Ollama model. Claude keys and the old llama3.2 default become OLLAMA_MODEL."""
+    """Pick the Ollama model. Retired defaults and Claude keys use OLLAMA_MODEL."""
     raw = (override or conn.get("ollama_model") or OLLAMA_MODEL or "").strip()
-    if not raw or is_claude_model(raw) or raw.lower() in LEGACY_OLLAMA_MODELS:
+    if not raw or is_claude_model(raw) or is_legacy_ollama_model(raw):
         return OLLAMA_MODEL
     return raw
 

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 from jobs.engine import empty_result_warnings
-from providers.tmdb import _window_is_upcoming, tmdb_discover
+from providers.tmdb import TMDB_CURSOR_PAGES, _window_is_upcoming, tmdb_discover
 from recommendation.filter_engine import apply_filters
 
 
@@ -66,7 +66,10 @@ def test_a_cursor_past_the_last_page_wraps_instead_of_returning_nothing():
     """The cursor advances every run; a filtered query may only have 2 pages.
 
     Asking TMDb for page 161 of a 2-page query answers with an empty body, so
-    the job used to report zero candidates on every run from then on.
+    the job used to report zero candidates on every run from then on. The stored
+    cursor is also folded into the quality window first - a job left running for
+    days had reached page 191 of a popularity-sorted query and was recommending
+    titles from the far tail of the catalogue.
     """
     asked = []
 
@@ -81,8 +84,24 @@ def test_a_cursor_past_the_last_page_wraps_instead_of_returning_nothing():
         rows = asyncio.run(tmdb_discover(job, "tv", api_key="k", start_page=161))
 
     assert rows, "a cursor past the end must wrap, not strand the job"
-    assert asked[0] == 161, "it still tries the stored cursor first"
+    assert all(page <= TMDB_CURSOR_PAGES for page in asked), asked
     assert all(page <= 2 for page in asked[1:]), asked
+
+
+def test_a_runaway_cursor_never_leaves_the_quality_window():
+    """Walking forward for ever is what put Nigerian soaps at the top of the list."""
+    asked = []
+
+    async def fake_page(path, params, api_key=None):
+        asked.append(params["page"])
+        return [{"id": params["page"], "name": f"Show {params['page']}", "first_air_date": "2023-05-01"}], 500
+
+    job = {"candidate_limit": 40, "final_recommendation_limit": 8, "filters": {"min_year": 2020}}
+    with patch("providers.tmdb._tmdb_page", AsyncMock(side_effect=fake_page)):
+        asyncio.run(tmdb_discover(job, "tv", api_key="k", start_page=191))
+
+    assert asked, "the lane must still ask for something"
+    assert max(asked) <= TMDB_CURSOR_PAGES, asked
 
 
 def test_a_cursor_inside_the_range_is_used_as_is():

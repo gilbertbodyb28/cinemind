@@ -102,9 +102,31 @@ def candidate_queries(item: Dict[str, Any]) -> List[Dict[str, Any]]:
     return queries
 
 
+def identity_scope(item: Dict[str, Any]) -> str:
+    """The namespace a provider's ID actually lives in: series or film.
+
+    "anime" is a classification, not a namespace - TMDb serves the same show
+    under /tv whether or not it is animated. Scoping the keys by it meant Trakt
+    history stored ("tmdb", 82684, "tv") while the TMDb candidate for the very
+    same show produced ("tmdb", 82684, "anime"), so the watched filter did not
+    match and "That Time I Got Reincarnated as a Slime" came back as a fresh
+    recommendation for a viewer who had already finished it.
+    """
+    media_type = normalize_media_type(item.get("media_type") or item.get("type"))
+    if media_type == "anime":
+        # An anime film is still served from /movie, so it must not land in the
+        # series namespace with the rest of the anime.
+        stated = item.get("type") if item.get("media_type") else None
+        fmt = str(item.get("format") or item.get("anime_format") or "").upper()
+        if fmt in {"MOVIE", "FILM"} or (stated and normalize_media_type(stated) == "movie"):
+            return "movie"
+        return "tv"
+    return "movie" if media_type == "movie" else "tv"
+
+
 def identity_link_keys(item: Dict[str, Any]) -> List[tuple]:
     """Stable keys that mean 'this is the same title' across providers."""
-    media_type = normalize_media_type(item.get("media_type") or item.get("type"))
+    media_type = identity_scope(item)
     ids = incoming_ids(item)
     keys: List[tuple] = []
     if "tmdb_id" in ids:

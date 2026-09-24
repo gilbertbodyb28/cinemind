@@ -31,7 +31,7 @@ def _generate(client, body, retries=2):
 
 # ---------- Feature 2: model toggle (per-action override) + Feature 1: TMDB enrichment ----------
 class TestRecsModelOverrideAndTmdb:
-    def test_generate_with_qwen_override(self, auth_client, no_ollama):
+    def test_generate_with_gemma_override(self, auth_client, no_ollama):
         data = _generate(auth_client, {"model": OLLAMA_MODEL})
         assert data["provider"] in ("ollama", "demo", "fallback"), f"expected ollama, got {data}"
         if data["provider"] == "ollama":
@@ -112,7 +112,7 @@ class TestStreamingReason:
 
 # ---------- Feature 2: taste profile model override + default ----------
 class TestTasteModel:
-    def test_taste_with_qwen_override(self, auth_client, no_ollama):
+    def test_taste_with_gemma_override(self, auth_client, no_ollama):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate",
                              json={"model": OLLAMA_MODEL}, timeout=LLM_TIMEOUT)
         assert r.status_code == 200, r.text
@@ -152,7 +152,7 @@ class TestGlobalModelDefault:
         assert r.status_code == 200
         assert auth_client.get(f"{BASE_URL}/api/connections", timeout=60).json()["ollama_model"] == OLLAMA_MODEL
 
-    def test_claude_model_falls_back_to_qwen(self, auth_client):
+    def test_claude_model_falls_back_to_default(self, auth_client):
         r = auth_client.post(f"{BASE_URL}/api/taste-profile/generate",
                              json={"model": "sonnet-5"}, timeout=LLM_TIMEOUT)
         assert r.status_code == 200, r.text

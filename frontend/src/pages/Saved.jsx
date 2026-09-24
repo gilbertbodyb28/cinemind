@@ -4,7 +4,7 @@ import { Bookmark, Search, ArrowUpDown } from "lucide-react";
 import RecModal from "@/components/RecModal";
 import WatchlistButton from "@/components/WatchlistButton";
 import { toast } from "sonner";
-import { MODELS, modelLabel } from "@/lib/models";
+import { modelLabel } from "@/lib/models";
 import { POSTER_GRID, SendToLibraryButton, MatchStat, RatingStat } from "@/components/ApproveRejectOverlay";
 
 const TYPES = [{ key: "all", label: "All" }, { key: "movie", label: "Movies" }, { key: "show", label: "Shows" }];
@@ -49,9 +49,12 @@ export default function Saved() {
     return Object.entries(c).sort((a, b) => b[1].n - a[1].n).map(([key, v]) => ({ key, label: v.label }));
   }, [items]);
 
+  // Derived from the rows themselves: any model the host has can appear here,
+  // so a fixed list would hide picks made with a freshly pulled model.
   const models = useMemo(() => {
-    const present = new Set(items.map(r => r.model || "demo"));
-    return [...MODELS.filter(m => present.has(m.key)).map(m => ({ key: m.key, label: m.label })), ...(present.has("demo") ? [{ key: "demo", label: "Demo picks" }] : [])];
+    const present = [...new Set(items.map(r => r.model || "demo"))];
+    present.sort((a, b) => (a === "demo") - (b === "demo") || a.localeCompare(b));
+    return present.map(key => ({ key, label: modelLabel(key) }));
   }, [items]);
 
   const visible = useMemo(() => {

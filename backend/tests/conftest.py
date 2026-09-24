@@ -20,7 +20,7 @@ BASE_URL = base_url.rstrip("/")
 DB_NAME = os.environ.get("DB_NAME") or backend_env.get("DB_NAME") or "cinemind"
 # Live LLM assertions follow the deployment's configured model rather than a
 # hard-coded name, so pointing .env at a different Ollama model keeps them valid.
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL") or backend_env.get("OLLAMA_MODEL") or "qwen-suggestarr"
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL") or backend_env.get("OLLAMA_MODEL") or "gemma4:12b-it-qat"
 
 SESSION_TOKEN = "test_session_claude_1"
 USER_ID = "test-user-claude-1"

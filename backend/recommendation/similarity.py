@@ -16,15 +16,24 @@ import math
 from .media_identity import coerce_int
 from .taste_engine import genre_pair, media_bucket, overview_tokens
 
-# Compared titles must share more than one broad label before the synopsis and
-# era terms are allowed to carry them.
-GENRE_WEIGHT = 0.42
-PAIR_WEIGHT = 0.18
-TEXT_WEIGHT = 0.16
-LANGUAGE_WEIGHT = 0.09
-BUCKET_WEIGHT = 0.07
-STUDIO_TAG_WEIGHT = 0.05
-ERA_WEIGHT = 0.03
+# Genre labels used to carry 0.42 of the comparison and everything else was
+# structurally dead - measured on real data, two unrelated "Action, Drama"
+# shows came out bit-identical to four decimals. TMDb keywords and people are
+# what actually separate titles inside a genre, so they carry most of it now.
+GENRE_WEIGHT = 0.26
+PAIR_WEIGHT = 0.12
+KEYWORD_WEIGHT = 0.22
+PEOPLE_WEIGHT = 0.14
+TEXT_WEIGHT = 0.09
+LANGUAGE_WEIGHT = 0.06
+COMPANY_WEIGHT = 0.05
+BUCKET_WEIGHT = 0.03
+COLLECTION_WEIGHT = 0.02
+ERA_WEIGHT = 0.01
+# Sharing five specific keywords ("space opera", "chosen one") is as strong a
+# statement as two titles ever make. Jaccard over 24-term lists would price
+# that at 0.1 and let the genre label win again.
+KEYWORD_SATURATION = 5.0
 
 
 def _names(row: Dict[str, Any], field: str = "genres") -> set:
@@ -35,6 +44,12 @@ def _jaccard(left: set, right: set) -> float:
     if not left or not right:
         return 0.0
     return len(left & right) / len(left | right)
+
+
+def _shared(left: set, right: set, saturation: float) -> float:
+    if not left or not right:
+        return 0.0
+    return min(1.0, len(left & right) / saturation)
 
 
 def _pairs(names: Sequence[str]) -> set:
@@ -67,18 +82,28 @@ def pair_similarity(candidate: Dict[str, Any], liked: Dict[str, Any]) -> float:
     candidate_genres, liked_genres = _names(candidate), _names(liked)
     score = GENRE_WEIGHT * _jaccard(candidate_genres, liked_genres)
     score += PAIR_WEIGHT * _jaccard(_pairs(candidate_genres), _pairs(liked_genres))
+    themes = _names(candidate, "tmdb_keywords") | _names(candidate, "tags")
+    liked_themes = _names(liked, "tmdb_keywords") | _names(liked, "tags")
+    score += KEYWORD_WEIGHT * _shared(themes, liked_themes, KEYWORD_SATURATION)
+    creators = _names(candidate, "creators") & _names(liked, "creators")
+    cast = _names(candidate, "cast") & _names(liked, "cast")
+    if creators or cast:
+        score += PEOPLE_WEIGHT * min(1.0, 0.75 * len(creators) + 0.25 * len(cast))
     score += TEXT_WEIGHT * _jaccard(_text(candidate), _text(liked))
     left = str(candidate.get("original_language") or "").casefold()
     right = str(liked.get("original_language") or "").casefold()
     if left and right and left == right:
         score += LANGUAGE_WEIGHT
+    shared_companies = (_names(candidate, "companies") & _names(liked, "companies")) | (
+        _names(candidate, "studios") & _names(liked, "studios")
+    )
+    if shared_companies:
+        score += COMPANY_WEIGHT
     if media_bucket(candidate) == media_bucket(liked):
         score += BUCKET_WEIGHT
-    shared_meta = (_names(candidate, "studios") & _names(liked, "studios")) | (
-        _names(candidate, "tags") & _names(liked, "tags")
-    )
-    if shared_meta:
-        score += STUDIO_TAG_WEIGHT
+    collection = str(candidate.get("collection") or "").casefold()
+    if collection and collection == str(liked.get("collection") or "").casefold():
+        score += COLLECTION_WEIGHT
     score += ERA_WEIGHT * _era_distance(candidate, liked)
     return round(min(1.0, score), 4)
 
@@ -124,18 +149,69 @@ def keyword_affinity(candidate: Dict[str, Any], taste: Dict[str, Any]) -> float:
     because a title with a short or missing synopsis is not a bad match - it is
     an unknown one, and `metadata_confidence` already prices that in.
     """
-    profile = taste.get("keywords") or {}
-    if not profile:
-        return 0.0
-    tokens = _text(candidate)
-    if not tokens:
-        return 0.0
+    themes = _names(candidate, "tmdb_keywords") | _names(candidate, "tags")
+    keyword_profile = taste.get("tmdb_keywords") or {}
     total = 0.0
-    for token in tokens:
-        row = profile.get(token)
+    counted = 0
+    for name in themes:
+        row = keyword_profile.get(name)
         if row:
             total += float(row.get("affinity") or 0.0) * (0.4 + 0.6 * float(row.get("confidence") or 0.0))
-    return round(max(-1.0, min(1.0, total / math.sqrt(max(len(tokens), 1)))), 4)
+        counted += 1
+    profile = taste.get("keywords") or {}
+    if profile:
+        tokens = _text(candidate)
+        for token in tokens:
+            row = profile.get(token)
+            if row:
+                total += 0.5 * float(row.get("affinity") or 0.0) * (0.4 + 0.6 * float(row.get("confidence") or 0.0))
+        counted += len(tokens)
+    if not counted:
+        return 0.0
+    return round(max(-1.0, min(1.0, total / math.sqrt(max(counted, 1)))), 4)
+
+
+def people_affinity(candidate: Dict[str, Any], taste: Dict[str, Any]) -> float:
+    """Directors, creators and recurring cast the user keeps coming back to.
+
+    The strongest single match wins rather than the sum: one favourite director
+    should not need a full cast behind them, and a large ensemble should not
+    out-score them by volume alone.
+    """
+    profile = taste.get("people") or {}
+    if not profile:
+        return 0.0
+    best = 0.0
+    for field, prefix in (("creators", "creator"), ("cast", "cast")):
+        for name in _names(candidate, field):
+            row = profile.get("%s:%s" % (prefix, name))
+            if not row:
+                continue
+            value = float(row.get("affinity") or 0.0) * (0.4 + 0.6 * float(row.get("confidence") or 0.0))
+            best = value if abs(value) > abs(best) else best
+    return round(max(-1.0, min(1.0, best)), 4)
+
+
+def franchise_affinity(candidate: Dict[str, Any], taste: Dict[str, Any]) -> float:
+    """Same collection or same studio as something the user rated highly."""
+    collections = taste.get("collections") or {}
+    collection = str(candidate.get("collection") or "").casefold()
+    if collection and collections.get(collection):
+        row = collections[collection]
+        return round(max(-1.0, min(1.0, float(row.get("affinity") or 0.0))), 4)
+    profile = taste.get("companies") or {}
+    studios = taste.get("studios") or {}
+    best = 0.0
+    for field, store in (("companies", profile), ("studios", studios)):
+        if not store:
+            continue
+        for name in _names(candidate, field):
+            row = store.get(name) or store.get(str(name))
+            if not row:
+                continue
+            value = float(row.get("affinity") or 0.0) * (0.4 + 0.6 * float(row.get("confidence") or 0.0))
+            best = value if abs(value) > abs(best) else best
+    return round(max(-1.0, min(1.0, best)), 4)
 
 
 def media_type_affinity(candidate: Dict[str, Any], taste: Dict[str, Any]) -> float:

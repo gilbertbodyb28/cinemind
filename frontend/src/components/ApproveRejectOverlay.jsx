@@ -282,20 +282,18 @@ export function RecPosterActions({ rec, onApproved, onRejected, testidPrefix }) 
   const [busy, setBusy] = useState(false);
   const done = !!rec.in_library || rec?.status === "approved";
 
-  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const openDialog = (event) => {
+  const approveNow = (event) => {
     event?.stopPropagation();
     event?.preventDefault();
     if (done || busy) return;
-    setDialogOpen(true);
+    push();
   };
 
   const push = async (options) => {
     setBusy(true);
     try {
       const data = await sendToMediaManager(rec, { requestId: rec.request_id, options });
-      setDialogOpen(false);
       onApproved?.(rec.id, data);
     } catch (error) {
       handleApproveError(error, navigate);
@@ -317,13 +315,6 @@ export function RecPosterActions({ rec, onApproved, onRejected, testidPrefix }) 
 
   return (
     <>
-      <AddToLibraryDialog
-        open={dialogOpen}
-        items={[rec]}
-        busy={busy}
-        onCancel={() => setDialogOpen(false)}
-        onConfirm={push}
-      />
       <div className="absolute top-3 right-3 z-30 pointer-events-auto">
         <SendToLibraryButton rec={rec} requestId={rec.request_id} onDone={onApproved} />
       </div>
@@ -334,7 +325,7 @@ export function RecPosterActions({ rec, onApproved, onRejected, testidPrefix }) 
               testid={`approve-button-${id}-poster`}
               label="Approve"
               src={APPROVE_ICON}
-              onClick={openDialog}
+              onClick={approveNow}
               disabled={busy}
             />
             {onRejected ? (

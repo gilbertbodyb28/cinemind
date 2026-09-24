@@ -429,7 +429,7 @@ export default function Jobs() {
             </label>
             <label className="flex items-end gap-3 pb-2">
               <input data-testid="job-ai-enabled-input" type="checkbox" checked={form.ai_enabled} onChange={(e) => set("ai_enabled", e.target.checked)} />
-              <span className="text-sm text-slate-300">Rerank with Ollama qwen-suggestarr</span>
+              <span className="text-sm text-slate-300">Rerank with Ollama Gemma 4 12B · konservativ</span>
             </label>
             <Field label="Candidate limit" value={form.candidate_limit} onChange={(v) => set("candidate_limit", v)} />
             <Field label="Final recommendation limit" value={form.final_recommendation_limit} onChange={(v) => set("final_recommendation_limit", v)} />

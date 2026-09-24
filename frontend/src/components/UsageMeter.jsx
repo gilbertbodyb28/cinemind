@@ -38,7 +38,7 @@ export default function UsageMeter() {
         </div>
       </div>
       {top && <div className="text-[10px] text-slate-500 mt-2 truncate">Mostly {modelLabel(top.model)}</div>}
-      <div className="text-[10px] text-slate-600 mt-2 leading-snug">Ollama usage on your configured server. Jobs and AI Picks use qwen-suggestarr.</div>
+      <div className="text-[10px] text-slate-600 mt-2 leading-snug">Ollama usage on your configured server. Jobs and AI Picks use Gemma 4 12B in conservative mode.</div>
     </div>
   );
 }

@@ -457,9 +457,9 @@ export default function Connections() {
           />
         </Section>
 
-        <Section title="Ollama (Self-hosted LLM)" icon={Cpu} tone="emerald" onTest={()=>test("ollama")} status={tests.ollama} testid="section-ollama" hint="Jobs and AI Picks call your configured Ollama server. Default model is qwen-suggestarr.">
+        <Section title="Ollama (Self-hosted LLM)" icon={Cpu} tone="emerald" onTest={()=>test("ollama")} status={tests.ollama} testid="section-ollama" hint="Jobs and AI Picks call your configured Ollama server. Default model is Gemma 4 12B in conservative mode.">
           <Field label="Ollama URL" testid="ollama-url-input" value={form.ollama_url} onChange={v=>set("ollama_url", v)} placeholder="http://localhost:11434" />
-          <Field label="Model" testid="ollama-model-select" value={form.ollama_model} onChange={v=>set("ollama_model", v)} placeholder="qwen-suggestarr" />
+          <Field label="Model" testid="ollama-model-select" value={form.ollama_model} onChange={v=>set("ollama_model", v)} placeholder="gemma4:12b" />
         </Section>
 
         <div data-testid="section-local-requests" className="glass rounded-2xl p-6 lg:p-8">

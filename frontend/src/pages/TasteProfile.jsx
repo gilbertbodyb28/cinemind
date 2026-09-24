@@ -27,7 +27,7 @@ export default function TasteProfile() {
       setProfile(r.data);
       const provider = r.data.provider;
       const msg = provider === "demo"
-        ? "Demo profile ready — connect Ollama with qwen-suggestarr for a personalized analysis"
+        ? "Demo profile ready — connect Ollama with Gemma 4 12B for a personalized analysis"
         : `Profile generated via ${providerLabel(provider, r.data.model)}`;
       toast.success(msg);
       notifyUsage();
@@ -100,7 +100,7 @@ export default function TasteProfile() {
 
             {profile.used_demo && (
               <div className="glass rounded-2xl p-4 border-amber-500/30">
-                <div className="text-xs text-amber-300">Demo profile · Connect Ollama with qwen-suggestarr for a personalized analysis.</div>
+                <div className="text-xs text-amber-300">Demo profile · Connect Ollama with Gemma 4 12B for a personalized analysis.</div>
               </div>
             )}
             {profile.provider && profile.provider !== "demo" && (

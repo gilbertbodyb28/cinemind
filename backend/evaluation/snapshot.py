@@ -52,6 +52,16 @@ async def export_snapshot(
 
     if with_live_candidates:
         snapshot["candidates"] = await live_candidate_pool(user_id, job_override)
+
+    # The snapshot has to carry the same enrichment the live pipeline applies,
+    # or the offline harness measures a profile the app never actually uses.
+    from providers.keys import resolve_tmdb_api_key
+    from providers.tmdb_enrich import enrich_rows
+
+    tmdb_key = resolve_tmdb_api_key(await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {})
+    if tmdb_key:
+        for name in ("history", "media_history", "candidates"):
+            await enrich_rows(snapshot.get(name) or [], tmdb_key)
     return snapshot
 
 

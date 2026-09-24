@@ -74,6 +74,11 @@ def compact_taste_prompt(taste: Optional[Dict[str, Any]]) -> str:
             _ranked_names(taste.get("genres"), 5, positive=False)
             or (taste.get("disliked_genres") or taste.get("least_preferred_genres") or [])[:5]
         ),
+        "Recurring themes: " + ", ".join(_ranked_names(taste.get("tmdb_keywords"), 12)),
+        "Creators and cast they follow: " + ", ".join(
+            name.split(":", 1)[-1] for name in _ranked_names(taste.get("people"), 8)
+        ),
+        "Studios and networks they watch: " + ", ".join(_ranked_names(taste.get("companies"), 6)),
         "Favourite eras: " + ", ".join((taste.get("favorite_eras") or [])[:4]),
         "Languages: " + ", ".join((taste.get("preferred_languages") or [])[:4]),
     ]

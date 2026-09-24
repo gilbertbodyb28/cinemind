@@ -73,9 +73,18 @@ Labels are personal Trakt/AniList ratings ≥ 8 or explicit likes, never
 
 ## Current configuration
 
-- Ollama model: `qwen-suggestarr` (= `qwen2.5:7b-instruct-q6_K`). Benchmarked
-  best of seven; `qwen3:14b` lost clearly and is retired in
-  `LEGACY_OLLAMA_MODELS`.
+- Ollama model: `gemma4:12b-it-qat`, selected by Gilbert 2026-09-24. Measured
+  against `qwen-suggestarr` on 2026-09-23 with 32 folds × 3 repeats (n=99 per
+  arm) on Gilbert's real snapshot: it beats the deterministic baseline on every
+  metric (nDCG@5 +0.117 ± 0.030, MRR +0.176 ± 0.039) but beats
+  `qwen-suggestarr` only on MRR (+0.087 ± 0.026); nDCG@5 (+0.045 ± 0.025) and
+  nDCG@10 (+0.001) are not significant. It is chosen for top-1 quality — MRR is
+  what decides the hero card — at ~4× the latency (5.0 s vs 1.2 s).
+  The QAT build is the quantisation-aware one and the only 12B Gemma 4 on the
+  box; plain `gemma4:12b` is not installed. Full numbers in `HANDOFF.md`.
+- Gemma 4 re-ranks too aggressively in the tail. Restricting it to its top 5
+  and letting the deterministic order keep positions 6–10 measured
+  +0.022 ± 0.008 nDCG@10 (t=2.64). Not implemented — worth doing.
 - Rerank pool: 12 candidates, short opaque handles (`r01`…), JSON-schema
   constrained. Long slug IDs made the model give up after the first one.
 - Inference: greedy, fixed seed, `num_ctx 8192`. Ranking wants the same answer

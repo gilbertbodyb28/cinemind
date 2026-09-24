@@ -217,11 +217,38 @@ def evidence_score(item: Dict[str, Any], feedback_by_id: Optional[Dict[str, str]
     return round(score, 4)
 
 
+def stated_opinion(item: Dict[str, Any], feedback_by_id: Optional[Dict[str, str]] = None) -> bool:
+    """Did the user actually pass judgement on this title, rather than watch it?
+
+    Watched is not liked. Episode depth is real evidence of engagement, but it
+    is not an opinion, and the precise signals - keywords, people, studios -
+    are only trustworthy when an opinion stands behind them.
+    """
+    if normalized_rating(item) is not None:
+        return True
+    if item.get("favorite"):
+        return True
+    action = (feedback_by_id or {}).get(item.get("canonical_media_id") or "", "")
+    return action in {"like", "dislike", "blacklist"}
+
+
 def is_recent(item: Dict[str, Any], days: int = RECENT_DAYS) -> bool:
     stamp = _parse_dt(item.get("last_watched_at") or item.get("watched_at"))
     if stamp is None:
         return False
     return (datetime.now(timezone.utc) - stamp).days <= days
+
+
+# TMDb tags animation-specific formats explicitly. Trakt and AniList report
+# anime genres as "Action, Adventure, Comedy" with no "Animation" among them, so
+# the genre test alone left 113 of Gilbert's 204 Japanese titles - Boruto, My
+# Hero Academia, Slime - counted as ordinary drama series, and his anime_movie
+# lane completely empty. Only formats that cannot exist in live action are
+# listed, so a live-action manga adaptation is not swept up with them.
+ANIMATED_FORMAT_KEYWORDS = frozenset({
+    "anime", "donghua", "original net animation (ona)",
+    "original video animation (ova)", "aeni",
+})
 
 
 def media_bucket(item: Dict[str, Any]) -> str:
@@ -232,7 +259,18 @@ def media_bucket(item: Dict[str, Any]) -> str:
     language = str(item.get("original_language") or "").casefold()
     if media != "anime" and "animation" in genres and language in {"ja", "zh", "ko"}:
         media = "anime"
-    if media == "anime" and (fmt in {"MOVIE", "FILM"} or normalize_media_type(item.get("type")) == "movie"):
+    if media != "anime" and ANIMATED_FORMAT_KEYWORDS & {
+        str(name).casefold() for name in (item.get("tmdb_keywords") or [])
+    }:
+        media = "anime"
+    # `normalize_media_type` defaults an absent value to "movie", so testing it
+    # against a missing `type` filed every anime row that carried no separate
+    # type - most of AniList's - as an anime film. The format has to be stated.
+    stated_type = item.get("type")
+    if media == "anime" and (
+        fmt in {"MOVIE", "FILM"}
+        or (stated_type and normalize_media_type(stated_type) == "movie")
+    ):
         return "anime_movie"
     return media
 
@@ -247,20 +285,28 @@ def _accumulate(store: Dict[str, Dict[str, float]], name: str, weight: float) ->
         row["negative"] += 1
 
 
-def _finalize(store: Dict[str, Dict[str, float]], floor: float = 1.0) -> Dict[str, Dict[str, float]]:
+def _finalize(store: Dict[str, Dict[str, float]], floor: float = 1.0, per_item: bool = False) -> Dict[str, Dict[str, float]]:
     """Map raw sums onto -1..1 affinity with an evidence-based confidence.
 
     Normalizing here rather than per item is what keeps one large provider from
     dominating without making individual evidence unreachably small.
+
+    `per_item` divides by the number of titles first, for the few dimensions
+    where volume is not preference. There are only a handful of formats, so the
+    format with the most rows would otherwise always come out on top: once anime
+    series were classified correctly they outnumbered everything else and took
+    affinity 1.0 purely on count, which measured worse than not classifying them
+    at all (NDCG@5 0.770 -> 0.573).
     """
     if not store:
         return {}
-    peak = max(abs(row["score"]) for row in store.values()) or 1.0
+    value = (lambda row: row["score"] / max(row["evidence"], 1.0)) if per_item else (lambda row: row["score"])
+    peak = max(abs(value(row)) for row in store.values()) or 1.0
     output: Dict[str, Dict[str, float]] = {}
     for name, row in store.items():
         evidence = row["evidence"]
         output[name] = {
-            "affinity": round(max(-1.0, min(1.0, row["score"] / max(peak, floor))), 4),
+            "affinity": round(max(-1.0, min(1.0, value(row) / max(peak, floor))), 4),
             "evidence": int(evidence),
             # Wilson-ish: 5 observations is where we start trusting a preference.
             "confidence": round(evidence / (evidence + 5.0), 4),
@@ -351,18 +397,25 @@ def build_taste_snapshot(
             _accumulate(studios, str(studio), weight)
         for tag in item.get("tags") or []:
             _accumulate(tags, str(tag), weight)
-        for keyword in item.get("tmdb_keywords") or []:
-            _accumulate(tmdb_keywords, str(keyword).casefold(), weight)
-        # A director carries more signal about taste than a fourth-billed actor,
-        # so they are accumulated separately rather than as one "people" bag.
-        for person in item.get("creators") or []:
-            _accumulate(people, "creator:%s" % str(person).casefold(), weight)
-        for person in item.get("cast") or []:
-            _accumulate(people, "cast:%s" % str(person).casefold(), weight * 0.5)
-        for company in item.get("companies") or []:
-            _accumulate(companies, str(company).casefold(), weight)
-        if item.get("collection"):
-            _accumulate(collections, str(item["collection"]).casefold(), weight)
+        # Keywords, people and studios are precise enough that finishing a show
+        # without ever rating it pollutes them. Episode depth alone can carry an
+        # unrated title past POSITIVE_EVIDENCE, and those titles then matched
+        # their own terms back. These stores therefore take only titles the user
+        # actually judged - a rating, a like, a dislike or a favourite. Genres
+        # still take every row; they need the volume to mean anything.
+        if stated_opinion(item, feedback_by_id):
+            for keyword in item.get("tmdb_keywords") or []:
+                _accumulate(tmdb_keywords, str(keyword).casefold(), weight)
+            # A director says more about taste than a fourth-billed actor, so
+            # they are accumulated separately rather than as one "people" bag.
+            for person in item.get("creators") or []:
+                _accumulate(people, "creator:%s" % str(person).casefold(), weight)
+            for person in item.get("cast") or []:
+                _accumulate(people, "cast:%s" % str(person).casefold(), weight * 0.5)
+            for company in item.get("companies") or []:
+                _accumulate(companies, str(company).casefold(), weight)
+            if item.get("collection"):
+                _accumulate(collections, str(item["collection"]).casefold(), weight)
         _accumulate(buckets, media_bucket(item), weight)
 
         title = item.get("title")
@@ -469,7 +522,7 @@ def build_taste_snapshot(
         "decades": _finalize(decades),
         "studios": _finalize(studios),
         "tags": _finalize(tags),
-        "media_types": _finalize(buckets),
+        "media_types": _finalize(buckets, per_item=True),
         "recent_genres": _finalize(recent_genres),
         "longterm_genres": _finalize(longterm_genres),
         "keywords": _finalize(keywords),

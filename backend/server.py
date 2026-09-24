@@ -19,7 +19,13 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime, timezone, timedelta
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL, effective_ollama_model, resolve_model
+from config import (
+    OLLAMA_BASE_URL,
+    OLLAMA_MODEL,
+    effective_ollama_model,
+    is_legacy_ollama_model,
+    resolve_model,
+)
 from llm import generate_with_llm
 from providers.ollama import stream_ollama
 from mediamanager_client import (
@@ -969,6 +975,45 @@ async def trakt_token(user_id: str, conn: Dict[str, Any]) -> Optional[str]:
         }},
     )
     return t["access_token"]
+
+
+@api.get("/connections/ollama/models")
+async def list_ollama_models(user: User = Depends(get_current_user)):
+    """Every model the user's own Ollama host has pulled, for the picker.
+
+    The picker must show what is actually installed, not a hard-coded list:
+    a name that is not on the host produces a run that fails at generate time.
+    `current` is what this account resolves to today, which is not always the
+    stored value - retired defaults fall back (see `effective_ollama_model`).
+
+    Retired models are left out even when the host still has them pulled:
+    saving one writes the configured default instead, so offering it means a
+    Save that reports success and stores something else.
+    """
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    url, current = resolve_model(conn)
+    try:
+        async with httpx.AsyncClient(timeout=8) as hc:
+            r = await hc.get(f"{url.rstrip('/')}/api/tags")
+    except Exception as e:
+        return {"ok": False, "url": url, "current": current, "models": [],
+                "message": f"Unreachable: {e.__class__.__name__}"}
+    if r.status_code != 200:
+        return {"ok": False, "url": url, "current": current, "models": [],
+                "message": f"Ollama responded {r.status_code}"}
+    models = [
+        {
+            "name": m.get("name"),
+            "size": m.get("size"),
+            "parameter_size": ((m.get("details") or {}).get("parameter_size")),
+            "quantization": ((m.get("details") or {}).get("quantization_level")),
+        }
+        for m in (r.json().get("models") or [])
+        if m.get("name") and not is_legacy_ollama_model(m.get("name"))
+    ]
+    models.sort(key=lambda m: (m["name"] or "").lower())
+    return {"ok": True, "url": url, "current": current, "models": models,
+            "message": f"{len(models)} model(s) available."}
 
 
 @api.post("/connections/test/ollama")
