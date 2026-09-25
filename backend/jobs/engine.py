@@ -420,6 +420,12 @@ RERANK_CANDIDATE_CAP = 12
 # Below this share of the list the answer says more about the model running out
 # of patience than about the ranking, so the deterministic order is kept.
 RERANK_MIN_COVERAGE = 0.5
+# Gemma 4 re-ranks the tail too aggressively. Keeping only its top 5 and letting
+# the deterministic order hold positions 6-10 measured +0.022 +/- 0.008 nDCG@10
+# (t=2.64) on Gilbert's snapshot, 2026-09-23. The model still has to return all
+# RERANK_CANDIDATE_CAP handles for the answer to count; positions 1-5, and so the
+# hero card, stay the model's.
+RERANK_LLM_KEEP = 5
 def rerank_schema(count: int) -> Dict[str, Any]:
     """Constrain decoding to the answer shape, and to a complete answer.
 
@@ -507,7 +513,7 @@ async def rerank_verified_candidates(
             len(ordered), len(lines),
         )
         return None, provider, model
-    return ordered, provider, model
+    return ordered[:RERANK_LLM_KEEP], provider, model
 
 
 async def persist_run_results(

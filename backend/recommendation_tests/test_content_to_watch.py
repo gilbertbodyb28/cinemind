@@ -124,6 +124,48 @@ def test_job_rerank_honors_selected_model(monkeypatch):
     assert result["run"]["model"] == "gemma4:12b"
 
 
+def test_rerank_keeps_the_model_top_five_and_the_deterministic_tail(monkeypatch):
+    """Gemma 4 decides positions 1-5; the deterministic order keeps the rest.
+
+    Letting it order the whole pool measured -0.022 nDCG@10 against this split
+    (HANDOFF.md section 18). It still has to answer with every handle.
+    """
+    pool = [
+        {"title": f"Pick {index}", "candidate_id": f"movie:{index}", "tmdb_id": index}
+        for index in range(1, 13)
+    ]
+    reversed_handles = ["r%02d" % index for index in range(12, 0, -1)]
+    monkeypatch.setattr(jobs_engine, "db", SimpleNamespace(
+        connections=SimpleNamespace(find_one=AsyncMock(return_value={})),
+    ))
+    monkeypatch.setattr(jobs_engine, "generate_with_llm", AsyncMock(
+        return_value=({"ids": reversed_handles}, "ollama", "gemma4:12b-it-qat"),
+    ))
+
+    ordered, provider, _model = asyncio.run(jobs_engine.rerank_verified_candidates("test-user", {}, pool))
+
+    assert provider == "ollama"
+    assert ordered == ["movie:12", "movie:11", "movie:10", "movie:9", "movie:8"]
+    ranked = [row["title"] for row in jobs_engine.apply_rerank(pool, ordered)]
+    assert ranked[:5] == ["Pick 12", "Pick 11", "Pick 10", "Pick 9", "Pick 8"]
+    assert ranked[5:] == [f"Pick {index}" for index in range(1, 8)]
+
+
+def test_rerank_that_drops_most_handles_is_still_discarded(monkeypatch):
+    pool = [{"title": f"Pick {index}", "candidate_id": f"movie:{index}"} for index in range(1, 13)]
+    monkeypatch.setattr(jobs_engine, "db", SimpleNamespace(
+        connections=SimpleNamespace(find_one=AsyncMock(return_value={})),
+    ))
+    # Five handles clear the top-5 cut but not the coverage floor for 12.
+    monkeypatch.setattr(jobs_engine, "generate_with_llm", AsyncMock(
+        return_value=({"ids": ["r01", "r02", "r03", "r04", "r05"]}, "ollama", "gemma4:12b-it-qat"),
+    ))
+
+    ordered, _provider, _model = asyncio.run(jobs_engine.rerank_verified_candidates("test-user", {}, pool))
+
+    assert ordered is None
+
+
 def test_recommendations_are_returned_best_first():
     """Rows are written in rank order; reading them back must not reverse it.
 
