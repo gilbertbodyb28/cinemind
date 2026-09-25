@@ -12,7 +12,7 @@ from database import db
 from llm import generate_with_llm
 from recommendation.llm_context import compact_taste_prompt
 from recommendation.pipeline import default_job, run_pipeline
-from recommendation.ranking_engine import apply_rerank
+from recommendation.ranking_engine import apply_rerank, relevance_cut
 
 HISTORY_PROVIDERS = {"plex", "trakt", "simkl", "anilist"}
 HISTORY_STALE_AFTER = timedelta(hours=24)
@@ -424,7 +424,8 @@ RERANK_MIN_COVERAGE = 0.5
 # the deterministic order hold positions 6-10 measured +0.022 +/- 0.008 nDCG@10
 # (t=2.64) on Gilbert's snapshot, 2026-09-23. The model still has to return all
 # RERANK_CANDIDATE_CAP handles for the answer to count; positions 1-5, and so the
-# hero card, stay the model's.
+# hero card, stay the model's - but only for picks inside the relevance floor
+# (see rerank_verified_candidates).
 RERANK_LLM_KEEP = 5
 def rerank_schema(count: int) -> Dict[str, Any]:
     """Constrain decoding to the answer shape, and to a complete answer.
@@ -499,6 +500,7 @@ async def rerank_verified_candidates(
         return None, provider, model
     raw_ids = parsed.get("ids") or parsed.get("candidate_ids") or parsed.get("ranking") or []
     ordered: List[str] = []
+    scores: Dict[str, float] = {}
     seen_handles = set()
     for item in raw_ids:
         handle = str(item).strip()
@@ -506,14 +508,30 @@ async def rerank_verified_candidates(
         if row is None or handle in seen_handles:
             continue
         seen_handles.add(handle)
-        ordered.append(str(row.get("candidate_id") or row.get("tmdb_id") or row["title"]))
+        key = str(row.get("candidate_id") or row.get("tmdb_id") or row["title"])
+        ordered.append(key)
+        scores[key] = row.get("rank_score") or 0.0
     if len(ordered) < max(1, int(len(lines) * RERANK_MIN_COVERAGE)):
         logging.warning(
             "Ollama rerank returned %s of %s handles; keeping deterministic order",
             len(ordered), len(lines),
         )
         return None, provider, model
-    return ordered[:RERANK_LLM_KEEP], provider, model
+    # The model may reorder the strong pool, never lift a weak taste match over
+    # it: a top-five pick below the relevance floor goes back to the
+    # deterministic order, where the floor keeps it behind every stronger title.
+    # Left in the model's top five it also ended apply_diversity's walk there
+    # and cut the list short.
+    floor = relevance_cut(candidates)
+    kept = [key for key in ordered[:RERANK_LLM_KEEP] if scores[key] >= floor]
+    if len(kept) < min(RERANK_LLM_KEEP, len(ordered)):
+        logging.warning(
+            "Ollama rerank put %s weak match(es) in its top %s; they keep their deterministic place",
+            min(RERANK_LLM_KEEP, len(ordered)) - len(kept), RERANK_LLM_KEEP,
+        )
+    if not kept:
+        return None, provider, model
+    return kept, provider, model
 
 
 async def persist_run_results(

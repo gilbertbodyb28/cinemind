@@ -351,11 +351,20 @@ def _diversity_key(row: Dict[str, Any]) -> str:
     return "%s|%s" % (media_bucket(row), _franchise_key(row))
 
 
+RELEVANCE_FLOOR = 0.75
+
+
+def relevance_cut(candidates: List[Dict[str, Any]], relevance_floor: float = RELEVANCE_FLOOR) -> float:
+    """The score a pick needs to count as strong: within `relevance_floor` of the best."""
+    best = max((row.get("rank_score", 0.0) for row in candidates), default=0.0)
+    return best - abs(best) * (1.0 - relevance_floor)
+
+
 def apply_diversity(
     candidates: List[Dict[str, Any]],
     limit: int,
     per_franchise: int = 2,
-    relevance_floor: float = 0.75,
+    relevance_floor: float = RELEVANCE_FLOOR,
     bucket_share: float = 0.6,
 ) -> List[Dict[str, Any]]:
     """Spread the final slots across franchises and formats, inside the strong pool.
@@ -368,8 +377,7 @@ def apply_diversity(
     """
     if not candidates or limit <= 0:
         return candidates[:limit]
-    best = max(row.get("rank_score", 0.0) for row in candidates)
-    floor = best - abs(best) * (1.0 - relevance_floor)
+    floor = relevance_cut(candidates, relevance_floor)
     per_bucket = max(2, int(math.ceil(limit * bucket_share)))
     chosen: List[Dict[str, Any]] = []
     picked = set()
@@ -415,7 +423,7 @@ def apply_lane_balance(
     lane_share: float = 0.5,
     lane_floor: float = 0.75,
     pool_floor: float = 0.5,
-    relevance_floor: float = 0.75,
+    relevance_floor: float = RELEVANCE_FLOOR,
 ) -> List[Dict[str, Any]]:
     """Give every lane the job's filters let through a share of a job's slots.
 
@@ -443,14 +451,17 @@ def apply_lane_balance(
         lanes.setdefault(selection_lane(row), []).append(row)
     eligible: List[List[Dict[str, Any]]] = []
     for rows in lanes.values():
-        lane_best = rows[0].get("rank_score", 0.0)
+        # The lane's best by score, not its first row: after a re-rank the first
+        # row is the model's pick, and measuring the lane from it let rows below
+        # the lane's real floor through, ahead of stronger rows in other lanes.
+        lane_best = max(row.get("rank_score", 0.0) for row in rows)
         if lane_best < pool_cut:
             continue
         cut = lane_best - abs(lane_best) * (1.0 - lane_floor)
         eligible.append([row for row in rows if row.get("rank_score", 0.0) >= cut])
     if len(eligible) <= 1:
         return apply_diversity(candidates, limit, per_franchise=per_franchise, relevance_floor=relevance_floor)
-    eligible.sort(key=lambda rows: -rows[0].get("rank_score", 0.0))
+    eligible.sort(key=lambda rows: -max(row.get("rank_score", 0.0) for row in rows))
     quota = max(1, int(limit * lane_share) // len(eligible))
     picked: Dict[int, Dict[str, Any]] = {}
     franchises: Dict[str, int] = {}
