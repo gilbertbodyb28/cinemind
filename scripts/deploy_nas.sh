@@ -23,7 +23,7 @@ echo "Bygger frontend ..."
 
 echo "Skickar koden till NAS:en ..."
 COPYFILE_DISABLE=1 tar --no-xattrs -C "$SRC" --exclude '__pycache__' --exclude '.pytest_cache' --exclude '.DS_Store' \
-    --exclude 'backend/.env' --exclude 'backend/tests' -czf - backend frontend/build deploy/nas \
+    --exclude 'backend/.env' --exclude 'backend/.env.bak*' --exclude 'backend/tests' -czf - backend frontend/build deploy/nas \
   | nas "set -e; mkdir -p $NAS_DIR/cinemind.new && tar -xzf - -C $NAS_DIR/cinemind.new \
          && mkdir -p $NAS_DIR/cinemind && cp -p $NAS_DIR/cinemind/cinemind.env $NAS_DIR/cinemind.new/ 2>/dev/null || true; \
          rm -rf $NAS_DIR/cinemind.old; [ -d $NAS_DIR/cinemind ] && mv $NAS_DIR/cinemind $NAS_DIR/cinemind.old; \

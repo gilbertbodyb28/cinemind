@@ -1592,7 +1592,7 @@ The Grim Lover 11-28, Sacred Jewel 12-05. Inget av dem ligger i kön, är sett, 
 - **Rensningsplan (inte tillämpad, Gilberts beslut):** `arch_20260925_152824` — 3 910 att arkivera
   (fails_job_filters 3 742, already_watched 156, duplicate_row 12) → 6 175 väntande kvar;
   Tv 3 374, Upcoming Tv Shows 497, avstängda jobbet 39. `apply --batch arch_20260925_152824`,
-  `revert` återställer. **`arch_20260925_152446` gjordes före rättningen — tillämpa den inte**
+  `revert` återställer. `arch_20260925_152446` gjordes före rättningen och raderades av Gilbert 15:5x UTC
   (den arkiverar 23 rader som nu lämnas: 5 med verifierad kommande premiär, t.ex. Marshals S2 2026-10-04 och Doctor Who 2027-01-14, och 18 donghua som ingen källa svarade för).
 
 ## Vanliga rekommendationer

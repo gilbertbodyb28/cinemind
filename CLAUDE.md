@@ -26,7 +26,7 @@ CineMind runs on the NAS (omgång 7, `scripts/deploy_nas.sh`); everything in the
 workspace is deployed there; Trakt, Simkl and Plex need Gilbert to sign in again
 (the Tv job fails every run until Trakt and Simkl work), and the queue backlog
 is a clean-up decision for Gilbert (`evaluation/queue_cleanup.py`, manifest
-`arch_20260925_152824`; `arch_20260925_152446` predates a fix and must not be applied).
+`arch_20260925_152824`; older manifests predate the upcoming-premiere fix).
 
 ## Do not reintroduce the bugs that were just removed
 
