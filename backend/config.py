@@ -86,11 +86,12 @@ CLAUDE_MODEL_KEYS = frozenset({
     "claude-opus-5",
     "claude-haiku-4-5-20251001",
 })
-# Models that were once the shipped default but are no longer offered in the UI.
-# A connection still pinned to one of these cannot be changed by the user - the
-# picker does not list it - so it silently overrides the configured default for
-# ever. The former Qwen defaults are included so a stored connection cannot
-# silently override the new Gemma default.
+# Models that were once the shipped default. A connection that still carries one
+# only because it was the default back then falls back to the configured default,
+# so an old stored value cannot silently override the new Gemma default.
+# They are still offered in the picker: a user who picks and saves one sets
+# `ollama_model_chosen`, and from then on the choice is honoured (see
+# `effective_ollama_model`). A per-run override is always an explicit choice.
 LEGACY_OLLAMA_MODELS = frozenset({
     "llama3.2", "llama3.2:latest", "llama3",
     "qwen-suggestarr", "qwen2.5:7b-instruct-q6_k",
@@ -129,9 +130,16 @@ def is_claude_model(name: Optional[str]) -> bool:
 
 
 def effective_ollama_model(conn: Dict[str, Any], override: Optional[str] = None) -> str:
-    """Pick the Ollama model. Retired defaults and Claude keys use OLLAMA_MODEL."""
+    """Pick the Ollama model. Claude keys use OLLAMA_MODEL.
+
+    A retired default also uses OLLAMA_MODEL, unless the user picked it: a
+    per-run override, or a stored value saved with `ollama_model_chosen`.
+    """
     raw = (override or conn.get("ollama_model") or OLLAMA_MODEL or "").strip()
-    if not raw or is_claude_model(raw) or is_legacy_ollama_model(raw):
+    if not raw or is_claude_model(raw):
+        return OLLAMA_MODEL
+    chosen = bool((override or "").strip()) or bool(conn.get("ollama_model_chosen"))
+    if is_legacy_ollama_model(raw) and not chosen:
         return OLLAMA_MODEL
     return raw
 

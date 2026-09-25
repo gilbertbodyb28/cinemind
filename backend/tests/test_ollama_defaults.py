@@ -77,3 +77,24 @@ def test_legacy_check_is_tag_insensitive_both_ways():
     assert not is_legacy_ollama_model("qwen3.5:9b")
     assert not is_legacy_ollama_model("")
     assert not is_legacy_ollama_model(None)
+
+
+def test_retired_model_saved_from_the_picker_is_honoured():
+    """The picker lists every pulled model, retired defaults included.
+
+    Saving one marks it as chosen; without the mark an old stored value still
+    falls back, so a connection left over from the Qwen default runs Gemma.
+    """
+    for name in ("qwen-suggestarr:latest", "qwen2.5:7b-instruct-q6_K"):
+        assert effective_ollama_model({"ollama_model": name, "ollama_model_chosen": True}) == name
+        assert effective_ollama_model({"ollama_model": name}) == OLLAMA_MODEL
+
+
+def test_retired_model_as_per_run_override_is_honoured():
+    assert effective_ollama_model({}, "qwen-suggestarr:latest") == "qwen-suggestarr:latest"
+    assert effective_ollama_model({"ollama_model": "gemma4:12b-it-qat"}, "qwen2.5:7b-instruct-q6_K") == "qwen2.5:7b-instruct-q6_K"
+
+
+def test_chosen_mark_never_lets_a_claude_key_through():
+    assert effective_ollama_model({"ollama_model": "sonnet-5", "ollama_model_chosen": True}) == OLLAMA_MODEL
+    assert effective_ollama_model({}, "claude-opus-5") == OLLAMA_MODEL

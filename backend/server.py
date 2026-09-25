@@ -24,7 +24,6 @@ from config import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     effective_ollama_model,
-    is_legacy_ollama_model,
     resolve_model,
 )
 from llm import generate_with_llm
@@ -613,7 +612,10 @@ async def update_connections(payload: Connections, user: User = Depends(get_curr
     if data.get("mediamanager_url"):
         data["mediamanager_url"] = normalize_mediamanager_url(data["mediamanager_url"])
     if "ollama_model" in data:
-        data["ollama_model"] = effective_ollama_model({"ollama_model": data.get("ollama_model")})
+        # Saved from the picker, so the name is the user's choice - a retired
+        # default included - and is honoured from now on.
+        data["ollama_model"] = effective_ollama_model({"ollama_model": data.get("ollama_model"), "ollama_model_chosen": True})
+        data["ollama_model_chosen"] = True
     if "ollama_url" in data and not str(data.get("ollama_url") or "").strip():
         data["ollama_url"] = OLLAMA_BASE_URL
     if "ui_theme" in data:
@@ -1215,9 +1217,8 @@ async def list_ollama_models(user: User = Depends(get_current_user)):
     `current` is what this account resolves to today, which is not always the
     stored value - retired defaults fall back (see `effective_ollama_model`).
 
-    Retired models are left out even when the host still has them pulled:
-    saving one writes the configured default instead, so offering it means a
-    Save that reports success and stores something else.
+    Retired defaults are listed too: saving one from the picker marks it as
+    chosen (`ollama_model_chosen`), so the account really runs it.
     """
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
     url, current = resolve_model(conn)
@@ -1238,7 +1239,7 @@ async def list_ollama_models(user: User = Depends(get_current_user)):
             "quantization": ((m.get("details") or {}).get("quantization_level")),
         }
         for m in (r.json().get("models") or [])
-        if m.get("name") and not is_legacy_ollama_model(m.get("name"))
+        if m.get("name")
     ]
     models.sort(key=lambda m: (m["name"] or "").lower())
     return {"ok": True, "url": url, "current": current, "models": models,

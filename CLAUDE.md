@@ -241,6 +241,11 @@ Labels are personal Trakt/AniList ratings ≥ 8 or explicit likes, never
   what decides the hero card — at ~4× the latency (5.0 s vs 1.2 s).
   The QAT build is the quantisation-aware one and the only 12B Gemma 4 on the
   box; plain `gemma4:12b` is not installed. Full numbers in `HANDOFF.md`.
+- 2026-09-25: Gilbert's account (`user_c30bd548254a`) runs
+  `qwen-suggestarr:latest` by his choice; the default stays Gemma. Retired
+  defaults (`config.LEGACY_OLLAMA_MODELS`) are listed in the picker again and
+  honoured once saved (`ollama_model_chosen`) or passed per run; an old stored
+  value without the mark still falls back to the default.
 - Gemma 4 re-ranks too aggressively in the tail. Restricting it to its top 5
   and letting the deterministic order keep positions 6–10 measured
   +0.022 ± 0.008 nDCG@10 (t=2.64). Implemented 2026-09-25 as
