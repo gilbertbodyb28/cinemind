@@ -906,8 +906,8 @@ eget arbete och gäller inte.
 ### 19.3 Klart i molnet
 
 Gren `origin/claude/great-davinci-zlc97t`, bas `5c53e42` (= `phase-0-local-runtime`
-på GitHub). Sex kodcommits, i ordning, och sist en sjunde som bara lägger till
-denna överlämning i `HANDOFF.md` och `CLAUDE.md`:
+på GitHub). Sex kodcommits, i ordning, följda av commits som bara rör denna
+överlämning i `HANDOFF.md` och `CLAUDE.md`:
 
 | commit | filer | beroenden och troliga krockar |
 |---|---|---|
@@ -959,9 +959,9 @@ git status --short; git stash list; git branch --show-current; git log --oneline
 
 ```bash
 git fetch origin claude/great-davinci-zlc97t
-git log --oneline 5c53e42..origin/claude/great-davinci-zlc97t    # sju commits
+git log --oneline 5c53e42..origin/claude/great-davinci-zlc97t    # sex kodcommits + överlämningen
 git merge-base --is-ancestor 5c53e42 HEAD && echo "basen finns lokalt"
-git cherry-pick 5c53e42..origin/claude/great-davinci-zlc97t     # alla sju, i ordning
+git cherry-pick 5c53e42..origin/claude/great-davinci-zlc97t     # alla, i ordning
 ```
 
 Vid konflikt: behåll båda sidornas avsikt och ta aldrig bort lokal kod för att
