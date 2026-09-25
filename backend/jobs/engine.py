@@ -607,8 +607,24 @@ async def apply_job_action_mode(
     local = LocalRequestProvider()
     warnings: List[Dict[str, Any]] = []
     tmdb_key = resolve_tmdb_api_key(conn)
+    # The user's rejections stand. A title the exclusions miss (a changed media
+    # type or identity) must still not be queued again or sent to MediaManager;
+    # this is the same title + year lookup submit() uses.
+    rejected = {
+        (doc.get("title"), doc.get("year"))
+        for doc in await db.requests.find(
+            {"user_id": user_id, "status": "rejected"}, {"_id": 0, "title": 1, "year": 1},
+        ).to_list(None)
+    }
 
     for row in rows:
+        if (row.get("title"), row.get("year")) in rejected:
+            # Hidden the way POST /requests/{id}/reject hides it.
+            await db.recommendations.update_one(
+                {"user_id": user_id, "id": row["id"]},
+                {"$set": {"dismissed": True, "needs_approval": False}},
+            )
+            continue
         payload = {
             "title": row.get("title"),
             "year": row.get("year"),

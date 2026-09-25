@@ -15,6 +15,11 @@ from database import db
 # same title again must not push it back into the Requests queue.
 DECIDED_STATUSES = {"approved", "available", "completed"}
 QUEUE_STATUSES = {"pending_approval", "pending", "requested", "request_failed"}
+# A rejection is the user's decision as well. submit() is the automated path
+# (jobs, the Seer fallback); a job that met the title again used to flip the
+# rejected row back to pending_approval. The manual POST /requests inserts on
+# its own, so this never stops the user asking for a title again.
+KEPT_STATUSES = DECIDED_STATUSES | {"rejected"}
 
 
 class LocalRequestProvider:
@@ -29,7 +34,7 @@ class LocalRequestProvider:
         }
         existing = await db.requests.find_one(query, {"id": 1, "status": 1}) or {}
         request_id = request_id or existing.get("id") or f"req_{uuid.uuid4().hex[:12]}"
-        if existing.get("status") in DECIDED_STATUSES and status in QUEUE_STATUSES:
+        if existing.get("status") in KEPT_STATUSES and status in QUEUE_STATUSES:
             return {"ok": True, "status": existing["status"], "provider": self.name, "id": request_id}
         now = datetime.now(timezone.utc).isoformat()
         doc = {
