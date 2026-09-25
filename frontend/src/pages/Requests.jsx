@@ -162,9 +162,13 @@ export default function Requests() {
     if (pagingRef.current) return;
     pagingRef.current = true;
     const seq = requestSeq.current;
+    // Approved rows stay in items until the next refresh, but the server's queue
+    // already dropped them. Counting them in the offset skipped as many queued
+    // titles as had just been approved.
+    const offset = itemsRef.current.filter((row) => !DONE.has(row.status)).length;
     try {
       const r = await api.get("/requests/page", {
-        params: { ...paramsRef.current, offset: itemsRef.current.length, limit: PAGE },
+        params: { ...paramsRef.current, offset, limit: PAGE },
       });
       if (seq === requestSeq.current) applyPage(r.data, false);
     } catch (error) {
@@ -433,7 +437,7 @@ export default function Requests() {
     io.observe(node);
     return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length, total]);
+  }, [queued.length, total]);
 
 
   return (
@@ -652,7 +656,8 @@ export default function Requests() {
         ))}
       </div>
 
-      {items.length < total && (
+      {/* Queued rows, not items: approved ones wait in items for the next refresh. */}
+      {queued.length < total && (
         <div ref={sentinel} data-testid="requests-sentinel" className="py-8 text-center text-xs text-[#8C7F6D]">
           Showing {queued.length} of {total} — keep scrolling
         </div>
