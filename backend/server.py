@@ -2770,7 +2770,7 @@ async def start_job_scheduler():
     try:
         await migrate_jobs_to_interval()
     except Exception:
-        logging.exception("Could not migrate jobs to 30-minute schedule")
+        logging.exception("Could not migrate jobs to 15-minute schedule")
     _scheduler_task = start_scheduler()
 
 

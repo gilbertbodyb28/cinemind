@@ -62,7 +62,7 @@ const empty = () => ({
   candidate_limit: 40,
   final_recommendation_limit: 8,
   action_mode: "require_approval",
-  schedule: "every_30m",
+  schedule: "every_15m",
 });
 
 function fromJob(job) {
@@ -343,7 +343,7 @@ export default function Jobs() {
             <label className="block">
               <div className="text-xs font-mono uppercase tracking-widest text-slate-500 mb-1.5">Schedule</div>
               <select data-testid="job-schedule-select" value={form.schedule} onChange={(e) => set("schedule", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-rose-500/50">
-                <option value="every_30m">Every 30 minutes</option>
+                <option value="every_15m">Every 15 minutes</option>
                 <option value="manual">Manual</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>

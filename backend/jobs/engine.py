@@ -18,11 +18,16 @@ HISTORY_PROVIDERS = {"plex", "trakt", "simkl", "anilist"}
 HISTORY_STALE_AFTER = timedelta(hours=24)
 HISTORY_CAP = 200000
 
-# Interval jobs share one 30-minute grid. Each job owns a 6-minute slot
-# (0, 6, 12, 18, 24) so two jobs never start on top of each other and every
-# job still runs twice an hour.
-JOB_INTERVAL_MINUTES = 30
-JOB_STAGGER_MINUTES = 6
+# Interval jobs share one 15-minute grid. Each job owns a 2-minute slot
+# (0, 2, 4, ... 12) so two jobs never start on top of each other and every
+# job still runs four times an hour. Gilbert asked for this on 2026-09-25;
+# it was a 30-minute grid with 6-minute slots before.
+INTERVAL_SCHEDULE = "every_15m"
+# The earlier interval key. Stored jobs are moved off it at startup
+# (`migrate_jobs_to_interval`); a client that still sends it gets the new one.
+LEGACY_INTERVAL_SCHEDULES = frozenset({"every_30m"})
+JOB_INTERVAL_MINUTES = 15
+JOB_STAGGER_MINUTES = 2
 JOB_STAGGER_SLOTS = JOB_INTERVAL_MINUTES // JOB_STAGGER_MINUTES
 
 JOB_TYPES = {
@@ -174,7 +179,7 @@ def next_run_at(
 ) -> Optional[str]:
     """Return next run instant in UTC ISO form.
 
-    every_30m lands on a fixed :00/:30 grid shifted by the job's
+    every_15m lands on a fixed :00/:15/:30/:45 grid shifted by the job's
     schedule_offset_minutes, so several jobs stay staggered instead of all
     firing together and drifting. Daily/weekly fire at 06:00 in the job's
     IANA timezone so the stored `timezone` field actually changes when the job runs.
@@ -186,11 +191,12 @@ def next_run_at(
         stamp = stamp.replace(tzinfo=timezone.utc)
     if not schedule or schedule == "manual":
         return None
-    if schedule == "every_30m":
-        offset = int(offset_minutes or 0) % 30
+    schedule = normalize_schedule(schedule)
+    if schedule == INTERVAL_SCHEDULE:
+        offset = int(offset_minutes or 0) % JOB_INTERVAL_MINUTES
         grid = stamp.replace(minute=0, second=0, microsecond=0) + timedelta(minutes=offset)
         while grid <= stamp:
-            grid = grid + timedelta(minutes=30)
+            grid = grid + timedelta(minutes=JOB_INTERVAL_MINUTES)
         return grid.isoformat()
     try:
         zone = ZoneInfo(timezone_name or "UTC")
@@ -213,19 +219,25 @@ def next_run_at(
     return target.astimezone(timezone.utc).isoformat()
 
 
+def normalize_schedule(schedule: Optional[str]) -> str:
+    """The stored schedule key; the old interval key means the current interval."""
+    schedule = schedule or INTERVAL_SCHEDULE
+    return INTERVAL_SCHEDULE if schedule in LEGACY_INTERVAL_SCHEDULES else schedule
+
+
 def stagger_offset(index: int) -> int:
-    """Slot `index` of the 30-minute window, 6 minutes apart: 0, 6, 12, 18, 24."""
+    """Slot `index` of the 15-minute window, 2 minutes apart: 0, 2, 4, ... 12."""
     return (index % JOB_STAGGER_SLOTS) * JOB_STAGGER_MINUTES
 
 
 async def next_stagger_offset(user_id: str) -> int:
-    """Lowest free 6-minute slot for this user, so a new job never collides.
+    """Lowest free 2-minute slot for this user, so a new job never collides.
 
-    All five slots taken means the least crowded one is reused; six or more
-    interval jobs cannot all be 6 minutes apart inside half an hour.
+    All seven slots taken means the least crowded one is reused; eight or more
+    interval jobs cannot all be 2 minutes apart inside a quarter of an hour.
     """
     docs = await db.jobs.find(
-        {"user_id": user_id, "schedule": "every_30m"},
+        {"user_id": user_id, "schedule": INTERVAL_SCHEDULE},
         {"_id": 0, "schedule_offset_minutes": 1},
     ).to_list(500)
     taken: Dict[int, int] = {}
@@ -260,13 +272,13 @@ def validate_job(spec: Dict[str, Any]) -> None:
     final_limit = int(spec.get("final_recommendation_limit") or 0)
     if candidate_limit < final_limit:
         raise ValueError("candidate_limit must be >= final_recommendation_limit")
-    schedule = spec.get("schedule") or "every_30m"
-    if schedule not in {"manual", "daily", "weekly", "every_30m"}:
+    schedule = normalize_schedule(spec.get("schedule"))
+    if schedule not in {"manual", "daily", "weekly", INTERVAL_SCHEDULE}:
         raise ValueError("Invalid schedule")
     offset = spec.get("schedule_offset_minutes")
     if offset not in (None, ""):
-        if int(offset) < 0 or int(offset) > 29:
-            raise ValueError("schedule_offset_minutes must be between 0 and 29")
+        if int(offset) < 0 or int(offset) > JOB_INTERVAL_MINUTES - 1:
+            raise ValueError(f"schedule_offset_minutes must be between 0 and {JOB_INTERVAL_MINUTES - 1}")
     if spec.get("action_mode") not in {None, "recommendations_only", "require_approval", "auto_request"}:
         raise ValueError("Invalid action mode")
     unknown_required = _required_sources(spec) - set(spec.get("candidate_sources") or [])
@@ -277,9 +289,9 @@ def validate_job(spec: Dict[str, Any]) -> None:
 async def create_job(user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     spec = apply_job_type_defaults({**default_job(), **payload})
     validate_job(spec)
-    schedule = spec.get("schedule") or "every_30m"
+    schedule = normalize_schedule(spec.get("schedule"))
     offset = spec.get("schedule_offset_minutes")
-    if offset in (None, "") and schedule == "every_30m":
+    if offset in (None, "") and schedule == INTERVAL_SCHEDULE:
         offset = await next_stagger_offset(user_id)
     offset = int(offset or 0)
     now = _now().isoformat()
@@ -290,7 +302,7 @@ async def create_job(user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         "name": (spec.get("name") or "Untitled job").strip(),
         "description": spec.get("description") or "",
         "enabled": bool(spec.get("enabled", True)),
-        "schedule": spec.get("schedule") or "every_30m",
+        "schedule": schedule,
         "timezone": spec.get("timezone") or "UTC",
         "created_at": now,
         "updated_at": now,
@@ -320,6 +332,8 @@ async def update_job(user_id: str, job_id: str, payload: Dict[str, Any]) -> Opti
     if not current:
         return None
     data = {key: value for key, value in payload.items() if key not in {"id", "user_id", "created_at"}}
+    if "schedule" in data:
+        data["schedule"] = normalize_schedule(data.get("schedule"))
     merged = apply_job_type_defaults({**current, **data})
     validate_job(merged)
     if "job_type" in data:
@@ -841,7 +855,7 @@ async def _advance_schedule(user_id: str, job: Dict[str, Any], finished: datetim
     """Move the job to its next slot. Runs after success AND after failure.
 
     Skipping this on failure left next_run_at in the past, so the 60-second
-    scheduler tick picked the job up again every minute instead of every 30.
+    scheduler tick picked the job up again every minute instead of every 15.
     """
     await db.jobs.update_one(
         {"user_id": user_id, "id": job["id"]},
@@ -1367,40 +1381,43 @@ async def fetch_linked_provider_candidates(
 
 
 async def restagger_jobs() -> None:
-    """Give every user's interval jobs their own 6-minute slot.
+    """Give every user's interval jobs their own 2-minute slot.
 
     Jobs created before auto-staggering existed all sat on offset 0 and fired
-    in one burst. Anything off the 6-minute grid is reassigned here, oldest job
+    in one burst. Anything off the 2-minute grid is reassigned here, oldest job
     first, so the order is stable across restarts and already-correct jobs keep
-    their next_run_at untouched.
+    their next_run_at untouched - unless it lies further out than one interval,
+    which is a slot left over from the old 30-minute grid.
     """
     now = _now()
-    user_ids = await db.jobs.distinct("user_id", {"schedule": "every_30m"})
+    horizon = (now + timedelta(minutes=JOB_INTERVAL_MINUTES)).isoformat()
+    user_ids = await db.jobs.distinct("user_id", {"schedule": INTERVAL_SCHEDULE})
     for user_id in user_ids:
         jobs = await db.jobs.find(
-            {"user_id": user_id, "schedule": "every_30m"},
+            {"user_id": user_id, "schedule": INTERVAL_SCHEDULE},
             {"_id": 0, "id": 1, "created_at": 1, "schedule_offset_minutes": 1, "next_run_at": 1},
         ).to_list(500)
         jobs.sort(key=lambda job: (job.get("created_at") or "", job.get("id") or ""))
         for index, job in enumerate(jobs):
             offset = stagger_offset(index)
-            if int(job.get("schedule_offset_minutes") or 0) == offset and job.get("next_run_at"):
+            planned = job.get("next_run_at")
+            if int(job.get("schedule_offset_minutes") or 0) == offset and planned and str(planned) <= horizon:
                 continue
             await db.jobs.update_one(
                 {"user_id": user_id, "id": job["id"]},
                 {"$set": {
                     "schedule_offset_minutes": offset,
-                    "next_run_at": next_run_at("every_30m", now=now, offset_minutes=offset),
+                    "next_run_at": next_run_at(INTERVAL_SCHEDULE, now=now, offset_minutes=offset),
                     "updated_at": now.isoformat(),
                 }},
             )
 
 
 async def migrate_jobs_to_interval() -> None:
-    """Existing jobs keep running, but on a 30-minute clock, 6 minutes apart."""
+    """Existing jobs keep running, but on a 15-minute clock, 2 minutes apart."""
     await db.jobs.update_many(
-        {"schedule": {"$nin": ["every_30m"]}},
-        {"$set": {"schedule": "every_30m", "enabled": True}},
+        {"schedule": {"$nin": [INTERVAL_SCHEDULE]}},
+        {"$set": {"schedule": INTERVAL_SCHEDULE, "enabled": True}},
     )
     await restagger_jobs()
 

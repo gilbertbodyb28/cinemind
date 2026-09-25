@@ -80,6 +80,11 @@ is a clean-up decision for Gilbert (`evaluation/queue_cleanup.py`, manifest
   lane (before/after filtering, scoring, LLM) without writing anything.
   `--spec '<job json>'` traces an unsaved job; every stage is also counted as
   English live action / other languages / anime / donghua / animation / kids.
+- **Interval jobs run every 15 minutes, 2 minutes apart** (Gilbert, 2026-09-25;
+  it was 30 / 6). `jobs.engine.INTERVAL_SCHEDULE = "every_15m"`, 7 slots
+  (0, 2 … 12); the old `every_30m` key is normalised and migrated at startup.
+  The scheduler runs due jobs one after another, so a job that takes longer
+  than 2 minutes pushes the next one back rather than overlapping it.
 - **A failed `GET /jobs` is not an empty list.** Jobs.jsx retries and says so;
   it used to show "no jobs" whenever the backend was restarting.
 

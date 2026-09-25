@@ -151,13 +151,13 @@ def test_recommendations_only_does_not_queue():
     fake_db.recommendations.update_one.assert_not_called()
 
 
-def test_every_30m_schedule_is_half_hour_from_now():
+def test_every_15m_schedule_is_a_quarter_hour_from_now():
     from datetime import datetime, timedelta, timezone
 
     from jobs.engine import next_run_at, validate_job
 
     stamp = datetime(2026, 9, 9, 12, 0, tzinfo=timezone.utc)
-    assert next_run_at("every_30m", now=stamp) == (stamp + timedelta(minutes=30)).isoformat()
+    assert next_run_at("every_15m", now=stamp) == (stamp + timedelta(minutes=15)).isoformat()
     assert next_run_at("manual", now=stamp) is None
     validate_job({
         "job_type": "personalized",
@@ -165,7 +165,7 @@ def test_every_30m_schedule_is_half_hour_from_now():
         "candidate_sources": ["seed_expand"],
         "candidate_limit": 40,
         "final_recommendation_limit": 8,
-        "schedule": "every_30m",
+        "schedule": "every_15m",
     })
 
 

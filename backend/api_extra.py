@@ -59,7 +59,7 @@ class JobBody(BaseModel):
     candidate_limit: Optional[int] = 40
     final_recommendation_limit: Optional[int] = 8
     action_mode: Optional[str] = "require_approval"
-    schedule: Optional[str] = "every_30m"
+    schedule: Optional[str] = "every_15m"
     schedule_offset_minutes: Optional[int] = None
     timezone: Optional[str] = "UTC"
 
