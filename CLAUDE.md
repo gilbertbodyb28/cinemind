@@ -61,6 +61,16 @@ anything below.
   lane (before/after filtering, scoring, LLM) without writing anything.
 - **A failed `GET /jobs` is not an empty list.** Jobs.jsx retries and says so;
   it used to show "no jobs" whenever the backend was restarting.
+- **One page of a provider is not its history.** `/history/sync` reads Trakt,
+  Simkl and Plex one page deep (`SYNC_PAGE`); an answer that hit the cap never
+  replaces a larger stored history. One press of Sync used to cut 10,210 Trakt
+  rows to 50. `recommendation_tests/test_history_sync_guard.py` covers it.
+- **Page the Requests queue by queued rows.** Approved rows stay in `items`
+  until the next refresh, so `loadMore`'s offset and the sentinel count only
+  queued ones; counting all of them skipped as many titles as were approved.
+- **Verify on the Mac, not by assumption:** `python3 -m evaluation.verify_live
+  --user <id>` runs the source connection tests, stored sync counts, upcoming
+  jobs, the Content to Watch ranking and the queue paging in one read-only pass.
 
 ## Changing weights, prompts or the model
 
@@ -95,10 +105,13 @@ Labels are personal Trakt/AniList ratings ≥ 8 or explicit likes, never
   nDCG@10 (+0.001) are not significant. It is chosen for top-1 quality — MRR is
   what decides the hero card — at ~4× the latency (5.0 s vs 1.2 s).
   The QAT build is the quantisation-aware one and the only 12B Gemma 4 on the
-  box; plain `gemma4:12b` is not installed. Full numbers in `HANDOFF.md`.
+  box; plain `gemma4:12b` is not installed. The recorded deltas are in
+  `HANDOFF.md` §18; the per-arm absolute values were never committed.
 - Gemma 4 re-ranks too aggressively in the tail. Restricting it to its top 5
   and letting the deterministic order keep positions 6–10 measured
-  +0.022 ± 0.008 nDCG@10 (t=2.64). Not implemented — worth doing.
+  +0.022 ± 0.008 nDCG@10 (t=2.64). Implemented 2026-09-25 as
+  `RERANK_LLM_KEEP = 5` in `jobs/engine.py`; measured once, not yet confirmed
+  with a second fold count.
 - Rerank pool: 12 candidates, short opaque handles (`r01`…), JSON-schema
   constrained. Long slug IDs made the model give up after the first one.
 - Inference: greedy, fixed seed, `num_ctx 8192`. Ranking wants the same answer
