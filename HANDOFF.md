@@ -1636,3 +1636,28 @@ Mac-backenden mot Mac-databasen vid nästa inloggning. Verifierat: `/`, `/api/`,
 AniList-callbacken svarar 200 via localhost, samma sida som NAS:en (md5 lika), processen startar
 om av sig själv efter kill, sidan laddar i webbläsaren. `--remove` backar (och tillåter
 `com.cinemind.local` igen). Inloggningen på localhost är en egen cookie: logga in en gång där.
+
+## Simkl-inloggningen kastades (2026-09-25 15:53 UTC) — rättat och driftsatt 15:57
+
+Gilbert tryckte Connect with Simkl: device-koden kom från serverns app (det döda manuella id:t
+401, sedan 54101790… 200) och Simkl utfärdade token 15:53:18 — men bekräftelsen
+`POST /users/settings` svarade **403**, och `simkl_pin_poll` behandlar 403 som "vägrad", så inget
+sparades. Orsak: Simkl AUTH V2 räknar POST som en skrivning, och en inloggning utan `scope` får
+bara `media:read` (api.simkl.org/api-reference/oauth2-scopes: 403 `insufficient_scope`). Både
+bekräftelsen (`server.simkl_pin_poll`) och Sources-kontrollen (`auth_state.check_simkl`) gör nu
+`GET /users/settings`. CineMind skriver aldrig till Simkl, så läsbehörighet räcker. Testfakes
+svarar nu 403 på POST precis som Simkl (`test_a_read_only_simkl_sign_in_is_confirmed_with_a_read`).
+Plex-koden 15:53 hämtades en gång; sedan laddades Sources om och väntan på koden avbröts — ingen
+kodändring, men sidan måste stå kvar tills "Connected" visas.
+
+## Inloggningarna gjorda och verifierade (2026-09-25 15:58–16:13 UTC)
+
+Gilbert anslöt Trakt, Plex och Simkl i Sources. Verifierat med riktiga anrop mot källorna (före och
+efter `docker compose restart cinemind` 16:00): Trakt `/users/settings` 200 gibbe21, Simkl
+`GET /users/settings` 200 "Gilbert Grigorian" (serverns app, `simkl_token_client_id` sparad), Plex
+`/library/sections` 200 på 192.168.50.223:32400 (gibbe211), AniList 200 gibbe21 (orörd); inga
+`*_auth_error` kvar, `connections_public` visar alla fyra anslutna. **Tv-jobbet 16:12 gick igenom
+för första gången sedan 10:12** (1 041 kandidater, 2 val, `queue_full` 5 530/250 — inget köat).
+Upcoming 16:00: samma 9 verifierade premiärer. Kön: 10 532 rader, 10 085 väntande, 0 nya sedan
+09:43 UTC; inget aktuellt val är avgjort någon annanstans. Tv ger bara 2 nya val eftersom de
+5 530 väntande utesluts — rensningsplanen `arch_20260925_152824` är fortfarande Gilberts beslut.

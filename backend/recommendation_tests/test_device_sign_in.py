@@ -86,6 +86,9 @@ def _simkl(app, settings_status):
     def handler(request):
         if request.url.path == "/oauth2/token":
             return _answer(200, {"access_token": "simkl-new"})
+        if request.method != "GET":
+            # Simkl AUTH V2: a POST is a write, and a new sign-in only has media:read.
+            return _answer(403, {"error": "insufficient_scope"})
         return _answer(settings_status, {"user": {"name": "Gilbert"}} if settings_status == 200 else
                        {"error": "user_token_failed"})
 
@@ -99,6 +102,13 @@ def test_a_simkl_sign_in_is_checked_with_the_app_that_issued_it(app):
     assert result == {"status": "authorized", "username": "Gilbert"}
     assert (stored["simkl_access_token"], stored["simkl_token_client_id"]) == ("simkl-new", "server-app")
     assert app.server.connections_public(stored).simkl_connected
+
+
+def test_a_read_only_simkl_sign_in_is_confirmed_with_a_read(app):
+    """2026-09-25 15:53 UTC: Simkl issued the token, the POST check got 403
+    insufficient_scope, and the sign-in was dropped as refused."""
+    assert _simkl(app, 200)["status"] == "authorized"
+    assert app.db.connections.rows[0]["simkl_access_token"] == "simkl-new"
 
 
 def test_a_simkl_sign_in_refused_at_once_is_not_stored(app):

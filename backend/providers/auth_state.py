@@ -125,7 +125,10 @@ async def check_simkl(conn: Dict[str, Any]) -> SignInCheck:
     if not client_id:
         return SignInCheck("simkl", UNVERIFIED, "No Simkl app configured on the server")
     async with httpx.AsyncClient(timeout=CHECK_TIMEOUT) as client:
-        response = await client.post(
+        # GET, not POST: Simkl's AUTH V2 counts a POST as a write, and a sign-in
+        # has only media:read unless more is asked for - POST answered 403
+        # insufficient_scope for a token Simkl had just issued (2026-09-25 15:53 UTC).
+        response = await client.get(
             f"{SIMKL_API}/users/settings",
             params={"client_id": client_id, "app-name": "CineMindAI", "app-version": "1.0"},
             headers=simkl_headers(client_id, token),

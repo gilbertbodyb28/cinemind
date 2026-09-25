@@ -734,7 +734,9 @@ async def simkl_pin_poll(body: DevicePoll, user: User = Depends(get_current_user
             # The new sign-in counts once Simkl answers for it with a real call.
             check_status: Optional[int] = None
             try:
-                me = await hc.post(f"{SIMKL_API}/users/settings", params=simkl_params(client_id), headers=simkl_headers(client_id, token))
+                # GET: a POST is a write to Simkl's AUTH V2 and a new sign-in is
+                # read-only (media:read), so POST answered 403 and the sign-in was dropped.
+                me = await hc.get(f"{SIMKL_API}/users/settings", params=simkl_params(client_id), headers=simkl_headers(client_id, token))
                 check_status = me.status_code
                 if me.status_code == 200:
                     username = (me.json().get("user") or {}).get("name")

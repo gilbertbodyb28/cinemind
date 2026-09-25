@@ -84,6 +84,8 @@ def test_the_simkl_token_is_asked_about_with_the_app_that_issued_it(monkeypatch,
 
     def handler(request):
         seen.append(request.headers.get("simkl-api-key"))
+        if request.method != "GET":  # a write needs media:write; a sign-in only has media:read
+            return _answer(403, {"error": "insufficient_scope"})
         return _answer(200, {"user": {"name": "Gilbert"}})
 
     conn = {"simkl_access_token": "s", "simkl_client_id": "dead-app", "simkl_token_client_id": "server-app"}
