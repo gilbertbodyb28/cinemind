@@ -34,6 +34,10 @@ const initial = {
 
 const SECRETS = ["plex_token", "mediamanager_password", "trakt_access_token", "simkl_access_token"];
 
+// What POST /connections/verify decides: whether each stored sign-in still works.
+const SIGN_IN_FIELDS = ["trakt", "simkl", "plex", "anilist"].flatMap((p) => [`${p}_connected`, `${p}_username`, `${p}_auth_error`]);
+const signInState = (data) => Object.fromEntries(SIGN_IN_FIELDS.filter((k) => k in (data || {})).map((k) => [k, data[k]]));
+
 const WALLPAPER_LABELS = {
   poster: "Poster glow",
   midnight: "Midnight",
@@ -78,6 +82,8 @@ export default function Connections() {
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [tests, setTests] = useState({});
+  // A stored token is not a working sign-in: every one is checked with its provider on open.
+  const [checking, setChecking] = useState(true);
   const [savingIconSize, setSavingIconSize] = useState(false);
   const {
     theme,
@@ -107,7 +113,13 @@ export default function Connections() {
       }))
       .catch(() => {});
 
-  useEffect(() => { reload(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const verify = () =>
+    api.post("/connections/verify")
+      .then(r => setForm(f => ({ ...f, ...signInState(r.data?.connections) })))
+      .catch(() => {})
+      .finally(() => setChecking(false));
+
+  useEffect(() => { reload().then(verify); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -128,6 +140,8 @@ export default function Connections() {
       const r = await api.post(`/connections/test/${name}`);
       setTests(t => ({ ...t, [name]: r.data }));
       r.data.ok ? toast.success(`${name}: ${r.data.message}`) : toast.error(`${name}: ${r.data.message}`);
+      // The test recorded the provider's answer; show the sign-in as it now stands.
+      if (r.data.check) await reload();
     } catch (e) {
       setTests(t => ({ ...t, [name]: { ok: false, message: e?.message || "Test failed" } }));
     }
@@ -413,7 +427,7 @@ export default function Connections() {
         <Section title="Trakt.tv" icon={Film} tone="rose" onTest={()=>test("trakt")} status={tests.trakt} testid="section-trakt" hint="One-click sign-in via Trakt device code. Manual credentials below are optional.">
           <div className="sm:col-span-2">
             <DeviceConnect id="trakt" name="Trakt" startPath="/trakt/device/start" pollPath="/trakt/device/poll" codeField="device_code" disconnectPath="/trakt/disconnect"
-              connected={form.trakt_connected} username={form.trakt_username ? `@${form.trakt_username}` : null} onChange={reload} />
+              connected={form.trakt_connected} checking={checking} username={form.trakt_username ? `@${form.trakt_username}` : null} notice={form.trakt_auth_error} onChange={reload} />
           </div>
           <Field label="Client ID (manual, optional)" testid="trakt-client-id-input" value={form.trakt_client_id} onChange={v=>set("trakt_client_id", v)} />
           <Field label="Access token (manual, optional)" testid="trakt-access-token-input" value={form.trakt_access_token} onChange={v=>set("trakt_access_token", v)} type="password" />
@@ -422,7 +436,7 @@ export default function Connections() {
         <Section title="Simkl" icon={Tv} tone="cyan" onTest={()=>test("simkl")} status={tests.simkl} testid="section-simkl" hint="One-click sign-in with a Simkl PIN. Manual credentials below are optional.">
           <div className="sm:col-span-2">
             <DeviceConnect id="simkl" name="Simkl" startPath="/simkl/pin/start" pollPath="/simkl/pin/poll" codeField="device_code" disconnectPath="/simkl/disconnect"
-              connected={form.simkl_connected} username={form.simkl_username} onChange={reload} />
+              connected={form.simkl_connected} checking={checking} username={form.simkl_username} notice={form.simkl_auth_error} onChange={reload} />
           </div>
           <Field label="Client ID (manual, optional)" testid="simkl-client-id-input" value={form.simkl_client_id} onChange={v=>set("simkl_client_id", v)} />
           <Field label="Access token (manual, optional)" testid="simkl-access-token-input" value={form.simkl_access_token} onChange={v=>set("simkl_access_token", v)} type="password" />
@@ -432,6 +446,8 @@ export default function Connections() {
           <div className="sm:col-span-2">
             <AnilistConnect
               connected={form.anilist_connected}
+              checking={checking}
+              notice={form.anilist_auth_error}
               username={form.anilist_username}
               clientConfigured={form.anilist_client_configured}
               onChange={reload}
@@ -439,9 +455,13 @@ export default function Connections() {
           </div>
         </Section>
 
-        <Section title="Plex Media Server" icon={Server} tone="amber" onTest={()=>test("plex")} status={tests.plex} testid="section-plex" hint="Server URL like http://192.168.1.10:32400 and your X-Plex-Token.">
+        <Section title="Plex Media Server" icon={Server} tone="amber" onTest={()=>test("plex")} status={tests.plex} testid="section-plex" hint="Server URL like http://192.168.1.10:32400, then sign in with a plex.tv/link code. Pasting an X-Plex-Token still works.">
+          <div className="sm:col-span-2">
+            <DeviceConnect id="plex" name="Plex" startPath="/plex/pin/start" pollPath="/plex/pin/poll" codeField="device_code" disconnectPath="/plex/disconnect"
+              connected={form.plex_connected} checking={checking} username={form.plex_username} notice={form.plex_auth_error} onChange={reload} />
+          </div>
           <Field label="Server URL" testid="plex-url-input" value={form.plex_url} onChange={v=>set("plex_url", v)} placeholder="http://plex.local:32400" />
-          <Field label="Plex token" testid="plex-token-input" value={form.plex_token} onChange={v=>set("plex_token", v)} type="password" />
+          <Field label="Plex token (manual, optional)" testid="plex-token-input" value={form.plex_token} onChange={v=>set("plex_token", v)} type="password" />
         </Section>
 
         <Section title="MediaManager" icon={Library} tone="amber" onTest={()=>test("mediamanager")} status={tests.mediamanager} testid="section-mediamanager" hint="API port 8000 — not the Vite UI. Approvals go straight into Movies / TV.">

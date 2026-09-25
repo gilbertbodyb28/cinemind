@@ -331,6 +331,30 @@ async def _find_identity_matches(item: Dict[str, Any]) -> List[Dict[str, Any]]:
     return matches
 
 
+def merge_personal_fields(keeper: Dict[str, Any], other: Dict[str, Any]) -> Dict[str, Any]:
+    """What `keeper` should take over from `other` when two rows become one title."""
+    updates: Dict[str, Any] = {}
+    if keeper.get("rating") is None and other.get("rating") is not None:
+        updates["rating"] = other["rating"]
+        updates["rating_scale"] = other.get("rating_scale") or 10
+    for field in ("watch_count", "progress"):
+        if other.get(field) is not None and int(other[field] or 0) > int(keeper.get(field) or 0):
+            updates[field] = other[field]
+    if other.get("favorite") and not keeper.get("favorite"):
+        updates["favorite"] = other["favorite"]
+    if other.get("status") and not keeper.get("status"):
+        updates["status"] = other["status"]
+    for field, pick in (("watched_at", min), ("last_watched_at", max)):
+        if other.get(field):
+            best = pick(str(keeper.get(field) or other[field]), str(other[field]))
+            if best != keeper.get(field):
+                updates[field] = best
+    for field in ("genres", "tags", "keywords", "studios"):
+        if other.get(field) and not keeper.get(field):
+            updates[field] = other[field]
+    return updates
+
+
 async def remap_canonical_references(old_id: str, new_id: str) -> None:
     if old_id == new_id:
         return
@@ -346,6 +370,12 @@ async def remap_canonical_references(old_id: str, new_id: str) -> None:
             query = {field: (new_id if field == "canonical_media_id" else row.get(field)) for field in fields}
             exists = await collection.find_one(query)
             if exists:
+                if name == "media_history":
+                    # The surviving row inherits what only the other one knew. A
+                    # personal rating on the merged-away row used to be deleted with it.
+                    kept = merge_personal_fields(exists, row)
+                    if kept:
+                        await collection.update_one({"_id": exists["_id"]}, {"$set": kept})
                 await collection.delete_one({"_id": row["_id"]})
             else:
                 await collection.update_one({"_id": row["_id"]}, {"$set": {"canonical_media_id": new_id}})

@@ -1,0 +1,13 @@
+# What the backend actually imports (checked against the code 2026-09-25),
+# pinned to the versions the Mac runtime runs. The repo's backend/requirements.txt
+# is the old Emergent environment and is not needed to run CineMind.
+fastapi==0.110.1
+starlette==0.37.2
+uvicorn==0.25.0
+pydantic==2.13.5
+httpx==0.28.1
+motor==3.3.1
+pymongo==4.6.3
+bcrypt==4.1.3
+python-dotenv==1.2.1
+email-validator==2.3.0

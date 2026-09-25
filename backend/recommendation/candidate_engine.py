@@ -87,14 +87,31 @@ def expand_from_seeds(
 
 
 def merge_candidate_sources(*groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """One row per title; the first row's metadata wins.
+
+    A title that several of the user's favourites point to ("more like
+    Arrow", "more like The Flash", "more like Legends of Tomorrow") is a far
+    stronger pick than one a single seed produced, so the seeds and sources of
+    every duplicate are kept on the row instead of being thrown away with it.
+    """
     merged: List[Dict[str, Any]] = []
-    seen = set()
+    kept: Dict[tuple, Dict[str, Any]] = {}
     for group in groups:
         for row in group or []:
             keys = identity_keys(row)
-            duplicate = bool(keys & seen)
-            seen.update(keys)
-            if duplicate:
-                continue
-            merged.append(row)
+            first = next((kept[key] for key in keys if key in kept), None)
+            if first is None:
+                first = row
+                merged.append(row)
+                if row.get("source_seed") and not row.get("seed_titles"):
+                    row["seed_titles"] = [row["source_seed"]]
+                row["sources"] = sorted({*(row.get("sources") or []), str(row.get("source") or "")} - {""})
+            else:
+                seed = row.get("source_seed")
+                if seed and seed not in (first.get("seed_titles") or []):
+                    first["seed_titles"] = [*(first.get("seed_titles") or []), seed]
+                if row.get("source") and row["source"] not in (first.get("sources") or []):
+                    first["sources"] = sorted({*(first.get("sources") or []), row["source"]})
+            for key in keys:
+                kept.setdefault(key, first)
     return merged

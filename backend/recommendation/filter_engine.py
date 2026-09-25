@@ -3,7 +3,7 @@
 from typing import Any, Dict, List, Optional, Set, Tuple
 import re
 
-from .media_identity import content_lane, normalize_media_type
+from .media_identity import content_lane, identity_scope, normalize_media_type
 
 # TMDb tags almost every scripted show as Drama (and many as Comedy). Hard-excluding
 # those when the user also asked for Action/Sci-Fi/etc. wipes the catalogue.
@@ -227,19 +227,31 @@ def _animation_exempt_from_origin(job_filters: Dict[str, Any], candidate: Dict[s
     return not (isinstance(overlay, dict) and (overlay.get("languages") or overlay.get("language")))
 
 
+def media_type_allowed(candidate: Dict[str, Any], media_types: Any) -> bool:
+    """Does the job's Movies / TV / Anime choice admit this title?
+
+    Anime is a lane, not a format. An anime *film* is a film: it passes a job
+    that allows Movies or Anime, never a TV-only job. Until 2026-09-25 every
+    anime title counted as TV, so "Upcoming Tv Shows" filled up with anime
+    films (Milky Subway, ALL YOU NEED IS KILL, Mononoke the Movie ...).
+    """
+    allowed = {normalize_media_type(item) for item in _as_list(media_types)}
+    if not allowed:
+        return True
+    film_or_series = identity_scope(candidate)
+    if _media_bucket(candidate) == "anime":
+        return "anime" in allowed or film_or_series in allowed
+    candidate_media = normalize_media_type(candidate.get("type") or candidate.get("media_type"))
+    return candidate_media in allowed or film_or_series in allowed
+
+
 def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
     job_filters = filters or {}
     origin_exempt = _animation_exempt_from_origin(job_filters, candidate)
     filters = _merge_media_filters(job_filters, candidate)
     media_types = filters.get("media_types") or filters.get("media_type")
-    if media_types:
-        allowed = {normalize_media_type(item) for item in (media_types if isinstance(media_types, list) else [media_types])}
-        bucket = _media_bucket(candidate)
-        # Anime lane may arrive as tv+animation; accept when anime is allowed.
-        candidate_media = normalize_media_type(candidate.get("type") or candidate.get("media_type"))
-        if candidate_media not in allowed and not (bucket == "anime" and "anime" in allowed):
-            if not (bucket == "anime" and ("tv" in allowed or "show" in allowed)):
-                return False, "rejected_media_type"
+    if media_types and not media_type_allowed(candidate, media_types):
+        return False, "rejected_media_type"
 
     genres = candidate_genres(candidate)
     include = canonical_genres(filters.get("include_genres") or [])
@@ -253,12 +265,23 @@ def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) 
         return False, "rejected_genre"
 
     year = candidate.get("year")
+    release = _release_stamp(candidate)
+    if filters.get("upcoming_only"):
+        # A job for coming premieres measures its window on the verified premiere
+        # (providers.premieres), not on the year the title first came out: a
+        # series from 2019 with a season premiering in 2027 belongs in a
+        # 2026-2029 window, a series that premiered in March 2026 does not.
+        from datetime import datetime, timezone
+
+        premiere = str(candidate.get("premiere_date") or "")[:10]
+        if len(premiere) != 10 or premiere <= datetime.now(timezone.utc).date().isoformat():
+            return False, "rejected_not_upcoming"
+        year, release = int(premiere[:4]), premiere
     if filters.get("min_year") is not None and (year is None or int(year) < int(filters["min_year"])):
         return False, "rejected_year"
     if filters.get("max_year") is not None and (year is None or int(year) > int(filters["max_year"])):
         return False, "rejected_year"
 
-    release = _release_stamp(candidate)
     if filters.get("min_release_date"):
         if not release or release < str(filters["min_release_date"])[:10]:
             return False, "rejected_release_date"

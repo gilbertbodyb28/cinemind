@@ -84,10 +84,18 @@ def _source_candidates(snapshot: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def explicit_positive_rows(snapshot: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Deduplicate canonical titles; watched/completed and legacy favorites are not labels."""
+    """Deduplicate canonical titles; watched/completed and legacy favorites are not labels.
+
+    Demo-shelf rows are never labels: Blade Runner 2049 (8.0) and Severance (8.7)
+    "on Trakt" were demo seeds, not ratings (recommendation.demo_seed).
+    """
+    from recommendation.demo_seed import is_demo_seed
+
     rows: List[Dict[str, Any]] = []
     for row in snapshot.get("media_history") or []:
         if str(row.get("provider") or row.get("source") or "").lower() not in {"trakt", "anilist"}:
+            continue
+        if is_demo_seed(row):
             continue
         try:
             rating, scale = float(row["rating"]), float(row.get("rating_scale") or 10)
@@ -137,6 +145,12 @@ def _make_case(snapshot: Dict[str, Any], name: str, heldout: List[Dict[str, Any]
         "train_history": [row for row in snapshot.get("history") or [] if eligible(row)],
         "train_media_history": [row for row in snapshot.get("media_history") or [] if eligible(row)],
         "train_feedback": [row for row in _feedback(snapshot) if eligible(row)],
+        # Approvals and rejections in the Requests queue are taste evidence.
+        # A held-out title must not come back in through its own request row.
+        "train_requests": [
+            row for row in snapshot.get("requests") or []
+            if row.get("status") in {"approved", "rejected"} and eligible(row)
+        ],
         "candidate_pool": pool,
         "source_candidate_coverage": sum(any(_same(row, source) for source in originals) for row in heldout) / len(heldout),
     }
@@ -237,7 +251,22 @@ def watched_but_unlabelled(snapshot: Dict[str, Any], positives: Sequence[Dict[st
     return rows[:limit]
 
 
-def discrimination_ranking(run_pipeline, spec, history, personal, feedback, snapshot, positives, hard):
+def build_case_taste(spec: Dict[str, Any], history, personal, feedback, requests) -> Dict[str, Any]:
+    """The profile a case is ranked with, built from that case's training rows only."""
+    from recommendation.taste_engine import build_taste_snapshot
+
+    try:
+        return build_taste_snapshot(
+            history, feedback=feedback, taste_sources=spec.get("taste_sources"),
+            personal_history=personal, requests=requests,
+        )
+    except TypeError:  # an engine from before request decisions existed
+        return build_taste_snapshot(
+            history, feedback=feedback, taste_sources=spec.get("taste_sources"), personal_history=personal,
+        )
+
+
+def discrimination_ranking(run_pipeline, spec, history, personal, feedback, snapshot, positives, hard, taste=None):
     """Score positives and hard negatives side by side with the watched filter off.
 
     Hard negatives are by definition already watched, so the production pipeline
@@ -259,7 +288,7 @@ def discrimination_ranking(run_pipeline, spec, history, personal, feedback, snap
             "already_requested": False, "already_recommended": False, "blacklisted": False,
         }, "final_recommendation_limit": len(pool) or 1, "diversity": False},
         history=history, feedback=feedback, personal_history=personal,
-        catalog=[], extra_candidates=pool,
+        catalog=[], extra_candidates=pool, taste=taste,
     )
     return result.get("ranked") or []
 
@@ -310,19 +339,21 @@ def evaluate_snapshot(snapshot: Dict[str, Any], *, folds: int = 3, seed: int = 0
         spec = {"job_type": "trakt", "candidate_sources": ["snapshot_fixed_pool"],
                 "media_types": ["movie", "tv", "anime"], "final_recommendation_limit": max(ks)}
         history, personal, train_feedback = case["train_history"], case["train_media_history"], case["train_feedback"]
+        train_requests = case["train_requests"]
         if control == "empty_taste":
             spec["taste_sources"] = []
-            history, personal, train_feedback = [], [], []
+            history, personal, train_feedback, train_requests = [], [], [], []
         elif control == "shuffled_taste":
             keep = {token for row in hard for token in _tokens(row)}
             history = [row for row in history if _tokens(row) & keep]
             personal = [row for row in personal if _tokens(row) & keep]
-            train_feedback = []
+            train_feedback, train_requests = [], []
+        taste = build_case_taste(spec, history, personal, train_feedback, train_requests)
         result = run_pipeline(
             spec,
             history=history, feedback=train_feedback,
             personal_history=personal,
-            catalog=[], extra_candidates=[dict(row) for row in pool],
+            catalog=[], extra_candidates=[dict(row) for row in pool], taste=taste,
         )
         ranked = result.get("ranked") or []
         reports.append({
@@ -333,7 +364,8 @@ def evaluate_snapshot(snapshot: Dict[str, Any], *, folds: int = 3, seed: int = 0
             "metrics": {
                 **score_ranking(ranked, case["heldout"], case["train_history"], pool, ks=ks),
                 **discrimination_score(
-                    discrimination_ranking(run_pipeline, spec, history, personal, train_feedback, snapshot, case["heldout"], hard),
+                    discrimination_ranking(run_pipeline, spec, history, personal, train_feedback, snapshot, case["heldout"], hard,
+                                           taste=build_case_taste(spec, history, personal, train_feedback, train_requests)),
                     case["heldout"], hard,
                 ),
             },

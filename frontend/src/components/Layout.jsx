@@ -4,6 +4,7 @@ import { House, Heart, BarChart3, User, SlidersHorizontal, Sparkles, LogOut, Sea
 import { useAuth } from "@/context/AuthContext";
 import { SearchContext } from "@/context/UiContext";
 import UsageMeter from "@/components/UsageMeter";
+import TitleDetailModal from "@/components/TitleDetailModal";
 import { ensureAmbient } from "@/lib/ambient";
 
 const RAIL = [
@@ -38,6 +39,37 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [q, setQ] = useState("");
+  const [posterDetail, setPosterDetail] = useState(null);
+
+  // Double-click any poster on any page for its trailer, cast and description.
+  // Pages with their own details (Requests, Approved) call preventDefault.
+  useEffect(() => {
+    const onDoubleClick = (event) => {
+      if (event.defaultPrevented) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("button, a, input, select, textarea, label, [role='dialog'], [data-testid='title-detail-modal']")) return;
+      let img = target.closest("img");
+      if (!img) {
+        const card = target.closest("[data-testid*='card'], .poster-frame, .group");
+        img = card?.querySelector("img[alt]:not([alt=''])") || null;
+      }
+      const title = img?.getAttribute("alt")?.trim();
+      if (!title) return;
+      const holder = img.closest("[data-title-type], [data-title-year], [data-tmdb-id]");
+      window.getSelection?.()?.removeAllRanges();
+      setPosterDetail({
+        generic: true,
+        title,
+        poster: img.currentSrc || img.src,
+        type: holder?.getAttribute("data-title-type") || undefined,
+        year: holder?.getAttribute("data-title-year") || undefined,
+        tmdb_id: holder?.getAttribute("data-tmdb-id") || undefined,
+      });
+    };
+    document.addEventListener("dblclick", onDoubleClick);
+    return () => document.removeEventListener("dblclick", onDoubleClick);
+  }, []);
   const [bell, setBell] = useState(false);
   const [menu, setMenu] = useState(false);
   const popRef = useRef(null);
@@ -239,6 +271,7 @@ export default function Layout({ children }) {
         </div>
 
       </div>
+      <TitleDetailModal item={posterDetail} onClose={() => setPosterDetail(null)} />
     </SearchContext.Provider>
   );
 }

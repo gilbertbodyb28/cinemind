@@ -12,7 +12,7 @@ from database import db
 from llm import generate_with_llm
 from recommendation.llm_context import compact_taste_prompt
 from recommendation.pipeline import default_job, run_pipeline
-from recommendation.ranking_engine import apply_rerank
+from recommendation.ranking_engine import apply_rerank, relevance_cut
 
 HISTORY_PROVIDERS = {"plex", "trakt", "simkl", "anilist"}
 HISTORY_STALE_AFTER = timedelta(hours=24)
@@ -73,6 +73,14 @@ def apply_job_type_defaults(spec: Dict[str, Any]) -> Dict[str, Any]:
     if defaults.get("provider_weights") and not spec.get("provider_weights"):
         spec["provider_weights"] = dict(defaults["provider_weights"])
     return spec
+
+
+def with_job_intent(job: Dict[str, Any]) -> Dict[str, Any]:
+    """Saved jobs are served by what they ask for (recommendation.job_intent).
+
+    Content to Watch sets job_intent False and keeps its measured behaviour.
+    """
+    return {**job, "job_intent": job.get("job_intent", True)}
 
 
 def _required_sources(spec: Dict[str, Any]) -> set:
@@ -393,8 +401,10 @@ async def load_pipeline_inputs(user_id: str) -> Dict[str, List[Dict[str, Any]]]:
         {"user_id": user_id, "status": {"$nin": ["request_failed", "failed"]}},
         {"_id": 0, "user_id": 0},
     ).to_list(50000)
-    blacklist = await db.blacklist.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(500)
-    feedback = await db.recommendation_feedback.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(500)
+    # No cap: a blacklist or feedback row past a 500-row cap was simply not
+    # applied, and the title it was about could come back.
+    blacklist = await db.blacklist.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(None)
+    feedback = await db.recommendation_feedback.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(None)
     # Personal ratings live in media_history, raw watch events in history. v1 read
     # one or the other, so a user with a full history never had their own ratings
     # reach the taste profile at all.
@@ -420,6 +430,41 @@ RERANK_CANDIDATE_CAP = 12
 # Below this share of the list the answer says more about the model running out
 # of patience than about the ranking, so the deterministic order is kept.
 RERANK_MIN_COVERAGE = 0.5
+# Gemma 4 re-ranks the tail too aggressively. Keeping only its top 5 and letting
+# the deterministic order hold positions 6-10 measured +0.022 +/- 0.008 nDCG@10
+# (t=2.64) on Gilbert's snapshot, 2026-09-23, for the model's own order - the
+# way Content to Watch uses it. The model still has to return all
+# RERANK_CANDIDATE_CAP handles for the answer to count; positions 1-5, and so the
+# hero card, stay the model's - but only for picks inside the relevance floor
+# (see rerank_verified_candidates). Saved jobs re-rank bounded over the model's
+# whole order, as measured (ranking_engine.RERANK_MAX_BOOST), so they do not cut
+# it. Measured once, not confirmed with a second fold count: 12 undoes it.
+RERANK_LLM_KEEP = 5
+
+
+def rerank_bounded(job: Optional[Dict[str, Any]]) -> bool:
+    """A saved job's list is ordered by what the job asked for and the model may
+    only break near-ties there; Content to Watch lets it reorder its above-floor
+    pool (measured, ranking_engine.RERANK_MAX_BOOST)."""
+    from recommendation.job_intent import job_intent
+
+    return job is not None and job_intent(job) is not None
+
+
+def apply_model_order(ranked: List[Dict[str, Any]], ordered: Optional[List[str]],
+                      job: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The model's answer over the ranked list, bounded or free as the job re-ranks."""
+    from recommendation.ranking_engine import RERANK_MAX_BOOST
+
+    return apply_rerank(ranked, ordered, max_boost=RERANK_MAX_BOOST if rerank_bounded(job) else None)
+
+
+def rerank_keep(job: Optional[Dict[str, Any]]) -> Optional[int]:
+    """How many of the model's picks lead the list: its top five, or its whole
+    (floor-checked) order for a bounded re-rank."""
+    return None if rerank_bounded(job) else RERANK_LLM_KEEP
+
+
 def rerank_schema(count: int) -> Dict[str, Any]:
     """Constrain decoding to the answer shape, and to a complete answer.
 
@@ -442,21 +487,28 @@ def rerank_schema(count: int) -> Dict[str, Any]:
     }
 
 
-async def rerank_verified_candidates(
-    user_id: str,
-    taste: Dict[str, Any],
-    candidates: List[Dict[str, Any]],
-    model_override: Optional[str] = None,
-) -> Tuple[Optional[List[str]], str, str]:
-    if not candidates:
-        return None, "fallback", "deterministic"
-    conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
-    rerank_pool = candidates[:RERANK_CANDIDATE_CAP]
+def rerank_pool(candidates: List[Dict[str, Any]], job: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    """What the model may reorder: the head of the list, above the job's taste floor.
+
+    A title below the floor is never selected (pipeline.select_final), so the
+    model's slots are not spent on it.
+    """
+    from recommendation.pipeline import clears_taste_floor, taste_floor
+
+    floor = taste_floor(job or {}) if job is not None else None
+    pool = [row for row in candidates if floor is None or clears_taste_floor(row, floor)]
+    return pool[:RERANK_CANDIDATE_CAP]
+
+
+def rerank_lines(pool: List[Dict[str, Any]], taste: Optional[Dict[str, Any]] = None) -> Tuple[Dict[str, Dict[str, Any]], List[str]]:
+    """Short handles and one line per candidate, shared with evaluation/model_bench.py."""
+    from recommendation.llm_context import candidate_evidence
+
     # Short opaque handles, not the candidate slugs. The slugs are long, accented
     # and full of spaces ("pokemon horizons the series:2023"); asked to echo a
     # dozen of them back exactly, a 7B model gave up after the first one and the
     # whole re-rank was discarded on every run.
-    handles = {"r%02d" % index: row for index, row in enumerate(rerank_pool, start=1)}
+    handles = {"r%02d" % index: row for index, row in enumerate(pool, start=1)}
     lines = []
     for handle, row in handles.items():
         detail = [
@@ -467,12 +519,42 @@ async def rerank_verified_candidates(
         themes = [str(name) for name in (row.get("tmdb_keywords") or [])[:5]]
         if themes:
             detail.append("themes=%s" % ",".join(themes))
-        similar = [item.get("title") for item in (row.get("similar_to") or [])[:2] if item.get("title")]
-        if similar:
-            detail.append("resembles=%s" % "; ".join(similar))
+        evidence = candidate_evidence(row, taste)
+        if evidence:
+            detail.append("evidence=%s" % evidence)
+        else:
+            similar = [item.get("title") for item in (row.get("similar_to") or [])[:2] if item.get("title")]
+            if similar:
+                detail.append("resembles=%s" % "; ".join(similar))
         if row.get("original_language"):
             detail.append("lang=%s" % row["original_language"])
         lines.append("%s | %s" % (handle, " | ".join(part for part in detail if part)))
+    return handles, lines
+
+
+async def rerank_verified_candidates(
+    user_id: str,
+    taste: Dict[str, Any],
+    candidates: List[Dict[str, Any]],
+    model_override: Optional[str] = None,
+    job: Optional[Dict[str, Any]] = None,
+    keep: Optional[int] = RERANK_LLM_KEEP,
+) -> Tuple[Optional[List[str]], str, str]:
+    """The model's order over the head of the list, as candidate ids.
+
+    `keep` is how many of its picks may lead (None: its whole order, for a
+    bounded re-rank). Picks below the relevance floor are left out either way:
+    they keep their deterministic place.
+    """
+    if not candidates:
+        return None, "fallback", "deterministic"
+    from recommendation.job_intent import job_intent
+
+    conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
+    pool = rerank_pool(candidates, job)
+    if len(pool) < 2:
+        return None, "fallback", "deterministic"
+    handles, lines = rerank_lines(pool, taste)
     system = (
         "You re-rank a verified candidate list for one viewer. Use only the given "
         "handles, never invent one, never drop one, never repeat one. Put the titles "
@@ -480,7 +562,7 @@ async def rerank_verified_candidates(
         'goal; fit to the stated taste is. Reply with JSON only: {"ids": ["<handle>", ...]}.'
     )
     prompt = (
-        compact_taste_prompt(taste)
+        compact_taste_prompt(taste, job_intent(job))
         + "\n\nVerified candidates (%d):\n" % len(lines)
         + "\n".join(lines)
         + "\n\nReturn all %d handles above, ordered best first for this viewer." % len(lines)
@@ -493,6 +575,7 @@ async def rerank_verified_candidates(
         return None, provider, model
     raw_ids = parsed.get("ids") or parsed.get("candidate_ids") or parsed.get("ranking") or []
     ordered: List[str] = []
+    scores: Dict[str, float] = {}
     seen_handles = set()
     for item in raw_ids:
         handle = str(item).strip()
@@ -500,14 +583,33 @@ async def rerank_verified_candidates(
         if row is None or handle in seen_handles:
             continue
         seen_handles.add(handle)
-        ordered.append(str(row.get("candidate_id") or row.get("tmdb_id") or row["title"]))
+        key = str(row.get("candidate_id") or row.get("tmdb_id") or row["title"])
+        ordered.append(key)
+        scores[key] = row.get("rank_score") or 0.0
     if len(ordered) < max(1, int(len(lines) * RERANK_MIN_COVERAGE)):
         logging.warning(
             "Ollama rerank returned %s of %s handles; keeping deterministic order",
             len(ordered), len(lines),
         )
         return None, provider, model
-    return ordered, provider, model
+    # The model may reorder the strong pool, never lift a weak taste match over
+    # it: a pick below the relevance floor goes back to the deterministic order,
+    # where the floor keeps it behind every stronger title. Left where the model
+    # put it, it also ended apply_diversity's walk there and cut the list short -
+    # at position 1 Content to Watch came back empty. The floor is the pool's, the
+    # same cut select_final's apply_diversity makes over the titles above the
+    # taste floor.
+    floor = relevance_cut(pool)
+    head = ordered[:keep] if keep else ordered
+    kept = [key for key in head if scores[key] >= floor]
+    if len(kept) < len(head):
+        logging.warning(
+            "Ollama rerank put %s weak match(es) in its top %s; they keep their deterministic place",
+            len(head) - len(kept), len(head),
+        )
+    if not kept:
+        return None, provider, model
+    return kept, provider, model
 
 
 async def persist_run_results(
@@ -524,7 +626,9 @@ async def persist_run_results(
         return []
     from recommendation.media_identity import attach_canonical_ids
 
-    identified = await attach_canonical_ids(user_id, [{**item} for item in accepted], persist_history=False)
+    from recommendation.ranking_engine import strip_private
+
+    identified = await attach_canonical_ids(user_id, [strip_private(item) for item in accepted], persist_history=False)
     from providers.keys import resolve_tmdb_api_key, resolve_tvdb_api_key
     from providers.tmdb import enrich_with_tmdb
 
@@ -554,7 +658,12 @@ async def persist_run_results(
             "created_at": _now().isoformat(),
         })
     if rows:
-        await db.recommendations.delete_many({"user_id": user_id, "saved": {"$ne": True}, "job_id": job.get("id")})
+        # A dismissed row stays behind (hidden everywhere) as the memory of that
+        # decision: deleting it with the rest of the old list let the next run
+        # recommend the rejected title again (exclusion_engine "dismissed").
+        await db.recommendations.delete_many({
+            "user_id": user_id, "saved": {"$ne": True}, "dismissed": {"$ne": True}, "job_id": job.get("id"),
+        })
         await db.recommendations.insert_many(rows)
     return await apply_job_action_mode(user_id, job, rows, conn)
 
@@ -577,12 +686,31 @@ async def apply_job_action_mode(
 
     from fastapi import HTTPException
     from providers.keys import resolve_tmdb_api_key
-    from request_providers import LocalRequestProvider
+    from request_providers import (
+        DECIDED_STATUSES, FINAL_STATUSES, PENDING_STATUSES, LocalRequestProvider,
+        find_existing_request, is_user_rejection,
+    )
     from mediamanager_client import send_item_to_library
 
     local = LocalRequestProvider()
     warnings: List[Dict[str, Any]] = []
     tmdb_key = resolve_tmdb_api_key(conn)
+    # Room in the queue: a job keeps at most one run's worth of titles waiting
+    # for a decision. Every job in require_approval queued up to its limit every
+    # 30 minutes with no ceiling, and 10,180 titles waited by 2026-09-25 (Tv
+    # 5,531 against a limit of 250). Titles already waiting are refreshed as
+    # before; only new rows wait for room. Nothing already queued is touched.
+    limit = int(job.get("final_recommendation_limit") or 8)
+    waiting = 0
+    room: Optional[int] = None
+    # auto_request queues for approval too when MediaManager cannot take a title
+    # (409 below), so the same ceiling holds there.
+    if mode in {"require_approval", "auto_request"}:
+        waiting = await db.requests.count_documents({
+            "user_id": user_id, "source_job_id": job.get("id"), "status": {"$in": sorted(PENDING_STATUSES)},
+        })
+        room = max(0, limit - waiting)
+    held_back = 0
 
     for row in rows:
         payload = {
@@ -598,9 +726,32 @@ async def apply_job_action_mode(
             "source_job_id": job.get("id"),
             "recommendation_id": row.get("id"),
             "match_score": row.get("match_score"),
+            # What the title is, so the queue recognises it next run (request_providers).
+            "canonical_media_id": row.get("canonical_media_id"),
+            "media_type": row.get("media_type"),
+            "format": row.get("format") or row.get("anime_format"),
+            "anilist_id": row.get("anilist_id"),
         }
+        # The user's decisions stand. A title the exclusions miss (a changed
+        # media type or identity) is neither queued again nor sent to
+        # MediaManager; a rejected one is hidden the way POST
+        # /requests/{id}/reject hides it.
+        existing = await find_existing_request(user_id, payload, database=db)
+        if is_user_rejection(existing):
+            await db.recommendations.update_one(
+                {"user_id": user_id, "id": row["id"]},
+                {"$set": {"dismissed": True, "needs_approval": False, "request_id": existing.get("id")}},
+            )
+            continue
         if mode == "require_approval":
+            status = existing.get("status")
+            adds_to_queue = not existing or status not in PENDING_STATUSES | FINAL_STATUSES
+            if adds_to_queue and room is not None and room <= 0:
+                held_back += 1
+                continue
             stored = await local.submit(user_id, payload, "pending_approval")
+            if adds_to_queue and room is not None and stored.get("status") in PENDING_STATUSES:
+                room -= 1
             await db.recommendations.update_one(
                 {"user_id": user_id, "id": row["id"]},
                 {"$set": {
@@ -610,6 +761,13 @@ async def apply_job_action_mode(
             )
             continue
 
+        if existing.get("status") in DECIDED_STATUSES:
+            # Approved already: it went to MediaManager then, not a second time now.
+            await db.recommendations.update_one(
+                {"user_id": user_id, "id": row["id"]},
+                {"$set": {"request_id": existing.get("id"), "needs_approval": False}},
+            )
+            continue
         try:
             result = await send_item_to_library(row, conn, tmdb_api_key=tmdb_key)
             stored = await local.submit(
@@ -631,7 +789,15 @@ async def apply_job_action_mode(
         except HTTPException as exc:
             queued = exc.status_code == 409
             status = "pending_approval" if queued else "request_failed"
+            adds_to_queue = queued and (not existing or existing.get("status") not in PENDING_STATUSES | FINAL_STATUSES)
+            if adds_to_queue and room is not None and room <= 0:
+                # MediaManager is not taking titles and the job's share of the
+                # queue is full: the title stays a pick and is tried again next run.
+                held_back += 1
+                continue
             stored = await local.submit(user_id, payload, status)
+            if adds_to_queue and room is not None and stored.get("status") in PENDING_STATUSES:
+                room -= 1
             await db.recommendations.update_one(
                 {"user_id": user_id, "id": row["id"]},
                 {
@@ -659,6 +825,15 @@ async def apply_job_action_mode(
                 "detail": f"{row.get('title')}: {exc}",
             })
             logging.warning("auto_request failed for %s: %s", row.get("title"), exc)
+    if held_back:
+        warnings.append({
+            "code": "queue_full",
+            "source": "requests",
+            "detail": (
+                f"{waiting} title(s) from this job are still waiting in Requests (room for {limit}); "
+                f"{held_back} new title(s) were not queued. They are still in this run's picks."
+            ),
+        })
     return warnings
 
 
@@ -695,6 +870,7 @@ REJECTION_HINTS = {
     "rejected_already_requested": "Every candidate had already been requested. The job needs fresh candidates.",
     "rejected_already_watched": "Every candidate was already in your watch history.",
     "rejected_already_in_library": "Every candidate was already in your library.",
+    "rejected_not_upcoming": "No candidate had a verified premiere date after today inside the job's window.",
 }
 
 
@@ -742,6 +918,34 @@ def empty_result_warnings(
     return rows
 
 
+def excluded_taste_source_warnings(job: Dict[str, Any], inputs: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    """Say so when a job leaves out a provider that holds the user's ratings.
+
+    Taste sources are the job's own choice and are honoured row by row. But a
+    job that leaves out Trakt leaves out almost every personal rating: measured
+    2026-09-24, with Trakt switched off the taste floor kept 69 % of Gilbert's
+    approved Requests instead of 93 %.
+    """
+    chosen = job.get("taste_sources")
+    if chosen is None:
+        return []
+    allowed = set(chosen)
+    rows: List[Dict[str, Any]] = []
+    for name in sorted(HISTORY_PROVIDERS - allowed):
+        rated = sum(1 for row in inputs.get("personal_history") or []
+                    if row.get("provider") == name and row.get("rating") is not None)
+        watched = sum(1 for row in inputs.get("history") or [] if (row.get("source") or row.get("provider")) == name)
+        # Only a provider that carries real taste evidence is worth a warning on
+        # every run: AniList's two ratings are not, Trakt's 169 are.
+        if rated >= 10:
+            rows.append({
+                "code": "taste_source_excluded",
+                "source": name,
+                "detail": f"{name} holds {rated} ratings and {watched} watch rows; this job's taste sources leave it out.",
+            })
+    return rows
+
+
 async def gather_job_candidates(
     user_id: str,
     job: Dict[str, Any],
@@ -764,9 +968,26 @@ async def gather_job_candidates(
 
     connection = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
     tmdb_key = resolve_tmdb_api_key(connection)
+    live_report: Dict[str, Any] = {}
+    if job.get("live_overlay", True):
+        # Trakt's own ratings and watched sets, and the AniList list on its real
+        # scale, read (cached) for this run and never written back. The synced
+        # copy was missing 74 of 176 Trakt ratings and 174 watched titles.
+        from providers.live_history import anilist_live, overlay_rows, trakt_live
+
+        extra_history, extra_personal, live_report = overlay_rows(
+            inputs.get("history") or [], inputs.get("personal_history") or [],
+            await trakt_live(user_id, connection), await anilist_live(connection),
+        )
+        inputs["history"] = list(inputs.get("history") or []) + extra_history
+        inputs["personal_history"] = list(inputs.get("personal_history") or []) + extra_personal
+    # Approved and rejected Requests are taste evidence too (taste_engine.
+    # decision_docs); they need the same keywords and people as history rows.
+    decided = [row for row in inputs.get("requested") or [] if row.get("status") in {"approved", "rejected"}]
     if tmdb_key:
         await enrich_rows(inputs.get("history") or [], tmdb_key)
         await enrich_rows(inputs.get("personal_history") or [], tmdb_key)
+        await enrich_rows(decided, tmdb_key)
     # Build the profile before generating candidates: the similarity and
     # discover lanes are seeded from the titles the user actually rated.
     from recommendation.taste_engine import build_taste_snapshot
@@ -777,7 +998,10 @@ async def gather_job_candidates(
         provider_weights=job.get("provider_weights"),
         taste_sources=job.get("taste_sources"),
         personal_history=inputs.get("personal_history"),
+        requests=decided,
     )
+    taste["live_overlay"] = live_report
+    warnings.extend(excluded_taste_source_warnings(job, inputs))
     extra: List[Dict[str, Any]] = []
     sources = set(job.get("candidate_sources") or [])
     required = _required_sources(job)
@@ -824,6 +1048,17 @@ async def gather_job_candidates(
         warnings.extend(linked_warnings)
     if tmdb_key and extra:
         await enrich_rows(extra, tmdb_key)
+    from providers.premieres import is_upcoming_job, verify_premieres
+
+    if is_upcoming_job(job) and extra:
+        # Only a verified premiere after today passes an upcoming job's filter
+        # (filter_engine "rejected_not_upcoming"); rows of a media type the job
+        # does not take are not worth a TMDb call.
+        from recommendation.filter_engine import media_type_allowed
+
+        wanted = [row for row in extra if media_type_allowed(row, job.get("media_types"))]
+        verified = await verify_premieres(wanted, tmdb_key)
+        logging.info("job %s: %s of %s candidates have a verified premiere", job.get("id"), verified, len(wanted))
     return inputs, taste, extra
 
 
@@ -837,6 +1072,7 @@ async def execute_job(
     owner = await acquire_job_lock(job["id"])
     if not owner:
         return {"status": "locked", "detail": "Job is already running"}
+    job = with_job_intent(job)
     started = _now()
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     warnings: List[Dict[str, Any]] = []
@@ -848,11 +1084,12 @@ async def execute_job(
         model = "deterministic"
         ai_reranked = False
         if job.get("ai_enabled") and ranked:
+            spec = result.get("job") or job
             ordered, provider, model = await rerank_verified_candidates(
-                user_id, result["taste"], ranked, model_override=model_override
+                user_id, result["taste"], ranked, model_override=model_override, job=spec, keep=rerank_keep(spec),
             )
             if ordered:
-                ranked = apply_rerank(ranked, ordered)
+                ranked = apply_model_order(ranked, ordered, spec)
                 ai_reranked = provider == "ollama"
                 result["ranked"] = ranked
             else:
@@ -900,7 +1137,22 @@ async def execute_job(
             "provider": provider,
             "model": model,
             "warnings": warnings,
-            "results": result["accepted"] if trigger == "preview" else [{"id": row.get("title"), "title": row.get("title")} for row in result["accepted"]],
+            "results": result["accepted"] if trigger == "preview" else [
+                {"id": row.get("title"), "title": row.get("title"), "year": row.get("year"),
+                 "type": row.get("type"), "media_type": row.get("media_type"),
+                 "format": row.get("format") or row.get("anime_format")}
+                for row in result["accepted"]
+            ],
+            # What the job asked for when it ran. Every run overwrites the job's
+            # updated_at, so 2024 titles queued by a 2026-2029 job could not be
+            # traced back to the settings of the day (HANDOFF.md §31).
+            "settings": {
+                "media_types": job.get("media_types"),
+                "taste_sources": job.get("taste_sources"),
+                "final_recommendation_limit": job.get("final_recommendation_limit"),
+                "filters": {key: value for key, value in (job.get("filters") or {}).items()
+                            if value not in (None, "", [], {})},
+            },
         }
         await db.job_runs.insert_one(dict(run))
         if trigger != "preview":
@@ -962,10 +1214,15 @@ async def fetch_linked_provider_candidates(
     job: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
     """Pull live recommendation feeds only when the user already has tokens."""
+    from recommendation.job_intent import job_intent, wants_lane
+
     required = required or set()
     conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
     extra: List[Dict[str, Any]] = []
     warnings: List[Dict[str, Any]] = []
+    intent = job_intent(job)
+    media = set((job or {}).get("media_types") or ["movie", "tv", "anime"])
+    wants_anime = intent is None or wants_lane(intent, "anime") or wants_lane(intent, "donghua")
 
     async def _required_or_warn(source: str, code: str, detail: str = "") -> None:
         row = {"code": code, "source": source}
@@ -989,18 +1246,34 @@ async def fetch_linked_provider_candidates(
                 if token and client_id:
                     import httpx
 
+                    kinds = [kind for kind, wanted in (
+                        ("movies", bool(media & {"movie", "movies"})),
+                        ("shows", bool(media & {"tv", "show", "anime"})),
+                    ) if wanted]
                     async with httpx.AsyncClient(timeout=10) as client:
-                        for kind in ("movies", "shows"):
+                        for kind in kinds:
                             response = await client.get(
                                 f"{TRAKT_API}/recommendations/{kind}",
                                 headers=trakt_headers(client_id, token),
-                                params={"limit": 20},
+                                # A job serving one lane needs a deeper feed: most of
+                                # Trakt's first 20 for this viewer are anime.
+                                params={"limit": 50 if intent else 20},
                             )
                             if response.status_code == 200:
                                 extra.extend(
                                     row for row in (
-                                        parse_recommendation_entry(item) for item in response.json() or []
+                                        parse_recommendation_entry(item, kind) for item in response.json() or []
                                     ) if row and row.get("title") and row["title"] != "Unknown"
+                                )
+                            elif response.status_code == 401:
+                                # Trakt refused the stored sign-in itself: Sources must offer
+                                # Connect again rather than keep saying "Connected".
+                                from providers.auth_state import note_auth_failure
+
+                                await note_auth_failure(user_id, "trakt", "Trakt no longer accepts the saved sign-in (401)")
+                                await _required_or_warn(
+                                    "trakt", "trakt_signin_rejected",
+                                    "Trakt no longer accepts the saved sign-in: connect Trakt again under Sources",
                                 )
                             else:
                                 await _required_or_warn("trakt", "trakt_http_error", str(response.status_code))
@@ -1015,19 +1288,28 @@ async def fetch_linked_provider_candidates(
             await _required_or_warn("simkl", "simkl_not_connected")
         else:
             try:
-                from providers.simkl import fetch_recommendations
-                from config import SIMKL_CLIENT_ID
+                from providers.simkl import fetch_recommendations, simkl_token_client_id
 
-                client_id = conn.get("simkl_client_id") or SIMKL_CLIENT_ID
+                client_id = simkl_token_client_id(conn)
                 history = await db.history.find(
                     {"user_id": user_id, "source": "simkl"},
                     {"_id": 0, "simkl_id": 1, "type": 1, "media_type": 1, "title": 1, "source": 1},
                 ).sort("watched_at", -1).to_list(40)
+                buckets = None
+                if intent:
+                    # Trending movies filled a TV job's Simkl share before a single
+                    # series was asked for; ask only for what the job can use.
+                    buckets = [bucket for bucket, wanted in (
+                        ("movies", "movie" in media),
+                        ("tv", "tv" in media and wants_lane(intent, "live_action")),
+                        ("anime", wants_anime),
+                    ) if wanted]
                 rows = await fetch_recommendations(
                     client_id,
                     conn["simkl_access_token"],
                     history,
                     limit=40,
+                    buckets=buckets,
                 )
                 if rows:
                     extra.extend(rows)
@@ -1039,7 +1321,12 @@ async def fetch_linked_provider_candidates(
                 detail = safe_provider_error(exc)
                 code = "simkl_http_error" if "failed" in str(detail).lower() or str(detail).isdigit() else "simkl_failed"
                 await _required_or_warn("simkl", code, detail)
-    if "anilist" in sources:
+    if "anilist" in sources and not wants_anime:
+        # AniList lists only anime-style media. For a job that asks for no anime
+        # or donghua every row it returns is outside the job, and it was 40 of
+        # the English TV job's 520 raw candidates.
+        logging.info("anilist skipped: job %s asks for no anime or donghua", (job or {}).get("id"))
+    elif "anilist" in sources:
         if not conn.get("anilist_access_token"):
             await _required_or_warn("anilist", "anilist_not_connected")
         else:
@@ -1062,7 +1349,9 @@ async def fetch_linked_provider_candidates(
                         min_year=filters.get("min_year"),
                         max_year=filters.get("max_year"),
                     ))
-                if _window_is_upcoming(filters):
+                from providers.premieres import is_upcoming_job
+
+                if _window_is_upcoming(filters) or is_upcoming_job(job):
                     # Recommendations are built from titles that already aired, so a
                     # job asking for future years got nothing it could ever accept.
                     extra.extend(await fetch_upcoming(

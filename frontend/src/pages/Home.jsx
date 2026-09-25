@@ -17,9 +17,29 @@ const TRAILER_SORTS = [
   { key: "rating", label: "Top rated" },
 ];
 
+// "Season 4 · Oct 12, 2026": what premieres, and the verified day (GET /upcoming).
+function premiereLabel(r) {
+  if (!r.premiere_date) return "";
+  const day = new Date(`${r.premiere_date}T00:00:00Z`).toLocaleDateString(undefined, {
+    day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+  });
+  const what = r.premiere_kind === "season_premiere" && r.premiere_season
+    ? `Season ${r.premiere_season}`
+    : r.premiere_kind === "series_premiere" ? "Series premiere" : "Release";
+  return `${what} · ${day}`;
+}
+
 export default function Home() {
   const [recs, setRecs] = useState([]);
+  const [coming, setComing] = useState([]);
   const [tab, setTab] = useState("all");
+  const [comingKind, setComingKind] = useState(() => {
+    try { return localStorage.getItem("cm-upcoming-kind") || "all"; } catch { return "all"; }
+  });
+  const chooseComingKind = (value) => {
+    setComingKind(value);
+    try { localStorage.setItem("cm-upcoming-kind", value); } catch { /* per-viewer convenience only */ }
+  };
   const [heroIdx, setHeroIdx] = useState(0);
   const [active, setActive] = useState(null);
   const [sort, setSort] = useState("match");
@@ -29,6 +49,13 @@ export default function Home() {
   const load = async () => {
     const r = await api.get("/recommendations");
     setRecs(r.data);
+    // Up Coming is its own list: picks with a verified premiere after today, soonest first.
+    try {
+      const u = await api.get("/upcoming", { params: { limit: 50 } });
+      setComing(u.data || []);
+    } catch {
+      setComing([]);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -82,7 +109,19 @@ export default function Home() {
     return [...filtered].sort(by).slice(0, 5);
   }, [filtered, sort]);
 
-  const upcoming = useMemo(() => filtered.filter((r) => r.id !== hero?.id).slice(0, 4), [filtered, hero]);
+  const upcoming = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return coming.filter((r) => {
+      if (comingKind !== "all" && r.upcoming_kind !== comingKind) return false;
+      if (tab === "movie" || tab === "show") { if (r.type !== tab) return false; }
+      else if (tab.startsWith("g:")) {
+        const g = tab.slice(2);
+        if (!(r.genres || []).some((x) => x.trim().toLowerCase() === g)) return false;
+      }
+      if (needle && !r.title.toLowerCase().includes(needle)) return false;
+      return true;
+    }).slice(0, 4);
+  }, [coming, tab, q, comingKind]);
 
   const save = async (id) => {
     await api.post(`/recommendations/${id}/save`);
@@ -103,6 +142,7 @@ export default function Home() {
 
   const dismiss = async (id) => {
     setRecs((list) => list.filter((r) => r.id !== id));
+    setComing((list) => list.filter((r) => r.id !== id));
     setActive((a) => (a && a.id === id ? null : a));
   };
 
@@ -269,6 +309,20 @@ export default function Home() {
           <section data-testid="upcoming-panel">
             <div className="flex items-center justify-between gap-3 mb-4 px-1">
               <h2 className="font-display text-2xl font-bold">Up Coming</h2>
+              <label className="relative inline-flex items-center glass rounded-full pl-3 pr-3 py-1.5 text-sm cursor-pointer hover:border-[rgba(216,178,106,0.4)] transition-colors ml-auto">
+                <select
+                  data-testid="upcoming-kind-select"
+                  aria-label="Filter Up Coming"
+                  value={comingKind}
+                  onChange={(e) => chooseComingKind(e.target.value)}
+                  className="appearance-none bg-transparent outline-none font-medium text-[#F6EFE4] cursor-pointer"
+                >
+                  <option value="all" className="bg-[#17130F] text-[#F6EFE4]">All</option>
+                  <option value="anime" className="bg-[#17130F] text-[#F6EFE4]">Anime</option>
+                  <option value="tv" className="bg-[#17130F] text-[#F6EFE4]">TV series</option>
+                  <option value="movie" className="bg-[#17130F] text-[#F6EFE4]">Movies</option>
+                </select>
+              </label>
               <Link data-testid="upcoming-see-all" to="/recommendations" className="chip hover:chip-rose transition-colors">See all</Link>
             </div>
             <div className={POSTER_GRID}>
@@ -285,10 +339,18 @@ export default function Home() {
                     <RecPosterActions rec={r} onApproved={markApproved} onRejected={dismiss} />
                   </div>
                   <h3 className="font-display font-bold text-xl truncate mt-3">{r.title}</h3>
+                  <p data-testid={`upcoming-date-${r.id}`} className="text-[11px] text-[#EBD3A3] mt-1">{premiereLabel(r)}</p>
                   <p className="text-[11px] text-[#A5987F] mt-1 line-clamp-2 leading-snug">{r.synopsis}</p>
                 </div>
               ))}
             </div>
+            {!upcoming.length && (
+              <div data-testid="upcoming-empty" className="glass rounded-3xl p-6 text-sm text-[#8C7F6D]">
+                {comingKind === "all"
+                  ? "No verified premieres coming up among your picks yet."
+                  : `No verified ${{ anime: "anime", tv: "TV series", movie: "movie" }[comingKind]} premieres coming up among your picks yet.`}
+              </div>
+            )}
           </section>
         </div>
       )}

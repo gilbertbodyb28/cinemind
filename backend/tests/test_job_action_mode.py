@@ -9,6 +9,15 @@ from fastapi import HTTPException
 from jobs.engine import apply_job_action_mode
 
 
+def _no_requests(fake_db):
+    """apply_job_action_mode looks the title up in Requests and counts the job's
+    waiting rows first; none here."""
+    fake_db.requests.find_one = AsyncMock(return_value=None)
+    fake_db.requests.count_documents = AsyncMock(return_value=0)
+    fake_db.requests.find.return_value.__aiter__.return_value = iter([])
+    return fake_db
+
+
 def _row(**extra):
     return {
         "id": "rec1",
@@ -22,7 +31,7 @@ def _row(**extra):
 
 
 def test_require_approval_queues_pending_request_with_poster():
-    fake_db = MagicMock()
+    fake_db = _no_requests(MagicMock())
     fake_db.recommendations.update_one = AsyncMock()
     submitted = []
 
@@ -52,7 +61,7 @@ def test_require_approval_queues_pending_request_with_poster():
 
 
 def test_auto_request_sends_to_mediamanager():
-    fake_db = MagicMock()
+    fake_db = _no_requests(MagicMock())
     fake_db.recommendations.update_one = AsyncMock()
     submitted = []
     send_calls = []
@@ -96,7 +105,7 @@ def test_auto_request_sends_to_mediamanager():
 
 
 def test_auto_request_without_mediamanager_falls_back_to_pending():
-    fake_db = MagicMock()
+    fake_db = _no_requests(MagicMock())
     fake_db.recommendations.update_one = AsyncMock()
     submitted = []
 

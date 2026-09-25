@@ -169,6 +169,10 @@ def parse_recommendation_media(media: Dict[str, Any]) -> Optional[Dict[str, Any]
         "candidate_score": float(media.get("averageScore") or 0) / 10.0,
         "why": "Suggested from AniList recommendations.",
     }
+    # TV, MOVIE, OVA ...: without it an anime film looked like a series to
+    # every media-type filter and to the queue's already-requested check.
+    if media.get("format"):
+        row["format"] = str(media["format"]).upper()
     # AniList lists donghua (CN) and aeni (KR) next to anime. Without the origin
     # every one of them looked Japanese. Only the country is set: the ranking
     # reads original_language, and this fix is about lanes, not scores.

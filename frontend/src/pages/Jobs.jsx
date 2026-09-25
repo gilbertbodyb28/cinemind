@@ -36,6 +36,7 @@ const empty = () => ({
   exclude_genres: "",
   min_year: "",
   max_year: "",
+  upcoming_only: false,
   min_rating: "",
   min_vote_count: "",
   min_runtime: "",
@@ -74,6 +75,7 @@ function fromJob(job) {
     exclude_genres: (filters.exclude_genres || []).join(", "),
     min_year: filters.min_year ?? "",
     max_year: filters.max_year ?? "",
+    upcoming_only: Boolean(filters.upcoming_only),
     min_rating: filters.min_rating ?? "",
     min_vote_count: filters.min_vote_count ?? "",
     min_runtime: filters.min_runtime ?? "",
@@ -115,6 +117,8 @@ function toPayload(form) {
       exclude_genres: split(form.exclude_genres),
       min_year: form.min_year === "" ? null : Number(form.min_year),
       max_year: form.max_year === "" ? null : Number(form.max_year),
+      // Only titles whose premiere (film, series or a coming season) is verified after today.
+      upcoming_only: Boolean(form.upcoming_only),
       min_rating: form.min_rating === "" ? null : Number(form.min_rating),
       min_vote_count: form.min_vote_count === "" ? null : Number(form.min_vote_count),
       min_runtime: form.min_runtime === "" ? null : Number(form.min_runtime),
@@ -174,6 +178,8 @@ export default function Jobs() {
     }
   };
 
+  // Load once on mount; reload is recreated every render and re-running it would loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { reload(); }, []);
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
@@ -394,6 +400,10 @@ export default function Jobs() {
             <Field label="Exclude genres" value={form.exclude_genres} onChange={(v) => set("exclude_genres", v)} placeholder="Horror" />
             <Field label="Minimum year" value={form.min_year} onChange={(v) => set("min_year", v)} />
             <Field label="Maximum year" value={form.max_year} onChange={(v) => set("max_year", v)} />
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+              <button type="button" data-testid="job-upcoming-only-toggle" onClick={() => set("upcoming_only", !form.upcoming_only)} className={`chip ${form.upcoming_only ? "chip-rose" : ""}`}>Only upcoming premieres</button>
+              <span className="text-xs text-slate-500">A verified premiere after today inside the years above, including a new season of an older series.</span>
+            </div>
             <Field label="Minimum rating" value={form.min_rating} onChange={(v) => set("min_rating", v)} placeholder="7.0" />
             <Field label="Minimum vote count" value={form.min_vote_count} onChange={(v) => set("min_vote_count", v)} />
             <Field label="Minimum runtime" value={form.min_runtime} onChange={(v) => set("min_runtime", v)} />

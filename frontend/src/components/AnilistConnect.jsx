@@ -3,7 +3,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Link2, Loader2, CheckCircle2, Unplug } from "lucide-react";
 
-export default function AnilistConnect({ connected, username, clientConfigured = true, onChange }) {
+export default function AnilistConnect({ connected, checking, notice, username, clientConfigured = true, onChange }) {
   const [code, setCode] = useState("");
   const [importJson, setImportJson] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,7 +88,11 @@ export default function AnilistConnect({ connected, username, clientConfigured =
 
   return (
     <div className="space-y-4">
-      {connected ? (
+      {checking ? (
+        <div data-testid="anilist-checking" className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-400 font-mono">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking the saved sign-in with AniList…
+        </div>
+      ) : connected ? (
         <div data-testid="anilist-connected" className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -114,6 +118,10 @@ export default function AnilistConnect({ connected, username, clientConfigured =
             >
               <Link2 className="w-4 h-4" /> Connect with AniList
             </button>
+            {/* Why a stored sign-in stopped counting (AniList refused it). */}
+            {notice && (
+              <span data-testid="anilist-auth-notice" className="text-xs text-rose-300 font-mono">{notice}</span>
+            )}
           </div>
           <p className="text-xs text-slate-500 leading-relaxed">
             AniList Redirect URL must be exactly{" "}

@@ -28,6 +28,9 @@ DEFAULT_PROVIDER_WEIGHTS = {
 # user demonstrably likes. Reachable: one 9/10 rating clears it on its own.
 POSITIVE_EVIDENCE = 1.8
 NEGATIVE_EVIDENCE = -1.0
+#: How many liked and disliked titles similarity may compare a candidate with.
+LIKED_REFERENCE_LIMIT = 400
+NEGATIVE_REFERENCE_LIMIT = 160
 RECENT_DAYS = 240
 # List-valued metadata merged across every provider row behind one title.
 # `tmdb_keywords`, `cast`, `creators` and `companies` arrive from TMDb detail
@@ -42,6 +45,82 @@ a an and are as at be but by for from has have he her his in into is it its of o
 that the their them they this to was were will with who what when which after before
 his hers our your my their one two new life world story man woman young old first last
 """.split())
+
+
+def taste_genres(item: Dict[str, Any]) -> List[str]:
+    """One spelling per genre, the way the filters already read them.
+
+    The profile stored genres exactly as each source spelled them, so Trakt's
+    "Science-Fiction" (affinity 0.645) and TMDb's "Sci-Fi" (0.026) were two
+    unrelated genres, and TMDb TV's 10765 "Sci-Fi & Fantasy" reached the
+    ranking as "Sci-Fi" alone - the Fantasy half, Gilbert's third strongest
+    genre at 0.905, was invisible on every TMDb TV candidate.
+    """
+    from .filter_engine import GENRE_ALIASES, TMDB_COMBINED_GENRE_IDS
+
+    cached = item.get("_taste_genres")
+    if cached is not None:
+        return cached
+    names: List[str] = []
+    if not CANONICAL_GENRES:
+        names = [str(value).casefold() for value in item.get("genres") or [] if value]
+        item["_taste_genres"] = names
+        return names
+    for value in item.get("genres") or []:
+        parts = re.split(r"\s*[&/]\s*", str(value).strip().casefold()) if SPLIT_COMBINED else [str(value).strip().casefold()]
+        for part in parts:
+            part = part.strip()
+            if part:
+                name = GENRE_ALIASES.get(part, part) if GENRE_ALIASING else part
+                if name not in names:
+                    names.append(name)
+    for raw in (item.get("tmdb_genre_ids") or []) if EXPAND_COMBINED else []:
+        try:
+            halves = TMDB_COMBINED_GENRE_IDS.get(int(raw), ())
+        except (TypeError, ValueError):
+            continue
+        for name in halves:
+            if name not in names:
+                names.append(name)
+    item["_taste_genres"] = names
+    return names
+
+
+#: One spelling per genre across providers (see taste_genres). Measured
+#: 2026-09-24, complete-data snapshot, 3 seeds x 8 folds, against raw names:
+#: TV job P@5 0.425 -> 0.567 and NDCG@10 0.380 -> 0.456, Requests AUC 0.800 ->
+#: 0.889; the broad Content to Watch holdout pays for it, NDCG@10 0.357 -> 0.317,
+#: because every live-action sci-fi/fantasy series now matches the profile's
+#: sci-fi and fantasy instead of neither. Kept: the same genre spelled two ways
+#: is a bug, and the TV jobs are where recommendations had stopped working.
+CANONICAL_GENRES = True
+#: ... including aliases ("Science-Fiction" and "Sci-Fi" are one genre). This is
+#: the half that carries the TV-job gain (P@5 0.450 without it).
+GENRE_ALIASING = True
+#: A genre *name* like "Sci-Fi & Fantasy" is read as both genres. This half
+#: carries the Requests gain (AUC 0.801 without it).
+SPLIT_COMBINED = True
+#: TMDb's combined TV ids (10759 Action & Adventure, 10765 Sci-Fi & Fantasy) are
+#: NOT expanded into both halves for taste. The filters must (a job asking for
+#: fantasy has to find a "Sci-Fi & Fantasy" series), but for taste it over-claims:
+#: every TMDb action or genre series then carried four of Gilbert's five top
+#: genres and looked like a perfect match. Measured 2026-09-24 on the complete-
+#: data snapshot: expanding cost holdout NDCG@10 0.311 -> 0.253 and the TV job's
+#: P@5 0.558 -> 0.375. TMDb names the id after its first half ("Sci-Fi").
+EXPAND_COMBINED = False
+#: Episode progress (AniList, Trakt's watched sets) counted as viewing depth.
+#: Off: measured 2026-09-24 on the complete-data snapshot it cost holdout P@5
+#: 0.358 -> 0.300 and gained nothing on the TV job (0.567 -> 0.558).
+PROGRESS_AS_PLAYS = False
+#: Plan-to-watch rows stay out of the profile.
+SKIP_PLANNED = True
+
+GENRE_LABELS = {"sci-fi": "Sci-Fi", "talk show": "Talk Show", "game show": "Game Show"}
+
+
+def genre_label(name: str) -> str:
+    """Display spelling for a canonical genre name."""
+    return GENRE_LABELS.get(name, " ".join(part.capitalize() for part in str(name).split(" ")))
 
 
 def _parse_dt(value: Optional[str]) -> Optional[datetime]:
@@ -80,9 +159,42 @@ def normalized_rating(item: Dict[str, Any]) -> Optional[float]:
     return value / scale * 10.0
 
 
+#: Statuses that say "I intend to watch this", not "I watched it".
+PLANNED_STATUSES = frozenset({"PLANNING", "PLANTOWATCH", "PLAN_TO_WATCH"})
+#: Rows CineMind itself produced from the user's explicit actions. They are not a
+#: history provider a job can switch off; only an empty taste_sources removes them.
+OWN_SIGNAL_PROVIDERS = frozenset({"feedback", "requests"})
+
+
+def row_provider(row: Dict[str, Any]) -> str:
+    return str(row.get("provider") or row.get("source") or "unknown")
+
+
+def is_planned(row: Dict[str, Any]) -> bool:
+    return str(row.get("status") or "").upper() in PLANNED_STATUSES
+
+
+def source_allowed(row: Dict[str, Any], taste_sources: Optional[Iterable[str]]) -> bool:
+    """Does this row belong to a provider the job takes its taste from?
+
+    Decided per row, before titles are merged. It used to be decided after the
+    merge, on the *alphabetically first* provider of the merged title, so a
+    title watched on AniList and Trakt counted as "anilist" and vanished from a
+    job without AniList even though its Trakt plays and rating were allowed.
+    """
+    if taste_sources is None:
+        return True
+    allowed = set(taste_sources)
+    if not allowed:
+        return False
+    provider = row_provider(row)
+    return provider in allowed or provider in OWN_SIGNAL_PROVIDERS
+
+
 def merge_taste_docs(
     history: Iterable[Dict[str, Any]],
     personal: Optional[Iterable[Dict[str, Any]]] = None,
+    ignored: Optional[Dict[str, int]] = None,
 ) -> List[Dict[str, Any]]:
     """One row per canonical title, merging every provider row behind it.
 
@@ -90,11 +202,27 @@ def merge_taste_docs(
     title is how much of it the user actually watched - the strongest signal
     the catalogue hands us for free. Keeping only the first row threw that away
     together with ratings that just one provider reported.
+
+    Two kinds of row never enter the merge. Demo-shelf rows are not the user's
+    (recommendation.demo_seed). A plan-to-watch row is not history at all, and
+    its status used to win the merge: Family Guy (389 episodes, 10/10),
+    Naruto Shippuden (501), Supernatural (328) and Friends (229) all carried a
+    Simkl "plantowatch" and were therefore scored as zero evidence.
+    `ignored` receives the counts, so a report can say what was left out.
     """
+    from .demo_seed import is_demo_seed
+
     merged: Dict[str, Dict[str, Any]] = {}
     order: List[str] = []
+    skipped = ignored if ignored is not None else {}
 
     def _absorb(row: Dict[str, Any], is_personal: bool) -> None:
+        if is_demo_seed(row):
+            skipped["demo_seed"] = skipped.get("demo_seed", 0) + 1
+            return
+        if SKIP_PLANNED and is_planned(row):
+            skipped["plan_to_watch"] = skipped.get("plan_to_watch", 0) + 1
+            return
         key = doc_key(row)
         current = merged.get(key)
         if current is None:
@@ -106,6 +234,11 @@ def merge_taste_docs(
             merged[key] = current
             order.append(key)
         current["plays"] += 0 if is_personal else 1
+        # AniList and Simkl keep one row per title; their episode progress is
+        # the same depth signal Trakt's one-row-per-episode history gives.
+        progress = coerce_int(row.get("progress")) if PROGRESS_AS_PLAYS else None
+        if progress:
+            current["progress"] = max(current.get("progress") or 0, progress)
         provider = row.get("provider") or row.get("source")
         if provider:
             current["providers"].add(provider)
@@ -126,14 +259,19 @@ def merge_taste_docs(
             current["rating"] = rating
             current["rating_scale"] = 10
             current["rating_source"] = "personal" if is_personal else "history"
+            current["rating_provider"] = row_provider(row)
         for field, combine in (
             ("watch_count", max), ("favorite", max), ("completed", max), ("rewatched", max),
         ):
             value = row.get(field)
             if value is not None:
                 current[field] = combine(current.get(field) or 0, int(bool(value)) if field != "watch_count" else int(value or 1))
-        if row.get("status") and not current.get("status"):
+        # A drop is a judgement and outranks any other provider's status.
+        status = str(row.get("status") or "").upper()
+        if status and (not current.get("status") or status == "DROPPED"):
             current["status"] = row["status"]
+        if row.get("decision") and not current.get("decision"):
+            current["decision"] = row["decision"]
         stamp = _parse_dt(row.get("last_watched_at") or row.get("watched_at") or row.get("rated_at"))
         if stamp and (current.get("_stamp") is None or stamp > current["_stamp"]):
             current["_stamp"] = stamp
@@ -147,11 +285,66 @@ def merge_taste_docs(
     output = []
     for key in order:
         row = merged[key]
-        row["provider"] = sorted(row.pop("providers"))[0] if row.get("providers") else "unknown"
+        providers = sorted(row.pop("providers") or [])
+        # `providers` is the truth; `provider` stays for the per-provider weight
+        # and older readers, and prefers a real history provider over CineMind's own rows.
+        row["providers"] = providers
+        history_providers = [name for name in providers if name not in OWN_SIGNAL_PROVIDERS]
+        row["provider"] = (history_providers or providers or ["unknown"])[0]
         row.pop("_stamp", None)
-        row["plays"] = max(1, row.get("plays") or 1)
+        row["plays"] = max(1, row.get("plays") or 1, row.get("progress") or 0)
         output.append(row)
     return output
+
+
+#: Evidence a decision in the Requests queue carries. An approval is a wish,
+#: weaker than a rating of 8; a rejection is a "no", weaker than a rating of 4.
+APPROVED_EVIDENCE = 2.0
+REJECTED_EVIDENCE = -1.5
+
+
+def decision_docs(
+    requests: Optional[Iterable[Dict[str, Any]]],
+    watched: Optional[Iterable[Dict[str, Any]]] = None,
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    """Approved and rejected Requests as explicit feedback on CineMind's own picks.
+
+    Measured 2026-09-24: 234 rejections and 55 approvals, never read by the
+    taste profile - only used to keep those exact titles from coming back, so
+    the next CSI, Monk or Castle was recommended right after the last one was
+    turned down.
+
+    A rejection of something the user has already watched is not a dislike -
+    Logan, The Dark Knight Rises and Avatar were rejected, and all three are
+    rated 10/10 on Trakt. Those rejections are skipped; so is anything the
+    user has since rated, because the rating is the better evidence.
+    """
+    from .exclusion_engine import identity_keys
+
+    seen = set()
+    for row in watched or []:
+        seen.update(identity_keys(row))
+    docs: List[Dict[str, Any]] = []
+    counts = {"approved": 0, "rejected": 0, "rejected_but_watched": 0}
+    for row in requests or []:
+        status = str(row.get("status") or "")
+        if status not in {"approved", "rejected"}:
+            continue
+        if not row.get("title"):
+            continue
+        if status == "rejected" and identity_keys(row) & seen:
+            counts["rejected_but_watched"] += 1
+            continue
+        if status == "approved" and identity_keys(row) & seen:
+            # Already in the history, where plays and ratings say more.
+            continue
+        counts[status] += 1
+        docs.append({
+            **{key: value for key, value in row.items() if key not in {"rating", "rating_scale", "status", "provider", "source", "match_score"}},
+            "provider": "requests",
+            "decision": status,
+        })
+    return docs, counts
 
 
 def evidence_score(item: Dict[str, Any], feedback_by_id: Optional[Dict[str, str]] = None) -> float:
@@ -162,7 +355,7 @@ def evidence_score(item: Dict[str, Any], feedback_by_id: Optional[Dict[str, str]
     """
     feedback_by_id = feedback_by_id or {}
     status = (item.get("status") or "").upper()
-    if status in {"PLANNING", "PLANTOWATCH"}:
+    if status in PLANNED_STATUSES:
         return 0.0
 
     canonical = item.get("canonical_media_id")
@@ -185,6 +378,12 @@ def evidence_score(item: Dict[str, Any], feedback_by_id: Optional[Dict[str, str]
             score = 0.2
         else:
             score = -2.4
+    elif item.get("decision") == "rejected":
+        # Turned down in the Requests queue: a "no" on a title never watched,
+        # so there are no plays or recency to add to it.
+        return REJECTED_EVIDENCE
+    elif item.get("decision") == "approved":
+        score = APPROVED_EVIDENCE
     else:
         # No rating: engagement depth is the only honest evidence we have.
         score = 0.35
@@ -226,7 +425,7 @@ def stated_opinion(item: Dict[str, Any], feedback_by_id: Optional[Dict[str, str]
     """
     if normalized_rating(item) is not None:
         return True
-    if item.get("favorite"):
+    if item.get("favorite") or item.get("decision"):
         return True
     action = (feedback_by_id or {}).get(item.get("canonical_media_id") or "", "")
     return action in {"like", "dislike", "blacklist"}
@@ -342,7 +541,14 @@ def build_taste_snapshot(
     provider_weights: Optional[Dict[str, float]] = None,
     taste_sources: Optional[List[str]] = None,
     personal_history: Optional[List[Dict[str, Any]]] = None,
+    requests: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
+    """The viewer's taste, built from every provider's rows and their own decisions.
+
+    `taste_sources` selects providers per row (None: all; []: none at all).
+    `requests` are the Requests queue: approvals and rejections are explicit
+    feedback on CineMind's own picks (see decision_docs).
+    """
     weights = {**DEFAULT_PROVIDER_WEIGHTS, **(provider_weights or {})}
     feedback_by_id = {
         row["canonical_media_id"]: row.get("action")
@@ -350,11 +556,16 @@ def build_taste_snapshot(
         if row.get("canonical_media_id")
     }
 
-    docs = merge_taste_docs(history or [], personal_history)
-    # taste_sources=None -> all providers; [] -> none; ["simkl"] -> only those.
-    if taste_sources is not None:
-        allowed = set(taste_sources)
-        docs = [] if not allowed else [doc for doc in docs if (doc.get("provider") or "unknown") in allowed]
+    ignored: Dict[str, int] = {}
+    history_rows = [row for row in history or [] if source_allowed(row, taste_sources)]
+    personal_rows = [row for row in personal_history or [] if source_allowed(row, taste_sources)]
+    ignored["other_taste_sources"] = (len(history or []) - len(history_rows)) + (
+        len(personal_history or []) - len(personal_rows))
+    decisions, decision_counts = decision_docs(
+        requests if taste_sources is None or taste_sources else [],
+        watched=list(history or []) + list(personal_history or []),
+    )
+    docs = merge_taste_docs(history_rows, personal_rows + decisions, ignored=ignored)
 
     genres: Dict[str, Dict[str, float]] = {}
     pairs: Dict[str, Dict[str, float]] = {}
@@ -375,24 +586,43 @@ def build_taste_snapshot(
     negatives: List[Dict[str, Any]] = []
     rewatched: List[str] = []
     rated_count = 0
+    usage: Dict[str, Dict[str, int]] = {}
+
+    def _use(names: Iterable[str], field: str) -> None:
+        for name in names:
+            row = usage.setdefault(name, {"titles": 0, "rated_titles": 0, "positives": 0, "negatives": 0, "seeds": 0})
+            row[field] += 1
 
     for item in docs:
         weight = evidence_score(item, feedback_by_id) * weights.get(item.get("provider") or "unknown", 1.0)
+        providers = item.get("providers") or [item.get("provider") or "unknown"]
+        _use(providers, "titles")
         if normalized_rating(item) is not None:
             rated_count += 1
-        names = [str(name) for name in (item.get("genres") or []) if name]
-        recent = is_recent(item)
-        for name in names:
-            _accumulate(genres, name, weight)
-            _accumulate(recent_genres if recent else longterm_genres, name, weight)
-        for first in range(len(names)):
-            for second in range(first + 1, len(names)):
-                _accumulate(pairs, genre_pair(names[first], names[second]), weight)
-        if item.get("original_language"):
-            _accumulate(languages, str(item["original_language"]).casefold(), weight)
-        year = coerce_int(item.get("year"))
-        if year:
-            _accumulate(decades, "%ds" % ((year // 10) * 10), weight)
+            _use([item.get("rating_provider") or providers[0]], "rated_titles")
+        decision = item.get("decision")
+        # A rejection says "not this one"; it is precise about the title, its
+        # themes and its people, and says nothing reliable about whole genres,
+        # languages or formats - 234 rejections of crime procedurals would
+        # otherwise have taken Drama down with them.
+        consumption = not decision
+        names = taste_genres(item)
+        if consumption or decision == "approved":
+            recent = is_recent(item)
+            for name in names:
+                _accumulate(genres, name, weight)
+                if consumption:
+                    _accumulate(recent_genres if recent else longterm_genres, name, weight)
+            for first in range(len(names)):
+                for second in range(first + 1, len(names)):
+                    _accumulate(pairs, genre_pair(names[first], names[second]), weight)
+        if consumption:
+            if item.get("original_language"):
+                _accumulate(languages, str(item["original_language"]).casefold(), weight)
+            year = coerce_int(item.get("year"))
+            if year:
+                _accumulate(decades, "%ds" % ((year // 10) * 10), weight)
+            _accumulate(buckets, media_bucket(item), weight)
         for studio in item.get("studios") or []:
             _accumulate(studios, str(studio), weight)
         for tag in item.get("tags") or []:
@@ -401,8 +631,9 @@ def build_taste_snapshot(
         # without ever rating it pollutes them. Episode depth alone can carry an
         # unrated title past POSITIVE_EVIDENCE, and those titles then matched
         # their own terms back. These stores therefore take only titles the user
-        # actually judged - a rating, a like, a dislike or a favourite. Genres
-        # still take every row; they need the volume to mean anything.
+        # actually judged - a rating, a like, a dislike, a favourite or a
+        # decision in the Requests queue. Genres still take every row; they need
+        # the volume to mean anything.
         if stated_opinion(item, feedback_by_id):
             for keyword in item.get("tmdb_keywords") or []:
                 _accumulate(tmdb_keywords, str(keyword).casefold(), weight)
@@ -416,7 +647,6 @@ def build_taste_snapshot(
                 _accumulate(companies, str(company).casefold(), weight)
             if item.get("collection"):
                 _accumulate(collections, str(item["collection"]).casefold(), weight)
-        _accumulate(buckets, media_bucket(item), weight)
 
         title = item.get("title")
         if not title:
@@ -427,9 +657,16 @@ def build_taste_snapshot(
             "score": round(weight, 3),
             "genres": names[:6],
             "media_type": media_bucket(item),
+            "type": item.get("type") or item.get("media_type"),
             "original_language": item.get("original_language"),
+            "country": item.get("country"),
+            "origin_countries": item.get("origin_countries"),
             "plays": item.get("plays"),
             "rating": normalized_rating(item),
+            "decision": decision,
+            "decided_at": item.get("updated_at") if decision else None,
+            "providers": providers,
+            "tmdb_id": item.get("tmdb_id"),
             # Carried so a candidate can be compared on what a title is actually
             # about, not only on which genre labels it happens to share.
             "overview": item.get("overview") or item.get("synopsis"),
@@ -443,10 +680,16 @@ def build_taste_snapshot(
         }
         if weight >= POSITIVE_EVIDENCE:
             positives.append(row)
+            _use(providers, "positives")
             for token in overview_tokens(item.get("overview") or item.get("synopsis")):
                 _accumulate(keywords, token, weight)
         elif weight <= NEGATIVE_EVIDENCE:
+            row["reason"] = ("rejected in Requests" if decision == "rejected"
+                             else "rated %.0f/10" % row["rating"] if row["rating"] is not None
+                             else "dropped" if str(item.get("status") or "").upper() == "DROPPED"
+                             else "disliked")
             negatives.append(row)
+            _use(providers, "negatives")
         if item.get("rewatched") or int(item.get("watch_count") or 1) > 1:
             rewatched.append(title)
 
@@ -463,10 +706,11 @@ def build_taste_snapshot(
             continue
         seen_feedback.add(title)
         delta = 3.5 if action == "like" else (-4.5 if action == "blacklist" else -3.5)
-        names = [name for name in (row.get("genres") or []) if name]
+        names = taste_genres(row)
         for name in names:
             _accumulate(genres, name, delta)
-        entry = {"title": title, "year": row.get("year"), "score": delta, "genres": names[:6]}
+        entry = {"title": title, "year": row.get("year"), "score": delta, "genres": names[:6],
+                 "type": row.get("type"), "media_type": media_bucket(row), "reason": action}
         if action == "like":
             positives.append(entry)
         else:
@@ -474,11 +718,15 @@ def build_taste_snapshot(
         preference_reasons.append({
             "kind": "liked" if action == "like" else ("disliked" if action == "dislike" else "blacklisted"),
             "title": title,
-            "effect": ", ".join(names[:3]) or ("positive signal" if action == "like" else "negative signal"),
+            "effect": ", ".join(genre_label(name) for name in names[:3]) or ("positive signal" if action == "like" else "negative signal"),
         })
 
     genre_profile = _finalize(genres)
     positives.sort(key=lambda row: -row["score"])
+    # Equal evidence (every rejection weighs the same) falls back to the most
+    # recent decision first: what the user turned down last week says more
+    # about their taste now than a rejection from months ago.
+    negatives.sort(key=lambda row: str(row.get("decided_at") or ""), reverse=True)
     negatives.sort(key=lambda row: row["score"])
     # Provider IDs for the titles with the most evidence behind them, so
     # "more like this" queries are seeded by what the user actually loved
@@ -487,8 +735,9 @@ def build_taste_snapshot(
         (doc for doc in docs if doc.get("tmdb_id") or doc.get("anilist_id")),
         key=lambda doc: -evidence_score(doc, feedback_by_id),
     )
-    seed_docs = [
-        {
+
+    def _seed_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
+        return {
             "title": doc.get("title"),
             "year": doc.get("year"),
             "type": doc.get("type") or doc.get("media_type"),
@@ -496,11 +745,23 @@ def build_taste_snapshot(
             "tmdb_id": doc.get("tmdb_id"),
             "anilist_id": doc.get("anilist_id"),
             "genres": (doc.get("genres") or [])[:6],
+            # Lets a job seed only from the lane it asks for (job_intent.seed_fits).
+            "original_language": doc.get("original_language"),
+            "country": doc.get("country"),
             "evidence": round(evidence_score(doc, feedback_by_id), 3),
+            "providers": doc.get("providers"),
         }
-        for doc in seeds[:24]
-        if evidence_score(doc, feedback_by_id) > 0
+
+    seed_docs = [_seed_doc(doc) for doc in seeds[:24] if evidence_score(doc, feedback_by_id) > 0]
+    # The same ordering, much further down. The top 24 of an anime-heavy
+    # profile hold only a few English live-action series, so a job that asks
+    # for those needs to look past them for its "more like this" seeds.
+    lane_seed_docs = [
+        _seed_doc(doc) for doc in seeds[:240]
+        if doc.get("tmdb_id") and evidence_score(doc, feedback_by_id) > 0
     ]
+    for doc in lane_seed_docs:
+        _use(doc.get("providers") or [], "seeds")
     snapshot: Dict[str, Any] = {
         # --- v1 keys, still read by the UI, the LLM prompt and older jobs ---
         "favorite_genres": _top(genre_profile, 8),
@@ -510,12 +771,16 @@ def build_taste_snapshot(
         "favorite_eras": _top(_finalize(decades), 4),
         "preferred_languages": _top(_finalize(languages), 4),
         "high_confidence_positive_titles": positives[:24],
-        "negative_titles": negatives[:16],
+        "negative_titles": negatives[:NEGATIVE_REFERENCE_LIMIT],
         "frequently_rewatched_titles": list(dict.fromkeys(rewatched))[:12],
         "preference_reasons": preference_reasons[:12],
         "provider_weights": weights,
         "item_count": len(docs),
         # --- v2 structured profile ---
+        # Every title with enough evidence, strongest first. Similarity used to
+        # compare candidates with the top 24 only - 15 of them anime - so an
+        # English TV job measured every sitcom against How I Met Your Mother.
+        "liked_titles": positives[:LIKED_REFERENCE_LIMIT],
         "genres": genre_profile,
         "genre_pairs": _finalize(pairs),
         "languages": _finalize(languages),
@@ -534,8 +799,14 @@ def build_taste_snapshot(
         "rated_count": rated_count,
         "positive_count": len(positives),
         "negative_count": len(negatives),
+        "approved_count": decision_counts["approved"],
+        "rejected_count": decision_counts["rejected"],
+        "rejected_but_watched": decision_counts["rejected_but_watched"],
+        "ignored_rows": {key: value for key, value in ignored.items() if value},
+        "provider_usage": usage,
         "seed_docs": seed_docs,
-        "engine": "structured_taste_v2",
+        "lane_seed_docs": lane_seed_docs,
+        "engine": "structured_taste_v3",
     }
     return snapshot
 
@@ -570,7 +841,7 @@ def candidate_affinity(candidate: Dict[str, Any], taste: Dict[str, Any]) -> floa
         hit = sum(1.0 - index * 0.1 for index, name in enumerate(favorites) if name in names)
         return max(-1.0, min(1.0, (hit - 1.5 * len(names & least)) / max(len(names), 1)))
 
-    names = [str(name).casefold() for name in (candidate.get("genres") or []) if name]
+    names = taste_genres(candidate)
     if not names:
         return 0.0
     total = 0.0

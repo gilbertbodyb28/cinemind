@@ -162,9 +162,13 @@ export default function Requests() {
     if (pagingRef.current) return;
     pagingRef.current = true;
     const seq = requestSeq.current;
+    // Approved rows stay in items until the next refresh, but the server's queue
+    // already dropped them. Counting them in the offset skipped as many queued
+    // titles as had just been approved.
+    const offset = itemsRef.current.filter((row) => !DONE.has(row.status)).length;
     try {
       const r = await api.get("/requests/page", {
-        params: { ...paramsRef.current, offset: itemsRef.current.length, limit: PAGE },
+        params: { ...paramsRef.current, offset, limit: PAGE },
       });
       if (seq === requestSeq.current) applyPage(r.data, false);
     } catch (error) {
@@ -433,7 +437,7 @@ export default function Requests() {
     io.observe(node);
     return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length, total]);
+  }, [queued.length, total]);
 
 
   return (
@@ -494,6 +498,22 @@ export default function Requests() {
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <label className={FIELD}>
+            <select
+              data-testid="request-kind-filter"
+              aria-label="Show anime, TV series or movies"
+              value={types.size === 0 ? "all" : types.size === 1 ? [...types][0] : "mixed"}
+              onChange={(event) => setTypes(event.target.value === "all" ? new Set() : new Set([event.target.value]))}
+              className={SELECT}
+            >
+              <option value="all">All: anime, TV and movies</option>
+              <option value="anime">Anime</option>
+              <option value="tv">TV series</option>
+              <option value="movie">Movies</option>
+              {types.size > 1 && <option value="mixed" disabled>Several types ticked</option>}
+            </select>
+          </label>
+
           <label className={FIELD}>
             <Search className="w-4 h-4 text-[#8C7F6D] shrink-0" />
             <input
@@ -652,7 +672,8 @@ export default function Requests() {
         ))}
       </div>
 
-      {items.length < total && (
+      {/* Queued rows, not items: approved ones wait in items for the next refresh. */}
+      {queued.length < total && (
         <div ref={sentinel} data-testid="requests-sentinel" className="py-8 text-center text-xs text-[#8C7F6D]">
           Showing {queued.length} of {total} — keep scrolling
         </div>
@@ -692,6 +713,7 @@ function RequestPoster({ item, index, busy, selected, onToggleSelect, onOpenDeta
       onClick={toggleFromCard}
       onDoubleClick={(event) => {
         if (event.target.closest("button, a, input, select, label")) return;
+        event.preventDefault();
         // The two clicks of a double-click already cancel each other out.
         onOpenDetails();
       }}

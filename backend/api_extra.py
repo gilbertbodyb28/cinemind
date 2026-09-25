@@ -574,15 +574,19 @@ async def ai_search(body: SearchBody, user: User = Depends(get_current_user)):
     ranked = result.get("ranked") or result["accepted"]
     ai_reranked = False
     if ranked and allow_llm:
+        # AI Search re-ranks bounded (apply_rerank's default), so the model's whole
+        # floor-checked order is used, not just its top five.
         ordered, rerank_provider, rerank_model = await rerank_verified_candidates(
-            user.user_id, result["taste"], ranked, model_override=body.model
+            user.user_id, result["taste"], ranked, model_override=body.model, keep=None,
         )
         if ordered:
             ranked = apply_rerank(ranked, ordered)
             ai_reranked = rerank_provider == "ollama"
             if ai_reranked:
                 provider, model = rerank_provider, rerank_model
-    accepted = ranked[:8]
+    from recommendation.ranking_engine import strip_private
+
+    accepted = [strip_private(row) for row in ranked[:8]]
     accepted = await attach_canonical_ids(user.user_id, accepted, persist_history=False)
     now = datetime.now(timezone.utc).isoformat()
     search_provider = "ollama" if ai_reranked or intent.get("refined") else "deterministic"

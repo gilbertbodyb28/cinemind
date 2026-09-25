@@ -5,6 +5,7 @@ import asyncio
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import hashlib
 import logging
 import uuid
 import json
@@ -28,6 +29,7 @@ from config import (
 )
 from llm import generate_with_llm
 from providers.ollama import stream_ollama
+from providers.tmdb import tmdb_kind
 from mediamanager_client import (
     media_type_for_mediamanager,
     mediamanager_add_title,
@@ -114,6 +116,7 @@ class Connections(BaseModel):
     simkl_connected: bool = False
     plex_url: Optional[str] = None
     plex_token: Optional[str] = None
+    plex_username: Optional[str] = None
     ollama_url: Optional[str] = None
     ollama_model: Optional[str] = OLLAMA_MODEL
     llm_model: Optional[str] = None
@@ -125,6 +128,11 @@ class Connections(BaseModel):
     anilist_connected: bool = False
     anilist_client_configured: bool = False
     plex_connected: bool = False
+    # Why a stored sign-in no longer counts as connected (providers.auth_state).
+    trakt_auth_error: Optional[str] = None
+    simkl_auth_error: Optional[str] = None
+    plex_auth_error: Optional[str] = None
+    anilist_auth_error: Optional[str] = None
     tmdb_configured: bool = False
     # Vision, Apple and Spatial, plus the eight-theme spatial collection.
     # normalize_ui_theme() is what guards the value on the way in and out.
@@ -211,13 +219,17 @@ def normalize_sidebar_icon_size(value: Any) -> int:
 
 def connections_public(doc: Dict[str, Any]) -> Connections:
     """Serialize connections without leaking write-only secrets."""
+    from providers.auth_state import auth_error
+
     data = {**doc}
-    data["trakt_connected"] = bool(doc.get("trakt_refresh_token"))
-    data["simkl_connected"] = bool(doc.get("simkl_access_token"))
-    data["anilist_connected"] = bool(doc.get("anilist_access_token"))
+    # A token the provider refuses is not a connection: Sources offers Connect
+    # again instead of "Connected" over a revoked sign-in (providers.auth_state).
+    data["trakt_connected"] = bool(doc.get("trakt_refresh_token")) and not auth_error(doc, "trakt")
+    data["simkl_connected"] = bool(doc.get("simkl_access_token")) and not auth_error(doc, "simkl")
+    data["anilist_connected"] = bool(doc.get("anilist_access_token")) and not auth_error(doc, "anilist")
     data["anilist_username"] = doc.get("anilist_username")
     data["anilist_client_configured"] = anilist_credentials_configured() or bool(anilist_client_id())
-    data["plex_connected"] = bool(doc.get("plex_token"))
+    data["plex_connected"] = bool(doc.get("plex_token")) and not auth_error(doc, "plex")
     data["tmdb_configured"] = bool(TMDB_KEY)
     data["mediamanager_configured"] = mediamanager_is_configured(doc)
     if data.get("mediamanager_url"):
@@ -582,6 +594,11 @@ async def update_connections(payload: Connections, user: User = Depends(get_curr
             "anilist_client_configured",
             "plex_connected",
             "tmdb_configured",
+            # Set by the server from the providers' own answers, never by the form.
+            "trakt_auth_error",
+            "simkl_auth_error",
+            "plex_auth_error",
+            "anilist_auth_error",
         },
     )
     # Blank secrets keep stored values; explicit null would clear.
@@ -614,6 +631,12 @@ async def update_connections(payload: Connections, user: User = Depends(get_curr
         {"$set": {**data, "user_id": user.user_id}},
         upsert=True,
     )
+    from providers.auth_state import clear_auth_failure
+
+    # A sign-in pasted by hand replaces the one the provider refused.
+    for provider, secret in (("plex", "plex_token"), ("trakt", "trakt_access_token"), ("simkl", "simkl_access_token")):
+        if data.get(secret):
+            await clear_auth_failure(user.user_id, provider)
     doc = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0, "user_id": 0}) or {}
     return connections_public(doc)
 
@@ -659,13 +682,24 @@ async def simkl_pin_start(user: User = Depends(get_current_user)):
         raise HTTPException(status_code=503, detail="Simkl app credentials not configured on server")
     if not SIMKL_CLIENT_SECRET:
         raise HTTPException(status_code=503, detail="Simkl app secret not configured on server")
+    # The manual Client ID is tried first; when Simkl rejects it (2026-09-25:
+    # 412 "Your client_id is wrong") the server's own app is used, so a dead
+    # manual id no longer makes reconnecting impossible.
+    candidates = list(dict.fromkeys(cid for cid in (client_id, (SIMKL_CLIENT_ID or "").strip()) if cid))
     # OAuth 2.0 device flow. The legacy GET /oauth/pin now answers OAuth2 apps with
     # 400 "use POST /oauth2/device instead", so this mirrors the Trakt device flow.
     async with httpx.AsyncClient(timeout=15) as hc:
-        r = await hc.get(f"{SIMKL_API}/oauth2/device", params={"client_id": client_id}, headers=simkl_headers(client_id))
-    data = r.json() if r.status_code == 200 else {}
+        for client_id in candidates:
+            r = await hc.get(f"{SIMKL_API}/oauth2/device", params={"client_id": client_id}, headers=simkl_headers(client_id))
+            data = r.json() if r.status_code == 200 else {}
+            if r.status_code == 200 and data.get("device_code") and data.get("user_code"):
+                break
     if r.status_code != 200 or not data.get("device_code") or not data.get("user_code"):
         raise HTTPException(status_code=502, detail=simkl_error_detail(r))
+    # The poll must exchange the code with the same app that issued it.
+    await db.connections.update_one(
+        {"user_id": user.user_id}, {"$set": {"user_id": user.user_id, "simkl_pin_client_id": client_id}}, upsert=True,
+    )
     return {
         "device_code": data["device_code"],
         "user_code": data["user_code"],
@@ -677,7 +711,8 @@ async def simkl_pin_start(user: User = Depends(get_current_user)):
 
 @api.post("/simkl/pin/poll")
 async def simkl_pin_poll(body: DevicePoll, user: User = Depends(get_current_user)):
-    client_id = await resolve_simkl_client_id(user.user_id)
+    pending = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0, "simkl_pin_client_id": 1}) or {}
+    client_id = pending.get("simkl_pin_client_id") or await resolve_simkl_client_id(user.user_id)
     async with httpx.AsyncClient(timeout=15) as hc:
         r = await hc.post(
             f"{SIMKL_API}/oauth2/token",
@@ -696,21 +731,41 @@ async def simkl_pin_poll(body: DevicePoll, user: User = Depends(get_current_user
         if r.status_code == 200 and data.get("access_token"):
             token = data["access_token"]
             username = None
+            # The new sign-in counts once Simkl answers for it with a real call.
+            check_status: Optional[int] = None
             try:
                 me = await hc.post(f"{SIMKL_API}/users/settings", params=simkl_params(client_id), headers=simkl_headers(client_id, token))
+                check_status = me.status_code
                 if me.status_code == 200:
                     username = (me.json().get("user") or {}).get("name")
             except Exception as e:
                 logging.warning(f"Simkl settings fetch failed: {e}")
+            from providers.auth_state import clear_auth_failure, is_auth_rejection, note_auth_failure
+
+            if check_status is not None and (is_auth_rejection("simkl", check_status) or check_status == 403):
+                # Issued and refused in the same breath: nothing is stored.
+                return {"status": "invalid", "detail": f"Simkl refused the new sign-in ({check_status})"}
+            fields = {"user_id": user.user_id, "simkl_access_token": token, "simkl_token_client_id": client_id}
+            if username:
+                fields["simkl_username"] = username
             await db.connections.update_one(
                 {"user_id": user.user_id},
                 # Only the token is stored. Persisting client_id here used to pin the
                 # account to whichever app was live at connect time, so rotating
                 # SIMKL_CLIENT_ID in .env had no effect until the row was cleared by hand.
                 # A manual client id still lives in the Sources form via PUT /connections.
-                {"$set": {"user_id": user.user_id, "simkl_access_token": token, "simkl_username": username}},
+                # `simkl_token_client_id` records which app issued this token: a Simkl
+                # token only works with that app (providers.simkl.simkl_token_client_id).
+                {"$set": fields},
                 upsert=True,
             )
+            if check_status != 200:
+                # Kept, so the sign-in is not lost to an outage, but not "Connected"
+                # until a check succeeds (Test, or opening Sources).
+                detail = f"Signed in, but Simkl did not confirm it ({check_status or 'no answer'}): press Test"
+                await note_auth_failure(user.user_id, "simkl", detail)
+                return {"status": "unverified", "detail": detail}
+            await clear_auth_failure(user.user_id, "simkl")
             return {"status": "authorized", "username": username}
         error = (data.get("error") or "").lower()
         if error == "authorization_pending":
@@ -728,8 +783,142 @@ async def simkl_pin_poll(body: DevicePoll, user: User = Depends(get_current_user
 async def simkl_disconnect(user: User = Depends(get_current_user)):
     await db.connections.update_one(
         {"user_id": user.user_id},
-        {"$set": {"simkl_access_token": None, "simkl_username": None}},
+        {"$set": {"simkl_access_token": None, "simkl_username": None, "simkl_token_client_id": None}},
     )
+    from providers.auth_state import clear_auth_failure
+
+    await clear_auth_failure(user.user_id, "simkl")  # no sign-in left to be refused
+    return {"ok": True}
+
+
+# ---------- Plex PIN sign-in ----------
+# The same device-code sign-in as Trakt and Simkl, through plex.tv/link. The only
+# other way to reconnect Plex was to dig an X-Plex-Token out of "View XML" by hand
+# (the stored one had been revoked: plex.tv itself answered 401, 2026-09-25).
+PLEX_TV_API = "https://plex.tv/api/v2"
+
+
+def plex_client_headers(client_identifier: str) -> Dict[str, str]:
+    return {
+        "Accept": "application/json",
+        "X-Plex-Product": "CineMind",
+        "X-Plex-Version": "1.0",
+        "X-Plex-Client-Identifier": client_identifier,
+        "X-Plex-Device-Name": "CineMind",
+    }
+
+
+def plex_client_identifier(user_id: str, conn: Dict[str, Any]) -> str:
+    """One stable device per account, so Plex lists CineMind once under Authorized Devices."""
+    return conn.get("plex_client_identifier") or "cinemind-" + hashlib.sha1(user_id.encode()).hexdigest()[:16]
+
+
+@api.post("/plex/pin/start")
+async def plex_pin_start(user: User = Depends(get_current_user)):
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    if not conn.get("plex_url"):
+        raise HTTPException(status_code=409, detail="Save the Plex server URL first, then connect")
+    ident = plex_client_identifier(user.user_id, conn)
+    async with httpx.AsyncClient(timeout=15) as hc:
+        r = await hc.post(f"{PLEX_TV_API}/pins", params={"strong": "false"}, headers=plex_client_headers(ident))
+    if r.status_code not in (200, 201):
+        raise HTTPException(status_code=502, detail=f"plex.tv responded {r.status_code}")
+    data = r.json() or {}
+    await db.connections.update_one(
+        {"user_id": user.user_id}, {"$set": {"plex_client_identifier": ident}}, upsert=True,
+    )
+    return {
+        "device_code": str(data.get("id")),
+        "user_code": data.get("code"),
+        "verification_url": "https://plex.tv/link",
+        "expires_in": int(data.get("expiresIn") or 900),
+        "interval": 5,
+    }
+
+
+async def plex_server_access_token(tv: httpx.AsyncClient, headers: Dict[str, str], account_token: str,
+                                   machine_id: Optional[str]) -> Optional[str]:
+    """The token this Plex server takes from this account.
+
+    The owner's account token opens the owner's server directly; a server shared
+    with the account takes the server's own access token from plex.tv/resources.
+    """
+    if not machine_id:
+        return None
+    r = await tv.get(f"{PLEX_TV_API}/resources", params={"includeHttps": 1, "includeRelay": 1},
+                     headers={**headers, "X-Plex-Token": account_token})
+    if r.status_code != 200:
+        return None
+    for resource in r.json() or []:
+        if resource.get("clientIdentifier") == machine_id and "server" in str(resource.get("provides") or ""):
+            return resource.get("accessToken") or None
+    return None
+
+
+@api.post("/plex/pin/poll")
+async def plex_pin_poll(body: DevicePoll, user: User = Depends(get_current_user)):
+    conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    ident = plex_client_identifier(user.user_id, conn)
+    headers = plex_client_headers(ident)
+    base = (conn.get("plex_url") or "").rstrip("/")
+    async with httpx.AsyncClient(timeout=15) as tv, httpx.AsyncClient(timeout=15) as lan:
+        try:
+            r = await tv.get(f"{PLEX_TV_API}/pins/{body.device_code}", headers=headers)
+        except httpx.HTTPError:
+            return {"status": "pending"}  # a network blip is not a failed sign-in
+        if r.status_code == 404:
+            return {"status": "expired"}
+        if r.status_code != 200:
+            return {"status": "invalid"}
+        account_token = (r.json() or {}).get("authToken")
+        if not account_token:
+            return {"status": "pending"}
+        username = None
+        try:
+            me = await tv.get(f"{PLEX_TV_API}/user", headers={**headers, "X-Plex-Token": account_token})
+            if me.status_code == 200:
+                username = (me.json() or {}).get("username") or (me.json() or {}).get("title")
+        except httpx.HTTPError:
+            me = None
+        # The sign-in must open this server, or it is the wrong account.
+        token, detail = account_token, None
+        try:
+            check = await lan.get(f"{base}/library/sections", headers={"X-Plex-Token": token, "Accept": "application/json"})
+            if check.status_code == 401:
+                identity = await lan.get(f"{base}/identity", headers={"Accept": "application/json"})
+                machine_id = ((identity.json() or {}).get("MediaContainer") or {}).get("machineIdentifier") \
+                    if identity.status_code == 200 else None
+                shared = await plex_server_access_token(tv, headers, account_token, machine_id)
+                if shared:
+                    token = shared
+                    check = await lan.get(f"{base}/library/sections", headers={"X-Plex-Token": token, "Accept": "application/json"})
+            if check.status_code != 200:
+                logging.warning("Plex sign-in: %s answered %s for the new token", base, check.status_code)
+                return {"status": "invalid", "detail": f"The Plex server at {base} refused this account ({check.status_code})"}
+        except httpx.HTTPError as exc:
+            # The server did not answer: the sign-in is kept when plex.tv itself
+            # vouches for it, and the server is checked again on the next call.
+            if me is None or me.status_code != 200:
+                return {"status": "invalid", "detail": f"Neither the Plex server nor plex.tv confirmed the sign-in ({exc.__class__.__name__})"}
+            detail = "plex.tv accepts the sign-in; the server did not answer"
+    await db.connections.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"plex_token": token, "plex_username": username, "plex_client_identifier": ident}},
+    )
+    from providers.auth_state import clear_auth_failure
+
+    await clear_auth_failure(user.user_id, "plex")
+    return {"status": "authorized", "username": username, **({"detail": detail} if detail else {})}
+
+
+@api.post("/plex/disconnect")
+async def plex_disconnect(user: User = Depends(get_current_user)):
+    await db.connections.update_one(
+        {"user_id": user.user_id}, {"$set": {"plex_token": None, "plex_username": None}},
+    )
+    from providers.auth_state import clear_auth_failure
+
+    await clear_auth_failure(user.user_id, "plex")  # no sign-in left to be refused
     return {"ok": True}
 
 
@@ -828,6 +1017,11 @@ async def anilist_oauth_exchange(body: AnilistCode, user: User = Depends(get_cur
         if viewer and viewer.get("name"):
             update["anilist_username"] = viewer["name"]
         await db.connections.update_one({"user_id": user.user_id}, {"$set": update}, upsert=True)
+        if viewer:
+            # AniList answered for the new token, so an old refusal no longer stands.
+            from providers.auth_state import clear_auth_failure
+
+            await clear_auth_failure(user.user_id, "anilist")
         return {"status": "authorized", "username": update.get("anilist_username")}
 
     token_payload, error = await anilist_exchange_code(raw)
@@ -841,6 +1035,10 @@ async def anilist_oauth_exchange(body: AnilistCode, user: User = Depends(get_cur
         if viewer and viewer.get("name"):
             update["anilist_username"] = viewer["name"]
         await db.connections.update_one({"user_id": user.user_id}, {"$set": update}, upsert=True)
+        if viewer:
+            from providers.auth_state import clear_auth_failure
+
+            await clear_auth_failure(user.user_id, "anilist")
         return {"status": "authorized", "username": update.get("anilist_username")}
     if error:
         raise HTTPException(status_code=401, detail=error)
@@ -866,6 +1064,9 @@ async def anilist_disconnect(user: User = Depends(get_current_user)):
         {"user_id": user.user_id},
         {"$set": {"anilist_access_token": None, "anilist_username": None, "anilist_oauth_code": None}},
     )
+    from providers.auth_state import clear_auth_failure
+
+    await clear_auth_failure(user.user_id, "anilist")  # no sign-in left to be refused
     return {"ok": True}
 
 
@@ -873,10 +1074,36 @@ async def anilist_disconnect(user: User = Depends(get_current_user)):
 async def test_anilist(user: User = Depends(get_current_user)):
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
     if conn.get("anilist_access_token"):
-        return {"ok": True, "message": "AniList token stored server-side"}
+        # A stored token is not a working one: ask AniList who it belongs to.
+        return await sign_in_test(user.user_id, "anilist", conn, "Authorized as {account}")
     if anilist_client_id():
         return {"ok": False, "message": "AniList app configured but not authorized — connect AniList"}
     return {"ok": False, "message": "No AniList client id or token configured"}
+
+
+async def sign_in_test(user_id: str, provider: str, conn: Dict[str, Any], ok_message: str) -> Dict[str, Any]:
+    """Sources' Test button for a stored sign-in: one read-only call, and the answer is recorded."""
+    from providers.auth_state import CONNECTED, check_provider, record_check
+
+    check = await check_provider(provider, user_id, conn)
+    await record_check(user_id, check)
+    if check.state == CONNECTED:
+        return {"ok": True, "message": ok_message.format(account=check.account or "this account"), "check": check.as_dict()}
+    return {"ok": False, "message": check.detail, "check": check.as_dict()}
+
+
+@api.post("/connections/verify")
+async def verify_sign_ins(user: User = Depends(get_current_user)):
+    """What Sources shows: every stored sign-in checked against its provider now.
+
+    A token being stored said nothing - at 13:30 UTC on 2026-09-25 Sources read
+    "Connected" for Simkl and Plex while both refused their tokens.
+    """
+    from providers.auth_state import verify_connections
+
+    checks = await verify_connections(user.user_id)
+    doc = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0, "user_id": 0}) or {}
+    return {"connections": connections_public(doc).model_dump(), "checks": checks}
 
 
 # ---------- Trakt device OAuth ----------
@@ -914,30 +1141,43 @@ async def trakt_device_poll(body: DevicePoll, user: User = Depends(get_current_u
             return {"status": "expired"}
         if r.status_code == 418:
             return {"status": "denied"}
-        if r.status_code == 404:
+        if r.status_code in (404, 409):  # unknown code, or one that was already used
             return {"status": "invalid"}
         if r.status_code != 200:
             raise HTTPException(status_code=502, detail=f"Trakt responded {r.status_code}")
         t = r.json()
+        # The new sign-in counts once Trakt answers for it with a real call.
+        check_status: Optional[int] = None
         username = None
         try:
             me = await hc.get(f"{TRAKT_API}/users/settings", headers=trakt_headers(TRAKT_CLIENT_ID, t["access_token"]))
+            check_status = me.status_code
             if me.status_code == 200:
                 username = me.json().get("user", {}).get("username")
         except Exception as e:
             logging.warning(f"Trakt settings fetch failed: {e}")
-    await db.connections.update_one(
-        {"user_id": user.user_id},
-        {"$set": {
-            "user_id": user.user_id,
-            "trakt_client_id": TRAKT_CLIENT_ID,
-            "trakt_access_token": t["access_token"],
-            "trakt_refresh_token": t["refresh_token"],
-            "trakt_expires_at": int(datetime.now(timezone.utc).timestamp()) + int(t.get("expires_in", 7 * 86400)),
-            "trakt_username": username,
-        }},
-        upsert=True,
-    )
+    from providers.auth_state import clear_auth_failure, is_auth_rejection, note_auth_failure
+
+    if check_status is not None and (is_auth_rejection("trakt", check_status) or check_status == 403):
+        # Issued and refused in the same breath: nothing is stored.
+        return {"status": "invalid", "detail": f"Trakt refused the new sign-in ({check_status})"}
+    fields = {
+        "user_id": user.user_id,
+        "trakt_client_id": TRAKT_CLIENT_ID,
+        "trakt_access_token": t["access_token"],
+        "trakt_refresh_token": t["refresh_token"],
+        "trakt_expires_at": int(datetime.now(timezone.utc).timestamp()) + int(t.get("expires_in", 7 * 86400)),
+    }
+    if username:
+        fields["trakt_username"] = username
+    await db.connections.update_one({"user_id": user.user_id}, {"$set": fields}, upsert=True)
+    if check_status != 200:
+        # Kept, so the sign-in is not lost to an outage, but not "Connected"
+        # until a check succeeds (Test, or opening Sources).
+        detail = f"Signed in, but Trakt did not confirm it ({check_status or 'no answer'}): press Test"
+        await note_auth_failure(user.user_id, "trakt", detail)
+        return {"status": "unverified", "detail": detail}
+    await clear_auth_failure(user.user_id, "trakt")
     return {"status": "authorized", "username": username}
 
 
@@ -947,38 +1187,21 @@ async def trakt_disconnect(user: User = Depends(get_current_user)):
         {"user_id": user.user_id},
         {"$set": {"trakt_access_token": None, "trakt_refresh_token": None, "trakt_expires_at": None, "trakt_username": None}},
     )
+    from providers.auth_state import clear_auth_failure
+
+    await clear_auth_failure(user.user_id, "trakt")  # no sign-in left to be refused
     return {"ok": True}
 
 
 async def trakt_token(user_id: str, conn: Dict[str, Any]) -> Optional[str]:
-    """Return a valid Trakt access token, refreshing (single-use refresh token) when near expiry."""
-    token = conn.get("trakt_access_token")
-    refresh = conn.get("trakt_refresh_token")
-    expires_at = conn.get("trakt_expires_at")
-    if not refresh or not expires_at or not TRAKT_CLIENT_SECRET:
-        return token
-    if expires_at > int(datetime.now(timezone.utc).timestamp()) + 60:
-        return token
-    async with httpx.AsyncClient(timeout=15) as hc:
-        r = await hc.post(
-            f"{TRAKT_API}/oauth/token",
-            json={"refresh_token": refresh, "client_id": TRAKT_CLIENT_ID, "client_secret": TRAKT_CLIENT_SECRET, "grant_type": "refresh_token"},
-            headers=trakt_headers(TRAKT_CLIENT_ID),
-        )
-    if r.status_code != 200:
-        logging.warning(f"Trakt refresh failed {r.status_code}; user must reconnect")
-        await db.connections.update_one({"user_id": user_id}, {"$set": {"trakt_access_token": None, "trakt_refresh_token": None, "trakt_expires_at": None}})
-        return None
-    t = r.json()
-    await db.connections.update_one(
-        {"user_id": user_id},
-        {"$set": {
-            "trakt_access_token": t["access_token"],
-            "trakt_refresh_token": t["refresh_token"],
-            "trakt_expires_at": int(datetime.now(timezone.utc).timestamp()) + int(t.get("expires_in", 7 * 86400)),
-        }},
-    )
-    return t["access_token"]
+    """Return a valid Trakt access token, refreshing (single-use refresh token) when near expiry.
+
+    One implementation (providers.trakt): this copy wiped the stored sign-in on
+    any failed renewal, a Trakt outage included.
+    """
+    from providers.trakt import trakt_token as renew_trakt_token
+
+    return await renew_trakt_token(user_id, conn)
 
 
 @api.get("/connections/ollama/models")
@@ -1044,14 +1267,10 @@ async def test_trakt(user: User = Depends(get_current_user)):
     cid = conn.get("trakt_client_id") or TRAKT_CLIENT_ID
     if not cid:
         return {"ok": False, "message": "No Trakt client id configured"}
-    tok = await trakt_token(user.user_id, conn)
+    if conn.get("trakt_access_token") or conn.get("trakt_refresh_token"):
+        return await sign_in_test(user.user_id, "trakt", conn, "Authorized as @{account}")
     try:
         async with httpx.AsyncClient(timeout=8) as hc:
-            if tok:
-                r = await hc.get(f"{TRAKT_API}/users/settings", headers=trakt_headers(cid, tok))
-                if r.status_code == 200:
-                    return {"ok": True, "message": f"Authorized as @{r.json().get('user', {}).get('username')}"}
-                return {"ok": False, "message": f"Token rejected ({r.status_code}) — reconnect Trakt"}
             r = await hc.get(f"{TRAKT_API}/movies/trending?limit=1", headers=trakt_headers(cid))
         return {"ok": r.status_code == 200, "message": f"Trakt responded {r.status_code} (not authorized — click Connect)"}
     except Exception as e:
@@ -1060,18 +1279,16 @@ async def test_trakt(user: User = Depends(get_current_user)):
 
 @api.post("/connections/test/simkl")
 async def test_simkl(user: User = Depends(get_current_user)):
+    from providers.simkl import simkl_token_client_id
+
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-    cid = conn.get("simkl_client_id") or SIMKL_CLIENT_ID
+    cid = simkl_token_client_id(conn)
     if not cid:
         return {"ok": False, "message": "No Simkl client id configured"}
-    tok = conn.get("simkl_access_token")
+    if conn.get("simkl_access_token"):
+        return await sign_in_test(user.user_id, "simkl", conn, "Authorized as {account}")
     try:
         async with httpx.AsyncClient(timeout=8) as hc:
-            if tok:
-                r = await hc.post(f"{SIMKL_API}/users/settings", params=simkl_params(cid), headers=simkl_headers(cid, tok))
-                if r.status_code == 200:
-                    return {"ok": True, "message": f"Authorized as {(r.json().get('user') or {}).get('name') or 'Simkl user'}"}
-                return {"ok": False, "message": f"Token rejected ({r.status_code}) — reconnect Simkl"}
             r = await hc.get(f"{SIMKL_API}/movies/trending", params=simkl_params(cid), headers=simkl_headers(cid))
         return {"ok": r.status_code == 200, "message": f"Simkl responded {r.status_code} (not authorized — click Connect)"}
     except Exception as e:
@@ -1081,16 +1298,11 @@ async def test_simkl(user: User = Depends(get_current_user)):
 @api.post("/connections/test/plex")
 async def test_plex(user: User = Depends(get_current_user)):
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-    url = conn.get("plex_url")
-    tok = conn.get("plex_token")
-    if not (url and tok):
+    if not conn.get("plex_token"):
         return {"ok": False, "message": "No Plex URL or token configured"}
-    try:
-        async with httpx.AsyncClient(timeout=8, verify=False) as hc:
-            r = await hc.get(f"{url.rstrip('/')}/", headers={"X-Plex-Token": tok, "Accept": "application/json"})
-        return {"ok": r.status_code == 200, "message": f"Plex responded {r.status_code}"}
-    except Exception as e:
-        return {"ok": False, "message": f"Unreachable: {e.__class__.__name__}"}
+    # /identity answers without a token, so "reachable" says nothing about it:
+    # the check asks the server (then plex.tv) with the saved token itself.
+    return await sign_in_test(user.user_id, "plex", conn, "Plex accepts the saved token")
 
 
 @api.post("/connections/test/mediamanager")
@@ -1120,20 +1332,9 @@ async def test_mediamanager(user: User = Depends(get_current_user)):
 
 
 # ---------- Demo Data ----------
-DEMO_HISTORY: List[Dict[str, Any]] = [
-    {"title": "Blade Runner 2049", "year": 2017, "type": "movie", "genres": ["Sci-Fi", "Neo-Noir"], "rating": 8.0, "poster": "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg", "source": "trakt"},
-    {"title": "Dune: Part Two", "year": 2024, "type": "movie", "genres": ["Sci-Fi", "Adventure"], "rating": 8.5, "poster": "https://image.tmdb.org/t/p/w500/6izwz7rsy95ARzTR3poZ8H6c5pp.jpg", "source": "trakt"},
-    {"title": "Severance", "year": 2022, "type": "show", "genres": ["Sci-Fi", "Thriller", "Drama"], "rating": 8.7, "poster": "https://image.tmdb.org/t/p/w500/pPHpeI2X1qEd1CS1SeyrdhZ4qnT.jpg", "source": "trakt"},
-    {"title": "The Bear", "year": 2022, "type": "show", "genres": ["Drama", "Comedy"], "rating": 8.6, "poster": "https://image.tmdb.org/t/p/w500/eKfVzzEazSIjJMrw9ADa2x8ksLz.jpg", "source": "simkl"},
-    {"title": "Everything Everywhere All at Once", "year": 2022, "type": "movie", "genres": ["Sci-Fi", "Action", "Comedy"], "rating": 8.0, "poster": "https://image.tmdb.org/t/p/w500/u68AjlvlutfEIcpmbYpKcdi09ut.jpg", "source": "plex"},
-    {"title": "Arrival", "year": 2016, "type": "movie", "genres": ["Sci-Fi", "Drama"], "rating": 7.9, "poster": "https://image.tmdb.org/t/p/w500/pEzNVQfdzYDzVK0XqxERIw2x2se.jpg", "source": "plex"},
-    {"title": "Mr. Robot", "year": 2015, "type": "show", "genres": ["Thriller", "Drama", "Crime"], "rating": 8.5, "poster": "https://image.tmdb.org/t/p/w500/kv1nRqgebSsREnd7vdC2pSGjpLo.jpg", "source": "trakt"},
-    {"title": "Chernobyl", "year": 2019, "type": "show", "genres": ["Drama", "History"], "rating": 9.4, "poster": "https://image.tmdb.org/t/p/w500/hlLXt2tOPT6RRnjiUmoxyG1LTFi.jpg", "source": "simkl"},
-    {"title": "Parasite", "year": 2019, "type": "movie", "genres": ["Thriller", "Drama"], "rating": 8.5, "poster": "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", "source": "plex"},
-    {"title": "Fargo", "year": 2014, "type": "show", "genres": ["Crime", "Drama", "Dark Comedy"], "rating": 8.9, "poster": "https://image.tmdb.org/t/p/w500/a3VW6khsyUVKrG0GBCWFG3NzWPX.jpg", "source": "trakt"},
-    {"title": "The Menu", "year": 2022, "type": "movie", "genres": ["Thriller", "Dark Comedy"], "rating": 7.2, "poster": "https://image.tmdb.org/t/p/w500/fPtUgMcLIboqlTlPrq0bQpKK8eq.jpg", "source": "simkl"},
-    {"title": "Andor", "year": 2022, "type": "show", "genres": ["Sci-Fi", "Drama"], "rating": 8.4, "poster": "https://image.tmdb.org/t/p/w500/khZqmwHQicTYoS7Flreb9EddFZC.jpg", "source": "trakt"},
-]
+# The demo shelf lives in recommendation.demo_seed, next to the fingerprint that
+# keeps it out of a real profile if it ever leaks into one.
+from recommendation.demo_seed import DEMO_HISTORY  # noqa: E402
 
 DEMO_RECS: List[Dict[str, Any]] = [
     {"title": "Foundation", "year": 2021, "type": "show", "genres": ["Sci-Fi", "Drama"], "poster": "https://image.tmdb.org/t/p/w500/tg9I5pOY4M9CKj8U0cxVBTsm5eh.jpg", "backdrop": "https://image.tmdb.org/t/p/w1280/7NNNXo0qG2SqH4JoG7GPvJ2hzes.jpg", "synopsis": "A complex saga of humans scattered on planets throughout the galaxy all living under the rule of the Galactic Empire.", "tmdb_rating": 7.5, "match_score": 96, "why": "Your love for cerebral sci-fi (Blade Runner 2049, Arrival) and long-arc political drama (Andor) makes Foundation a near-perfect match — dense worldbuilding, quiet menace, and slow-burn character work."},
@@ -1150,172 +1351,57 @@ DEMO_RECS: List[Dict[str, Any]] = [
 # ---------- History ----------
 @api.post("/history/sync")
 async def sync_history(user: User = Depends(get_current_user)):
-    """Fetch history from every connected source; falls back to demo when none is configured.
+    """Fetch the complete history from every connected source (providers.history_sync).
 
-    Each provider is committed on its own. A provider that fails keeps the history it
-    synced last time instead of having every row wiped by the next partial sync, and
-    every attempt writes provider_sync_state so the job engine can tell "never synced"
-    apart from "synced and genuinely empty".
+    A provider's rows are replaced only after a complete fetch; a failing or
+    partial provider keeps what it synced last time. Nothing connected at all
+    still seeds the demo shelf, so the app stays explorable before linking.
     """
-    from providers.sync_lock import record_sync_result
+    from providers.history_sync import sync_user_history
 
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-    synced: Dict[str, List[Dict[str, Any]]] = {}
-    errors: Dict[str, str] = {}
-
-    # Trakt
-    trakt_cid = conn.get("trakt_client_id") or TRAKT_CLIENT_ID
-    trakt_tok = await trakt_token(user.user_id, conn) if trakt_cid else None
-    if trakt_cid and trakt_tok:
-        rows: List[Dict[str, Any]] = []
-        try:
-            async with httpx.AsyncClient(timeout=12) as hc:
-                r = await hc.get(
-                    f"{TRAKT_API}/sync/history?limit=50&extended=full",
-                    headers=trakt_headers(trakt_cid, trakt_tok),
-                )
-                if r.status_code == 200:
-                    for entry in r.json():
-                        m = entry.get("movie") or entry.get("show") or {}
-                        rows.append({
-                            "id": str(uuid.uuid4()),
-                            "title": m.get("title", "Unknown"),
-                            "year": m.get("year"),
-                            "type": "movie" if entry.get("movie") else "show",
-                            "genres": [g.title() for g in (m.get("genres") or [])],
-                            "rating": round(float(m["rating"]), 1) if m.get("rating") else None,
-                            "poster": None,
-                            "tmdb_id": (m.get("ids") or {}).get("tmdb"),
-                            "watched_at": entry.get("watched_at"),
-                            "source": "trakt",
-                        })
-                    synced["trakt"] = rows
-                else:
-                    errors["trakt"] = f"Trakt history responded {r.status_code}"
-        except Exception as e:
-            errors["trakt"] = safe_provider_error(e)
-        if "trakt" in errors:
-            logging.warning("Trakt sync failed: %s", errors["trakt"])
-
-    # Simkl
-    simkl_cid = conn.get("simkl_client_id") or SIMKL_CLIENT_ID
-    if simkl_cid and conn.get("simkl_access_token"):
-        rows = []
-        try:
-            async with httpx.AsyncClient(timeout=20) as hc:
-                r = await hc.get(
-                    f"{SIMKL_API}/sync/all-items",
-                    params={**simkl_params(simkl_cid), "extended": "full"},
-                    headers=simkl_headers(simkl_cid, conn["simkl_access_token"]),
-                )
-                if r.status_code == 200:
-                    data = r.json() or {}
-                    for kind, key in (("movie", "movies"), ("show", "shows"), ("show", "anime")):
-                        for entry in (data.get(key) or [])[:50]:
-                            m = entry.get(kind) or entry.get("show") or {}
-                            rows.append({
-                                "id": str(uuid.uuid4()),
-                                "title": m.get("title", "Unknown"),
-                                "year": m.get("year"),
-                                "type": kind,
-                                "genres": [g.title() for g in (m.get("genres") or [])],
-                                "rating": None,
-                                "poster": f"https://simkl.in/posters/{m['poster']}_m.jpg" if m.get("poster") else None,
-                                "tmdb_id": int((m.get("ids") or {}).get("tmdb")) if str((m.get("ids") or {}).get("tmdb", "")).isdigit() else None,
-                                "watched_at": entry.get("last_watched_at"),
-                                "source": "simkl",
-                            })
-                    synced["simkl"] = rows
-                else:
-                    errors["simkl"] = f"Simkl all-items responded {r.status_code}"
-        except Exception as e:
-            errors["simkl"] = safe_provider_error(e)
-        if "simkl" in errors:
-            logging.warning("Simkl sync failed: %s", errors["simkl"])
-
-    # Plex
-    if conn.get("plex_url") and conn.get("plex_token"):
-        rows = []
-        try:
-            async with httpx.AsyncClient(timeout=12, verify=False) as hc:
-                r = await hc.get(
-                    f"{conn['plex_url'].rstrip('/')}/library/all",
-                    headers={"X-Plex-Token": conn["plex_token"], "Accept": "application/json"},
-                )
-                if r.status_code == 200:
-                    data = r.json().get("MediaContainer", {}).get("Metadata", [])[:50]
-                    for m in data:
-                        rows.append({
-                            "id": str(uuid.uuid4()),
-                            "title": m.get("title", "Unknown"),
-                            "year": m.get("year"),
-                            "type": "movie" if m.get("type") == "movie" else "show",
-                            "genres": [g.get("tag") for g in m.get("Genre", [])],
-                            "rating": round(float(m["audienceRating"]), 1) if m.get("audienceRating") else None,
-                            "poster": None,
-                            "watched_at": datetime.fromtimestamp(m["lastViewedAt"], tz=timezone.utc).isoformat() if m.get("lastViewedAt") else None,
-                            "source": "plex",
-                        })
-                    synced["plex"] = rows
-                else:
-                    errors["plex"] = f"Plex library responded {r.status_code}"
-        except Exception as e:
-            errors["plex"] = safe_provider_error(e)
-        if "plex" in errors:
-            logging.warning("Plex sync failed: %s", errors["plex"])
-
-    # AniList — previously only reachable through a hand-pasted /anilist/import payload,
-    # which left every connected account looking permanently unsynced to the job engine.
-    if conn.get("anilist_access_token"):
-        try:
-            rows = [
-                {**item, "id": str(uuid.uuid4())}
-                for item in await anilist_fetch_media_list(
-                    conn["anilist_access_token"], conn.get("anilist_username")
-                )
-            ]
-            synced["anilist"] = rows
-        except Exception as e:
-            errors["anilist"] = safe_provider_error(e)
-            logging.warning("AniList sync failed: %s", errors["anilist"])
-
-    for provider, rows in synced.items():
-        await record_sync_result(provider, user.user_id, items_synced=len(rows))
-    for provider, message in errors.items():
-        await record_sync_result(provider, user.user_id, error=message)
-
-    items = [row for rows in synced.values() for row in rows]
-    used_demo = False
-    if not synced and not errors:
-        # Nothing is connected at all — seed the demo shelf so the app is explorable.
-        items = [{**h, "id": str(uuid.uuid4()), "watched_at": (datetime.now(timezone.utc) - timedelta(days=i*3)).isoformat()} for i, h in enumerate(DEMO_HISTORY)]
-        used_demo = True
-        await db.history.delete_many({"user_id": user.user_id})
+    connected = any((
+        conn.get("trakt_access_token"), conn.get("simkl_access_token"),
+        conn.get("plex_url") and conn.get("plex_token"), conn.get("anilist_access_token"),
+    ))
+    if not connected:
+        if await db.history.count_documents({"user_id": user.user_id}):
+            return {"count": 0, "demo": False, "sources": {}, "errors": {}}
+        items = [{**h, "id": str(uuid.uuid4()), "demo": True, "watched_at": (datetime.now(timezone.utc) - timedelta(days=i*3)).isoformat()} for i, h in enumerate(DEMO_HISTORY)]
         await db.history.insert_many([{**it, "user_id": user.user_id} for it in items])
         return {"count": len(items), "demo": True, "sources": {}, "errors": {}}
 
-    if items:
-        await enrich_history_posters(items)
-    # Replace only the sources that actually came back, so a failing provider does not
-    # take the other providers' history down with it.
-    for provider, rows in synced.items():
-        await db.history.delete_many({"user_id": user.user_id, "source": provider})
-        if rows:
-            await db.history.insert_many([{**it, "user_id": user.user_id} for it in rows])
-
-    return {
-        "count": len(items),
-        "demo": used_demo,
-        "sources": {provider: len(rows) for provider, rows in synced.items()},
-        "errors": errors,
-    }
+    report = await sync_user_history(user.user_id)
+    sources: Dict[str, int] = {}
+    errors: Dict[str, str] = {}
+    for provider, row in (report.get("providers") or {}).items():
+        result = row.get("result") or {}
+        if result.get("committed"):
+            sources[provider] = int(result.get("rows_after") or 0)
+        else:
+            errors[provider] = str(row.get("error") or result.get("error") or "incomplete")
+    if sources:
+        recent = await db.history.find(
+            {"user_id": user.user_id, "poster": None}, {"_id": 0},
+        ).sort("watched_at", -1).to_list(60)
+        if recent:
+            await enrich_history_posters(recent)
+            for doc in recent:
+                if doc.get("poster"):
+                    await db.history.update_many(
+                        {"user_id": user.user_id, "canonical_media_id": doc.get("canonical_media_id"), "poster": None},
+                        {"$set": {"poster": doc["poster"]}},
+                    )
+    return {"count": sum(sources.values()), "demo": False, "sources": sources, "errors": errors}
 
 
 @api.get("/history")
 async def get_history(user: User = Depends(get_current_user)):
     docs = await db.history.find({"user_id": user.user_id}, {"_id": 0, "user_id": 0}).to_list(500)
-    if not docs:
-        # auto-seed demo on first load
+    if not docs and not await _has_connected_provider(user.user_id):
+        # auto-seed demo on first load - never for an account with a provider
+        # linked: the seed then leaked into media_history as "personal ratings"
+        # (recommendation.demo_seed).
         seeded = [{**h, "id": str(uuid.uuid4()), "watched_at": (datetime.now(timezone.utc) - timedelta(days=i*3)).isoformat(), "user_id": user.user_id} for i, h in enumerate(DEMO_HISTORY)]
         await db.history.insert_many(seeded)
         docs = [{k: v for k, v in d.items() if k not in ("user_id", "_id")} for d in seeded]
@@ -1435,9 +1521,9 @@ async def enrich_history_posters(items: List[Dict[str, Any]]) -> None:
 
     async def one(hc: httpx.AsyncClient, it: Dict[str, Any]):
         async with sem:
-            meta = await tmdb_details(hc, it["tmdb_id"], it.get("type", "movie")) if it.get("tmdb_id") else None
+            meta = await tmdb_details(hc, it["tmdb_id"], tmdb_kind(it)) if it.get("tmdb_id") else None
             if not (meta and meta.get("poster")):
-                meta = await tmdb_lookup(hc, it["title"], it.get("year"), it.get("type", "movie"))
+                meta = await tmdb_lookup(hc, it["title"], it.get("year"), tmdb_kind(it))
             if meta:
                 if meta.get("poster"):
                     it["poster"] = meta["poster"]
@@ -1456,7 +1542,7 @@ async def enrich_with_tmdb(recs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not targets:
         return recs
     async with httpx.AsyncClient(timeout=10) as hc:
-        results = await asyncio.gather(*[tmdb_lookup(hc, r["title"], r.get("year"), r.get("type", "movie")) for r in targets])
+        results = await asyncio.gather(*[tmdb_lookup(hc, r["title"], r.get("year"), tmdb_kind(r)) for r in targets])
     for r, meta in zip(targets, results):
         if meta:
             r.update({k: v for k, v in meta.items() if v})
@@ -1477,10 +1563,18 @@ async def backfill_posters(user_id: str, docs: List[Dict[str, Any]]) -> List[Dic
     return docs
 
 
+async def _has_connected_provider(user_id: str) -> bool:
+    conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
+    return bool(
+        conn.get("trakt_access_token") or conn.get("simkl_access_token")
+        or (conn.get("plex_url") and conn.get("plex_token")) or conn.get("anilist_access_token")
+    )
+
+
 async def ensure_history(user_id: str) -> None:
     """Seed demo history if the user has none yet, so LLM prompts always have real titles."""
     count = await db.history.count_documents({"user_id": user_id})
-    if count == 0:
+    if count == 0 and not await _has_connected_provider(user_id):
         seeded = [
             {**h, "id": str(uuid.uuid4()),
              "watched_at": (datetime.now(timezone.utc) - timedelta(days=i * 3)).isoformat(),
@@ -1612,7 +1706,11 @@ def by_rank(docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 @api.get("/recommendations")
 async def list_recs(user: User = Depends(get_current_user)):
-    visible = {"user_id": user.user_id, "dismissed": {"$ne": True}}
+    from recommendation.shown_picks import retire_settled
+
+    # Retired: settled since the run that picked it - watched, rated, queued,
+    # approved or rejected elsewhere (recommendation.shown_picks).
+    visible = {"user_id": user.user_id, "dismissed": {"$ne": True}, "retired": {"$ne": True}}
     main_job = f"content_to_watch:{user.user_id}"
     docs = await db.recommendations.find(
         {**visible, "job_id": main_job},
@@ -1622,7 +1720,84 @@ async def list_recs(user: User = Depends(get_current_user)):
         docs = await db.recommendations.find(
             visible, {"_id": 0, "user_id": 0},
         ).sort("created_at", -1).to_list(50)
+    docs = await retire_settled(user.user_id, docs, db)
     return await backfill_posters(user.user_id, by_rank(docs))
+
+
+#: How long a row's verified premiere stands before it is checked again.
+UPCOMING_RECHECK = timedelta(hours=12)
+
+
+def upcoming_kind(doc: Dict[str, Any]) -> str:
+    """'anime' for anime and donghua (films too), else 'tv' or 'movie'."""
+    from recommendation.media_identity import content_lane
+    if content_lane(doc) in {"anime", "donghua"}:
+        return "anime"
+    return "tv" if details_endpoint(doc.get("type") or doc.get("media_type")) == "tv" else "movie"
+
+
+@api.get("/upcoming")
+async def upcoming_premieres(limit: int = 12, user: User = Depends(get_current_user)):
+    """Home "Up Coming": the user's picks that premiere after today, soonest first.
+
+    Only a verified date counts (providers.premieres): a film's release, a
+    series premiere, or the first episode of a coming season of an older series.
+    The panel used to show Content to Watch picks 2-5, whatever their dates.
+    Rows of a disabled job are left out; the check is cached on each row.
+    """
+    from providers.keys import resolve_tmdb_api_key
+    from providers.premieres import PREMIERE_FIELDS, today_iso, verify_premieres
+    from recommendation.exclusion_engine import identity_keys
+
+    limit = max(1, min(int(limit), 50))
+    enabled = {job["id"]: job.get("enabled", True) for job in await db.jobs.find(
+        {"user_id": user.user_id}, {"_id": 0, "id": 1, "enabled": 1}).to_list(None)}
+    docs = await db.recommendations.find(
+        {"user_id": user.user_id, "dismissed": {"$ne": True}, "in_library": {"$ne": True}, "retired": {"$ne": True}},
+        {"_id": 0, "user_id": 0},
+    ).to_list(3000)
+    docs = [doc for doc in docs if enabled.get(doc.get("job_id"), True)]
+    # A title rejected on Home, or watched, queued or decided since, is not
+    # "coming up" under another job's row either (recommendation.shown_picks).
+    from recommendation.shown_picks import retire_settled
+
+    docs = await retire_settled(user.user_id, docs, db)
+    now = datetime.now(timezone.utc)
+    stale = []
+    for doc in docs:
+        checked = doc.get("premiere_checked_at")
+        try:
+            fresh = checked and now - datetime.fromisoformat(str(checked)) < UPCOMING_RECHECK
+        except ValueError:
+            fresh = False
+        if not fresh:
+            stale.append(doc)
+    if stale:
+        conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+        await verify_premieres(stale, resolve_tmdb_api_key(conn), now=now)
+        for doc in stale:
+            await db.recommendations.update_one(
+                {"user_id": user.user_id, "id": doc["id"]},
+                {"$set": {field: doc.get(field) for field in PREMIERE_FIELDS}},
+            )
+    today = today_iso(now)
+    coming = [doc for doc in docs if str(doc.get("premiere_date") or "") > today]
+    # One card per title: the same premiere can be a pick of more than one job.
+    coming.sort(key=lambda doc: (str(doc["premiere_date"]), -(doc.get("match_score") or 0)))
+    seen: set = set()
+    picks = []
+    for doc in coming:
+        keys = identity_keys(doc)
+        if keys & seen:
+            continue
+        seen |= keys
+        picks.append(doc)
+        if len(picks) >= limit:
+            break
+    # Home's filter reads this: Anime (anime and donghua), TV series or Movies.
+    for doc in picks:
+        doc["upcoming_kind"] = upcoming_kind(doc)
+    return await backfill_posters(user.user_id, picks)
 
 
 @api.post("/recommendations/{rec_id}/save")
@@ -1659,14 +1834,24 @@ async def dismiss_rec(rec_id: str, user: User = Depends(get_current_user)):
     if rec and rec.get("request_id"):
         await db.requests.update_one(
             {**request_filter, "id": rec["request_id"]},
-            {"$set": {"status": "rejected", "updated_at": datetime.now(timezone.utc).isoformat()}},
+            {"$set": {"status": "rejected", "updated_at": datetime.now(timezone.utc).isoformat(),
+                      "rejected_at": datetime.now(timezone.utc).isoformat()}},
         )
     else:
         await db.requests.update_one(
             {**request_filter, "recommendation_id": rec_id},
-            {"$set": {"status": "rejected", "updated_at": datetime.now(timezone.utc).isoformat()}},
+            {"$set": {"status": "rejected", "updated_at": datetime.now(timezone.utc).isoformat(),
+                      "rejected_at": datetime.now(timezone.utc).isoformat()}},
         )
-    return {"ok": True}
+    # A pick rejected on Home is a rejected title: the same title waiting in
+    # Requests under another job's row leaves the queue as well. The dismissed
+    # row itself stays as the memory of the decision (exclusion_engine).
+    settled = []
+    if rec:
+        from request_providers import settle_duplicates
+
+        settled = await settle_duplicates(user.user_id, rec, "duplicate_of_rejected", database=db)
+    return {"ok": True, "duplicates_archived": settled}
 
 
 @api.post("/recommendations/{rec_id}/watchlist")
@@ -1682,7 +1867,7 @@ async def add_to_trakt_watchlist(rec_id: str, user: User = Depends(get_current_u
     tmdb_id = rec.get("tmdb_id")
     async with httpx.AsyncClient(timeout=12) as hc:
         if not tmdb_id and TMDB_KEY:
-            meta = await tmdb_lookup(hc, rec["title"], rec.get("year"), rec.get("type", "movie"))
+            meta = await tmdb_lookup(hc, rec["title"], rec.get("year"), tmdb_kind(rec))
             tmdb_id = meta.get("tmdb_id") if meta else None
         if not tmdb_id:
             raise HTTPException(status_code=422, detail="Could not identify this title on TMDB")
@@ -1864,6 +2049,10 @@ async def approve_to_mediamanager(
                 }
             },
         )
+    # One approval per title: a waiting copy in Requests would be approved, and sent, again.
+    from request_providers import settle_duplicates
+
+    await settle_duplicates(user.user_id, rec, "duplicate_of_approved", database=db)
     return result
 
 
@@ -1890,7 +2079,7 @@ async def list_requests(user: User = Depends(get_current_user)):
         {"_id": 0, "user_id": 0},
     ).sort("updated_at", -1).to_list(REQUEST_LIST_CAP)
     other_rows = await db.requests.find(
-        {**base, "status": {"$nin": [*PENDING_STATUSES, "rejected"]}},
+        {**base, "status": {"$nin": [*PENDING_STATUSES, "rejected", "archived"]}},
         {"_id": 0, "user_id": 0},
     ).sort("updated_at", -1).to_list(REQUEST_LIST_CAP)
     return await attach_request_match_scores(user.user_id, pending_rows + other_rows)
@@ -2021,7 +2210,7 @@ async def request_stats(user: User = Depends(get_current_user)):
     ).to_list(REQUEST_LIST_CAP)
     pending = {"pending_approval", "pending", "requested"}
     approved = {"approved", "available", "completed"}
-    tally = {"total": len(rows), "pending": 0, "approved": 0, "rejected": 0, "failed": 0}
+    tally = {"total": len(rows), "pending": 0, "approved": 0, "rejected": 0, "failed": 0, "archived": 0}
     for row in rows:
         status = row.get("status")
         if status in pending:
@@ -2030,6 +2219,8 @@ async def request_stats(user: User = Depends(get_current_user)):
             tally["approved"] += 1
         elif status == "rejected":
             tally["rejected"] += 1
+        elif status == "archived":
+            tally["archived"] += 1
         else:
             tally["failed"] += 1
     tally["blacklisted"] = await db.blacklist.count_documents({"user_id": user.user_id})
@@ -2047,14 +2238,19 @@ async def bulk_requests(payload: BulkRequestsBody, user: User = Depends(get_curr
         rec_ids = [doc.get("recommendation_id") for doc in docs if doc.get("recommendation_id")]
         await db.requests.update_many(
             {"user_id": user.user_id, "id": {"$in": [doc["id"] for doc in docs]}},
-            {"$set": {"status": "rejected", "updated_at": now}},
+            {"$set": {"status": "rejected", "updated_at": now, "rejected_at": now}},
         )
         if rec_ids:
             await db.recommendations.update_many(
                 {"user_id": user.user_id, "id": {"$in": rec_ids}},
                 {"$set": {"dismissed": True, "needs_approval": False}},
             )
-        return {"ok": True, "action": "reject", "ids": [doc["id"] for doc in docs]}
+        from request_providers import settle_duplicates
+
+        settled = []
+        for doc in docs:
+            settled += await settle_duplicates(user.user_id, doc, "duplicate_of_rejected", database=db)
+        return {"ok": True, "action": "reject", "ids": [doc["id"] for doc in docs], "duplicates_archived": settled}
 
     pending = {"pending_approval", "pending", "requested"}
     targets = [doc for doc in docs if doc.get("status") in pending]
@@ -2159,8 +2355,14 @@ async def approve_request(
                 }
             },
         )
+    # One approval per title: a waiting copy would be approved, and sent, again.
+    from request_providers import settle_duplicates
+
+    settled = await settle_duplicates(user.user_id, doc, "duplicate_of_approved", database=db)
     updated = await db.requests.find_one({"user_id": user.user_id, "id": doc["id"]}, {"_id": 0, "user_id": 0})
     payload = {**result, "status": "approved", "request": updated}
+    if settled:
+        payload["duplicates_archived"] = settled
     if delivery_error:
         payload["delivery_error"] = delivery_error
     return payload
@@ -2174,7 +2376,7 @@ async def reject_request(request_id: str, user: User = Depends(get_current_user)
     now = datetime.now(timezone.utc).isoformat()
     await db.requests.update_one(
         {"user_id": user.user_id, "id": request_id},
-        {"$set": {"status": "rejected", "updated_at": now}},
+        {"$set": {"status": "rejected", "updated_at": now, "rejected_at": now}},
     )
     rec_id = doc.get("recommendation_id")
     if rec_id:
@@ -2182,7 +2384,11 @@ async def reject_request(request_id: str, user: User = Depends(get_current_user)
             {"user_id": user.user_id, "id": rec_id},
             {"$set": {"dismissed": True, "needs_approval": False}},
         )
-    return {"ok": True, "status": "rejected"}
+    # The rejection is about the title: its other waiting copies leave the queue too.
+    from request_providers import settle_duplicates
+
+    settled = await settle_duplicates(user.user_id, doc, "duplicate_of_rejected", database=db)
+    return {"ok": True, "status": "rejected", "duplicates_archived": settled}
 
 
 @api.post("/requests/{request_id}/retry")
@@ -2251,7 +2457,7 @@ async def get_trailer(rec_id: str, user: User = Depends(get_current_user)):
     async with httpx.AsyncClient(timeout=10) as hc:
         tmdb_id = rec.get("tmdb_id")
         if not tmdb_id:
-            meta = await tmdb_lookup(hc, rec["title"], rec.get("year"), rec.get("type", "movie"))
+            meta = await tmdb_lookup(hc, rec["title"], rec.get("year"), tmdb_kind(rec))
             tmdb_id = meta.get("tmdb_id") if meta else None
         if tmdb_id:
             try:
@@ -2275,62 +2481,95 @@ async def get_trailer(rec_id: str, user: User = Depends(get_current_user)):
     return {"key": key, "name": name, "cached": False}
 
 
-@api.get("/requests/{request_id}/details")
-async def request_details(request_id: str, user: User = Depends(get_current_user)):
-    """Overview, cast and YouTube trailer for a queued title, cached for a day."""
-    doc = await db.requests.find_one({"user_id": user.user_id, "id": request_id}, {"_id": 0})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Request not found")
-    tmdb_id = doc.get("tmdb_id")
-    if not tmdb_id or not TMDB_KEY:
-        return {"id": request_id, "title": doc.get("title"), "overview": None, "trailer": None, "cast": []}
+SEASON_RE = re.compile(r"\b(?:season|säsong|staffel|saison|temporada)\s*(\d{1,3})\b|\bS(\d{1,2})\b", re.I)
 
-    endpoint = "tv" if str(doc.get("type") or "").lower() in {"show", "tv", "series", "anime"} else "movie"
-    cache_key = f"tmdb:details:{endpoint}:{tmdb_id}"
-    now = datetime.now(timezone.utc)
-    cached = await db.provider_cache.find_one({"key": cache_key, "expires_at": {"$gt": now.isoformat()}})
-    if cached and isinstance(cached.get("payload"), dict):
-        return {"id": request_id, **cached["payload"]}
 
-    try:
-        async with httpx.AsyncClient(timeout=10) as hc:
-            r = await hc.get(
-                f"https://api.themoviedb.org/3/{endpoint}/{tmdb_id}",
-                params={"api_key": TMDB_KEY, "append_to_response": "videos,credits"},
-            )
-        data = r.json() if r.status_code == 200 else {}
-    except httpx.HTTPError as exc:
-        logging.warning("TMDb details failed for %s: %s", doc.get("title"), exc)
-        data = {}
+def split_season(title: str):
+    """'Pokémon Season 25' -> ('Pokémon', 25). A title without a season is (title, None)."""
+    text = str(title or "")
+    match = SEASON_RE.search(text)
+    if not match:
+        return text.strip(), None
+    number = int(match.group(1) or match.group(2))
+    base = (text[:match.start()] + text[match.end():]).strip(" -:–—·,()[]")
+    return (base or text).strip(), number
 
-    videos = [v for v in ((data.get("videos") or {}).get("results") or []) if v.get("site") == "YouTube"]
-    videos.sort(key=lambda v: (v.get("type") != "Trailer", not v.get("official"), v.get("type") != "Teaser"))
-    trailer = {"key": videos[0]["key"], "name": videos[0].get("name")} if videos else None
 
-    cast = [
+def pick_trailer(videos):
+    """Prefer an official YouTube trailer, then any trailer, then a teaser."""
+    videos = [v for v in (videos or []) if v.get("site") == "YouTube" and v.get("key")]
+    videos.sort(key=lambda v: (
+        v.get("type") != "Trailer", not v.get("official"), v.get("type") != "Teaser",
+    ))
+    return {"key": videos[0]["key"], "name": videos[0].get("name"), "official": bool(videos[0].get("official"))} if videos else None
+
+
+def cast_rows(credits):
+    return [
         {
             "name": row.get("name"),
             "character": row.get("character")
             or ((row.get("roles") or [{}])[0].get("character") if row.get("roles") else None),
             "profile": f"https://image.tmdb.org/t/p/w185{row['profile_path']}" if row.get("profile_path") else None,
         }
-        for row in ((data.get("credits") or {}).get("cast") or [])[:12]
+        for row in ((credits or {}).get("cast") or [])[:12]
     ]
 
+
+async def tmdb_title_details(endpoint: str, tmdb_id, season: Optional[int] = None, fallback_title: Optional[str] = None):
+    """Overview, cast and YouTube trailer from TMDb, cached for a day.
+
+    With a season the season's own trailer and cast win; the series' are the
+    fallback, so "Pokémon Season 25" shows that season's released trailer.
+    """
+    season = season if endpoint == "tv" and season else None
+    cache_key = f"tmdb:details:{endpoint}:{tmdb_id}" + (f":s{season}" if season else "")
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": cache_key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), dict):
+        return cached["payload"]
+
+    params = {"api_key": TMDB_KEY, "append_to_response": "videos,credits", "include_video_language": "en,null"}
+    data, season_data = {}, {}
+    try:
+        async with httpx.AsyncClient(timeout=10) as hc:
+            r = await hc.get(f"https://api.themoviedb.org/3/{endpoint}/{tmdb_id}", params=params)
+            data = r.json() if r.status_code == 200 else {}
+            if season:
+                rs = await hc.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/season/{season}", params=params)
+                season_data = rs.json() if rs.status_code == 200 else {}
+    except httpx.HTTPError as exc:
+        logging.warning("TMDb details failed for %s: %s", fallback_title or tmdb_id, exc)
+
+    trailer = pick_trailer((season_data.get("videos") or {}).get("results")) if season_data else None
+    trailer_scope = "season" if trailer else None
+    if not trailer:
+        trailer = pick_trailer((data.get("videos") or {}).get("results"))
+        trailer_scope = "series" if trailer and season else None
+    cast = cast_rows(season_data.get("credits")) if season_data else []
+    if not cast:
+        cast = cast_rows(data.get("credits"))
+
+    title = data.get("name") or data.get("title") or fallback_title
     payload = {
-        "title": data.get("name") or data.get("title") or doc.get("title"),
-        "overview": data.get("overview") or None,
+        "title": f"{title} · {season_data.get('name') or f'Season {season}'}" if season and title else title,
+        "tmdb_id": tmdb_id,
+        "season": season,
+        "overview": season_data.get("overview") or data.get("overview") or None,
         "tagline": data.get("tagline") or None,
         "genres": [g.get("name") for g in (data.get("genres") or []) if g.get("name")],
-        "rating": data.get("vote_average"),
+        "rating": season_data.get("vote_average") or data.get("vote_average"),
         "vote_count": data.get("vote_count"),
         "runtime": data.get("runtime") or ((data.get("episode_run_time") or [None])[0]),
-        "seasons": data.get("number_of_seasons"),
-        "episodes": data.get("number_of_episodes"),
+        "seasons": None if season else data.get("number_of_seasons"),
+        "episodes": (len(season_data.get("episodes") or []) or None) if season else data.get("number_of_episodes"),
         "status": data.get("status"),
-        "release_date": data.get("first_air_date") or data.get("release_date"),
+        "release_date": season_data.get("air_date") or data.get("first_air_date") or data.get("release_date"),
         "networks": [n.get("name") for n in (data.get("networks") or []) if n.get("name")][:3],
+        "poster": f"https://image.tmdb.org/t/p/w342{data['poster_path']}" if data.get("poster_path") else None,
+        "backdrop": f"https://image.tmdb.org/t/p/w780{data['backdrop_path']}" if data.get("backdrop_path") else None,
         "trailer": trailer,
+        "trailer_scope": trailer_scope,
         "cast": cast,
     }
     if data:
@@ -2344,7 +2583,78 @@ async def request_details(request_id: str, user: User = Depends(get_current_user
             }},
             upsert=True,
         )
+    return payload
+
+
+def details_endpoint(kind) -> Optional[str]:
+    kind = str(kind or "").lower()
+    if kind in {"show", "tv", "series", "anime", "donghua"}:
+        return "tv"
+    if kind in {"movie", "film"}:
+        return "movie"
+    return None
+
+
+@api.get("/requests/{request_id}/details")
+async def request_details(request_id: str, user: User = Depends(get_current_user)):
+    """Overview, cast and YouTube trailer for a queued title, cached for a day."""
+    doc = await db.requests.find_one({"user_id": user.user_id, "id": request_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    tmdb_id = doc.get("tmdb_id")
+    if not tmdb_id or not TMDB_KEY:
+        return {"id": request_id, "title": doc.get("title"), "overview": None, "trailer": None, "cast": []}
+    endpoint = details_endpoint(doc.get("type")) or "movie"
+    _, season = split_season(doc.get("title"))
+    payload = await tmdb_title_details(endpoint, tmdb_id, season, doc.get("title"))
     return {"id": request_id, **payload}
+
+
+@api.get("/titles/details")
+async def title_details(
+    title: Optional[str] = None,
+    year: Optional[str] = None,
+    type: Optional[str] = None,
+    tmdb_id: Optional[int] = None,
+    season: Optional[int] = None,
+    user: User = Depends(get_current_user),
+):
+    """Details for any poster in the app: by TMDb id, else found by title.
+
+    "Pokémon Season 25" is searched as Pokémon and answered with season 25.
+    """
+    base, parsed_season = split_season(title or "")
+    season = season or parsed_season
+    empty = {"title": title, "overview": None, "trailer": None, "cast": []}
+    if not TMDB_KEY:
+        return empty
+    endpoint = details_endpoint(type) or ("tv" if season else None)
+    if not tmdb_id:
+        if not base:
+            return empty
+        year_digits = re.search(r"\d{4}", str(year or ""))
+        search = endpoint or "multi"
+        params = {"api_key": TMDB_KEY, "query": base}
+        if year_digits and not season:
+            params["first_air_date_year" if search == "tv" else "year"] = year_digits.group(0)
+        try:
+            async with httpx.AsyncClient(timeout=10) as hc:
+                r = await hc.get(f"https://api.themoviedb.org/3/search/{search}", params=params)
+                results = (r.json().get("results") or []) if r.status_code == 200 else []
+                if not results and ("year" in params or "first_air_date_year" in params):
+                    params.pop("year", None); params.pop("first_air_date_year", None)
+                    r = await hc.get(f"https://api.themoviedb.org/3/search/{search}", params=params)
+                    results = (r.json().get("results") or []) if r.status_code == 200 else []
+        except httpx.HTTPError as exc:
+            logging.warning("TMDb search failed for %s: %s", base, exc)
+            results = []
+        results = [row for row in results if search != "multi" or row.get("media_type") in {"tv", "movie"}]
+        if not results:
+            return empty
+        hit = results[0]
+        tmdb_id = hit.get("id")
+        endpoint = endpoint or hit.get("media_type") or "movie"
+    return await tmdb_title_details(endpoint or "movie", tmdb_id, season, title)
 
 
 @api.get("/recommendations/{rec_id}/reason/stream")

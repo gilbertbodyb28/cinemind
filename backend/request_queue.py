@@ -11,8 +11,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 PENDING_STATUSES = ("pending_approval", "pending", "requested")
 APPROVED_STATUSES = ("approved", "available", "completed")
-#: What the queue never shows: decided rows. Approved ones live on their own tab.
-QUEUE_HIDDEN = ("rejected", *APPROVED_STATUSES)
+#: What the queue never shows: decided rows, and rows an archive batch set
+#: aside (evaluation/queue_cleanup.py, reversible). Approved ones live on their own tab.
+QUEUE_HIDDEN = ("rejected", "archived", *APPROVED_STATUSES)
 
 VIEWS = {"queue", "approved"}
 SORTS = {"added_desc", "added_asc", "release_desc", "release_asc", "match_desc", "title_asc"}
@@ -27,8 +28,11 @@ LIGHT_FIELDS = (
 
 
 def type_bucket(row: Dict[str, Any]) -> str:
+    """Movies, TV series or Anime — anime films and donghua count as anime,
+    the same buckets Home's Up Coming filter uses."""
+    from recommendation.media_identity import content_lane
     kind = str(row.get("type") or "").lower()
-    if kind == "anime":
+    if kind == "anime" or content_lane(row) in {"anime", "donghua"}:
         return "anime"
     if kind in {"movie", "film"}:
         return "movie"

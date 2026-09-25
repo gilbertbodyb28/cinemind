@@ -213,6 +213,7 @@ function ApprovedPoster({ item, index, onDelivered, onOpenDetails }) {
       style={{ animationDelay: `${index * 60}ms` }}
       onDoubleClick={(event) => {
         if (event.target.closest("button, a")) return;
+        event.preventDefault();
         onOpenDetails();
       }}
       title="Double-click for trailer, cast and description"

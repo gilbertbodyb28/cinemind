@@ -12,6 +12,39 @@ def simkl_params(client_id: str) -> Dict[str, str]:
     return {"client_id": client_id, "app-name": "CineMindAI", "app-version": "1.0"}
 
 
+def simkl_token_client_id(conn: Dict[str, Any]) -> str:
+    """The Simkl app id to call with the stored token.
+
+    A Simkl token only works with the app that issued it. Measured 2026-09-25:
+    the manual Client ID saved in Sources answers exactly like a made-up one
+    (412 "Your client_id is wrong"), and the server's own app answers 401
+    user_token_failed for the stored token - every user endpoint failed
+    whichever id was tried. The id that issued a token is now stored with it
+    at connect time; older connections fall back to the manual field, then .env.
+    """
+    from config import SIMKL_CLIENT_ID
+
+    return str(conn.get("simkl_token_client_id") or conn.get("simkl_client_id") or SIMKL_CLIENT_ID or "").strip()
+
+
+def simkl_failure_hint(response: httpx.Response) -> str:
+    """Simkl's reason for refusing, and what fixes it."""
+    try:
+        reason = (response.json() or {}).get("error")
+    except Exception:
+        reason = None
+    # Sources shows "Connect with Simkl" once a sign-in is refused, and that
+    # sign-in falls back to the server's own Simkl app when the saved Client ID
+    # is refused (server.simkl_pin_start), so pressing it is the whole fix.
+    if response.status_code == 412 or reason == "client_id_failed":
+        return ("simkl responded 412 (client_id_failed): Simkl does not accept the saved Client ID - "
+                "press Connect with Simkl under Sources (CineMind signs in with its own Simkl app)")
+    if response.status_code == 401 or reason == "user_token_failed":
+        return ("simkl responded 401 (user_token_failed): the saved Simkl sign-in is no longer valid - "
+                "press Connect with Simkl under Sources")
+    return f"simkl responded {response.status_code}" + (f" ({reason})" if reason else "")
+
+
 def simkl_headers(client_id: str, token: Optional[str] = None) -> Dict[str, str]:
     headers = {
         "User-Agent": "CineMindAI/1.0",
@@ -127,6 +160,7 @@ async def fetch_recommendations(
     *,
     limit: int = 40,
     seed_limit: int = 6,
+    buckets: Optional[Sequence[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Build Simkl candidates from related titles + trending feeds.
 
@@ -196,6 +230,8 @@ async def fetch_recommendations(
         for bucket, kind in (("movies", "movie"), ("tv", "show"), ("anime", "anime")):
             if len(collected) >= limit:
                 break
+            if buckets is not None and bucket not in buckets:
+                continue
             attempts += 1
             try:
                 response = await client.get(
