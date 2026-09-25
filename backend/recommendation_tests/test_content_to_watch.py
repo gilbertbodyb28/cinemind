@@ -9,6 +9,7 @@ from fastapi import HTTPException
 
 import server
 import jobs.engine as jobs_engine
+from recommendation.pipeline import select_final
 
 
 class _History:
@@ -122,6 +123,95 @@ def test_job_rerank_honors_selected_model(monkeypatch):
     assert result["status"] == "ok"
     assert rerank.await_args.kwargs["model_override"] == "gemma4:12b"
     assert result["run"]["model"] == "gemma4:12b"
+
+
+def test_rerank_keeps_the_model_top_five_and_the_deterministic_tail(monkeypatch):
+    """Gemma 4 decides positions 1-5; the deterministic order keeps the rest.
+
+    Letting it order the whole pool measured -0.022 nDCG@10 against this split
+    (HANDOFF.md section 18). It still has to answer with every handle.
+    """
+    pool = [
+        {"title": f"Pick {index}", "candidate_id": f"movie:{index}", "tmdb_id": index}
+        for index in range(1, 13)
+    ]
+    reversed_handles = ["r%02d" % index for index in range(12, 0, -1)]
+    monkeypatch.setattr(jobs_engine, "db", SimpleNamespace(
+        connections=SimpleNamespace(find_one=AsyncMock(return_value={})),
+    ))
+    monkeypatch.setattr(jobs_engine, "generate_with_llm", AsyncMock(
+        return_value=({"ids": reversed_handles}, "ollama", "gemma4:12b-it-qat"),
+    ))
+
+    ordered, provider, _model = asyncio.run(jobs_engine.rerank_verified_candidates("test-user", {}, pool))
+
+    assert provider == "ollama"
+    assert ordered == ["movie:12", "movie:11", "movie:10", "movie:9", "movie:8"]
+    ranked = [row["title"] for row in jobs_engine.apply_rerank(pool, ordered)]
+    assert ranked[:5] == ["Pick 12", "Pick 11", "Pick 10", "Pick 9", "Pick 8"]
+    assert ranked[5:] == [f"Pick {index}" for index in range(1, 8)]
+
+
+def test_a_weak_match_lifted_into_the_model_top_five_keeps_its_deterministic_place(monkeypatch):
+    """Gemma reorders the strong pool; it never puts a weak taste match first.
+
+    "Weak" is below the relevance floor (75% of the best score). Left where the
+    model put it, it also ended apply_diversity's walk at position 1 and Content
+    to Watch came back empty.
+    """
+    pool = [
+        {"title": f"Pick{index}", "candidate_id": f"movie:{index}", "media_type": "movie",
+         "rank_score": 10.0 - index * 0.1}
+        for index in range(1, 12)
+    ] + [{"title": "Weak", "candidate_id": "movie:weak", "media_type": "movie", "rank_score": 5.0}]
+    handles = ["r12", "r01", "r02", "r03", "r04", "r05", "r06", "r07", "r08", "r09", "r10", "r11"]
+    monkeypatch.setattr(jobs_engine, "db", SimpleNamespace(
+        connections=SimpleNamespace(find_one=AsyncMock(return_value={})),
+    ))
+    monkeypatch.setattr(jobs_engine, "generate_with_llm", AsyncMock(
+        return_value=({"ids": handles}, "ollama", "gemma4:12b-it-qat"),
+    ))
+
+    ordered, _provider, _model = asyncio.run(jobs_engine.rerank_verified_candidates("test-user", {}, pool))
+
+    # The model's other four keep their places; its sixth choice is not pulled up.
+    assert ordered == ["movie:1", "movie:2", "movie:3", "movie:4"]
+    final = select_final(jobs_engine.apply_rerank(pool, ordered), {
+        "final_recommendation_limit": 8, "lane_balance": False,
+    })
+    assert [row["title"] for row in final] == [f"Pick{index}" for index in range(1, 9)]
+
+
+def test_a_top_five_of_weak_matches_is_not_a_rerank(monkeypatch):
+    pool = [{"title": "Strong", "candidate_id": "movie:s", "rank_score": 10.0}] + [
+        {"title": f"Weak{index}", "candidate_id": f"movie:w{index}", "rank_score": 2.0} for index in range(11)
+    ]
+    monkeypatch.setattr(jobs_engine, "db", SimpleNamespace(
+        connections=SimpleNamespace(find_one=AsyncMock(return_value={})),
+    ))
+    handles = ["r%02d" % index for index in range(2, 13)] + ["r01"]
+    monkeypatch.setattr(jobs_engine, "generate_with_llm", AsyncMock(
+        return_value=({"ids": handles}, "ollama", "gemma4:12b-it-qat"),
+    ))
+
+    ordered, _provider, _model = asyncio.run(jobs_engine.rerank_verified_candidates("test-user", {}, pool))
+
+    assert ordered is None
+
+
+def test_rerank_that_drops_most_handles_is_still_discarded(monkeypatch):
+    pool = [{"title": f"Pick {index}", "candidate_id": f"movie:{index}"} for index in range(1, 13)]
+    monkeypatch.setattr(jobs_engine, "db", SimpleNamespace(
+        connections=SimpleNamespace(find_one=AsyncMock(return_value={})),
+    ))
+    # Five handles clear the top-5 cut but not the coverage floor for 12.
+    monkeypatch.setattr(jobs_engine, "generate_with_llm", AsyncMock(
+        return_value=({"ids": ["r01", "r02", "r03", "r04", "r05"]}, "ollama", "gemma4:12b-it-qat"),
+    ))
+
+    ordered, _provider, _model = asyncio.run(jobs_engine.rerank_verified_candidates("test-user", {}, pool))
+
+    assert ordered is None
 
 
 def test_recommendations_are_returned_best_first():

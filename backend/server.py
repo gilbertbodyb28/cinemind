@@ -1148,6 +1148,13 @@ DEMO_RECS: List[Dict[str, Any]] = [
 
 
 # ---------- History ----------
+# Each provider below is read one page deep: Trakt's newest 50 history entries,
+# 50 Simkl items per list, 50 Plex library items. That is a slice, not the
+# history, so a provider whose answer hit the cap never replaces a larger
+# stored history - one press of Sync used to cut 10,210 Trakt rows down to 50.
+SYNC_PAGE = 50
+
+
 @api.post("/history/sync")
 async def sync_history(user: User = Depends(get_current_user)):
     """Fetch history from every connected source; falls back to demo when none is configured.
@@ -1162,6 +1169,8 @@ async def sync_history(user: User = Depends(get_current_user)):
     conn = await db.connections.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
     synced: Dict[str, List[Dict[str, Any]]] = {}
     errors: Dict[str, str] = {}
+    # Providers whose answer was cut at SYNC_PAGE, so it is not their whole history.
+    truncated: set = set()
 
     # Trakt
     trakt_cid = conn.get("trakt_client_id") or TRAKT_CLIENT_ID
@@ -1171,11 +1180,15 @@ async def sync_history(user: User = Depends(get_current_user)):
         try:
             async with httpx.AsyncClient(timeout=12) as hc:
                 r = await hc.get(
-                    f"{TRAKT_API}/sync/history?limit=50&extended=full",
+                    f"{TRAKT_API}/sync/history?limit={SYNC_PAGE}&extended=full",
                     headers=trakt_headers(trakt_cid, trakt_tok),
                 )
                 if r.status_code == 200:
-                    for entry in r.json():
+                    entries = r.json() or []
+                    # A full page means Trakt has more pages behind it.
+                    if len(entries) >= SYNC_PAGE:
+                        truncated.add("trakt")
+                    for entry in entries:
                         m = entry.get("movie") or entry.get("show") or {}
                         rows.append({
                             "id": str(uuid.uuid4()),
@@ -1211,7 +1224,10 @@ async def sync_history(user: User = Depends(get_current_user)):
                 if r.status_code == 200:
                     data = r.json() or {}
                     for kind, key in (("movie", "movies"), ("show", "shows"), ("show", "anime")):
-                        for entry in (data.get(key) or [])[:50]:
+                        entries = data.get(key) or []
+                        if len(entries) > SYNC_PAGE:
+                            truncated.add("simkl")
+                        for entry in entries[:SYNC_PAGE]:
                             m = entry.get(kind) or entry.get("show") or {}
                             rows.append({
                                 "id": str(uuid.uuid4()),
@@ -1243,8 +1259,10 @@ async def sync_history(user: User = Depends(get_current_user)):
                     headers={"X-Plex-Token": conn["plex_token"], "Accept": "application/json"},
                 )
                 if r.status_code == 200:
-                    data = r.json().get("MediaContainer", {}).get("Metadata", [])[:50]
-                    for m in data:
+                    metadata = r.json().get("MediaContainer", {}).get("Metadata", []) or []
+                    if len(metadata) > SYNC_PAGE:
+                        truncated.add("plex")
+                    for m in metadata[:SYNC_PAGE]:
                         rows.append({
                             "id": str(uuid.uuid4()),
                             "title": m.get("title", "Unknown"),
@@ -1287,6 +1305,11 @@ async def sync_history(user: User = Depends(get_current_user)):
     items = [row for rows in synced.values() for row in rows]
     used_demo = False
     if not synced and not errors:
+        # Nothing answered and nothing failed: an expired token reads the same as
+        # "never connected", so stored history is kept rather than swapped for demo rows.
+        stored = await db.history.count_documents({"user_id": user.user_id})
+        if stored:
+            return {"count": 0, "demo": False, "sources": {}, "errors": {}, "kept": {"all": stored}}
         # Nothing is connected at all — seed the demo shelf so the app is explorable.
         items = [{**h, "id": str(uuid.uuid4()), "watched_at": (datetime.now(timezone.utc) - timedelta(days=i*3)).isoformat()} for i, h in enumerate(DEMO_HISTORY)]
         used_demo = True
@@ -1298,7 +1321,16 @@ async def sync_history(user: User = Depends(get_current_user)):
         await enrich_history_posters(items)
     # Replace only the sources that actually came back, so a failing provider does not
     # take the other providers' history down with it.
+    kept: Dict[str, int] = {}
     for provider, rows in synced.items():
+        if provider in truncated:
+            stored = await db.history.count_documents({"user_id": user.user_id, "source": provider})
+            if stored > len(rows):
+                kept[provider] = stored
+                logging.warning(
+                    "%s sync read one page (%s rows); kept the %s stored rows", provider, len(rows), stored,
+                )
+                continue
         await db.history.delete_many({"user_id": user.user_id, "source": provider})
         if rows:
             await db.history.insert_many([{**it, "user_id": user.user_id} for it in rows])
@@ -1308,6 +1340,8 @@ async def sync_history(user: User = Depends(get_current_user)):
         "demo": used_demo,
         "sources": {provider: len(rows) for provider, rows in synced.items()},
         "errors": errors,
+        # Stored rows left in place because the provider's answer was only one page.
+        "kept": kept,
     }
 
 

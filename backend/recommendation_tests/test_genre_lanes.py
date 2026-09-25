@@ -198,6 +198,23 @@ def test_lane_balance_leaves_a_weak_lane_out():
     assert all(row["title"] != "Awful" for row in apply_lane_balance(pool, 40))
 
 
+def test_lane_floor_follows_the_lanes_best_not_the_models_first_pick():
+    """After a re-rank a lane's first row is the model's pick, not its best.
+
+    Measured from "Bravo" (8.0) the live-action floor fell to 6.0 and "Weak"
+    (6.5) took a slot from "Omega" (9.2); measured from "Alpha" (10.0) it is 7.5.
+    """
+    pool = [
+        _row("Bravo", "live_action", 8.0), _row("Alpha", "live_action", 10.0), _row("Weak", "live_action", 6.5),
+        _row("Kappa", "anime", 9.5), _row("Lambda", "anime", 9.4), _row("Sigma", "anime", 9.3),
+        _row("Omega", "anime", 9.2), _row("Delta", "anime", 9.1),
+    ]
+    titles = [row["title"] for row in apply_lane_balance(pool, 6)]
+    assert "Weak" not in titles
+    assert "Omega" in titles
+    assert titles[0] == "Bravo"
+
+
 def test_single_lane_pool_is_unchanged():
     pool = [_row(f"A{i}", "anime", 9 - i * 0.1) for i in range(20)]
     assert apply_lane_balance(pool, 8) == apply_diversity(pool, 8)

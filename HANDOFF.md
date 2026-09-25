@@ -727,3 +727,387 @@ Motiveringarna läses ur de komponenter som avgjorde placeringen:
 4. **Fem negativa exempel** i datat. Negativhanteringen är tunt underbyggd.
 5. **Inga embeddings.** Lexikal likhet mättes och förkastades i omgång 1.
 6. **AniList bidrar inte med animefilmer** — den lanen kommer bara från TMDb.
+
+---
+
+# LEVERANS 2026-09-25 — experimentloopen avslutad
+
+Gjort i en molnsession utan åtkomst till Macen, databasen, Ollama på NAS:en eller
+Plex. Simkl, Trakt, TMDb och AniList nekas av miljöns nätverkspolicy (HTTP 403).
+Allt nedan skiljer därför på **ändrad kod**, **driftsatt kod** och **verifierad
+funktion**. **Den enda gällande överlämningen till den lokala agenten är §19.**
+
+## 18. Molndelen: mätningar, ändringar och tester
+
+### 18.1 Experimentloopen
+
+- Inga fler ablationer, viktoptimeringar, seed-svep, signifikanstester eller
+  LLM-jämförelser har startats. Konfigurationen nedan väljs ur mätningar som
+  redan fanns.
+- Molnsessionen når ingen lokal Claude-session, och kontots enda schemalagda
+  rutin (MediaManager-deploy till NAS:en, misslyckad 2026-09-20) rör inte
+  CineMind. **Kör en loop fortfarande i en terminal på Macen måste den stoppas
+  där.**
+- `server.py` sätter `"job_intent": False` och hänvisar till
+  `recommendation.job_intent`, som bara finns i Gilberts lokala arbetsyta.
+  Molnet har inte rört nyckeln; den håller Content to Watch utanför en lokal
+  modul som läser `spec.get("job_intent", True)`. Den lokala koden ska bevaras
+  (§19.4).
+
+### 18.2 Konfiguration, vald ur redan gjorda mätningar
+
+Modell `gemma4:12b-it-qat` (Gilberts val 2026-09-24), mätt 2026-09-23 med
+32 veck × 3 upprepningar (n = 99 per arm) mot Gilberts riktiga ögonblicksbild:
+
+| jämförelse | mått | Δ ± SE | |
+|---|---|---|---|
+| mot enbart deterministisk | nDCG@5 | +0,117 ± 0,030 | signifikant |
+| mot enbart deterministisk | MRR | +0,176 ± 0,039 | signifikant |
+| mot `qwen-suggestarr` | MRR | +0,087 ± 0,026 | signifikant |
+| mot `qwen-suggestarr` | nDCG@5 | +0,045 ± 0,025 | inte signifikant |
+| mot `qwen-suggestarr` | nDCG@10 | +0,001 | inte signifikant |
+| latens per omrankning | | 5,0 s mot 1,2 s | ~4× långsammare |
+
+Svansen: Gemma behåller plats 1–5 och den deterministiska ordningen plats 6–10
+mätte **+0,022 ± 0,008 nDCG@10 (t = 2,64)**. Införd som `RERANK_LLM_KEEP = 5`
+i `jobs/engine.py` (2930177). Modellen måste fortfarande svara med alla 12
+handtag för att svaret ska räknas.
+
+**Relevansgolvet gäller modellens val (9949f1d, Gilberts beslut 3).** Golvet
+(75 % av bästa poängen) är det som hindrar en svag smakmatchning från att
+passera tydligt starkare titlar. Det kördes efter omrankningen men bara som ett
+`break` i `apply_diversity`, som förutsätter en poängsorterad lista: en titel
+under golvet som Gemma lyfte visades inte, men den avbröt listan där — på plats
+1 blev Content to Watch tom, på plats 3 blev den två titlar. `/search/ai` hade
+inget golv alls. Nu stryks topp-5-val under golvet; de behåller sin
+deterministiska plats bakom alla starkare titlar, modellens sjätte val dras inte
+upp, och en topp 5 med bara svaga val räknas som ingen omrankning. Lane-balansen
+mäter varje bana från dess bästa rad, inte från modellens första val.
+
+Deterministisk offline (d698cdc, 2026-09-24): nDCG@5 **0,8931**, nDCG@10
+**0,6503**. Kontrollarmarna kollapsar: `empty_taste` 0,0000, `shuffled_taste`
+0,1366. Den deterministiska ordningen är oförändrad av 9949f1d (sorterad indata).
+
+### 18.3 Kvarvarande osäkerhet i rankingmätningen
+
+Dokumenterad, inte ett skäl att starta fler experiment.
+
+1. **Absolutvärdena per arm från 2026-09-23 committades aldrig**, bara
+   skillnaderna ovan (commit 2472c53). CLAUDE.md sade "full numbers in
+   HANDOFF.md"; före detta avsnitt fanns inga Gemma-siffror här alls.
+2. **Litet underlag:** 97 egna betyg ≥ 8, 5 negativa exempel. Modellordningen
+   har vänt två gånger när urvalet växte — `qwen2.5:14b` vann på 9 veck och
+   förlorade på 14 (§15), `qwen-suggestarr` vann på 8 veck och förlorade på 32.
+3. **Svansvinsten är mätt en gång**, inte bekräftad med ett annat veckantal som
+   §15 kräver för modellbyten. Visar en senare mätning motsatsen sätts
+   `RERANK_LLM_KEEP` till 12.
+4. **Golvfiltret är inte mätt offline.** `model_bench.py` utvärderar modellens
+   egen ordning och går inte genom `rerank_verified_candidates`; ingen ny
+   mätning har körts, enligt beslut.
+5. Gemma slår `qwen-suggestarr` **bara på MRR** (topp-1). På nDCG@5 och
+   nDCG@10 går de inte att skilja åt, till fyra gånger latensen.
+6. Berikad profil mäter fortfarande 0,05–0,075 P@5 under oberikad på
+   holdouten, oförklarat (§14). Parvis träffsäkerhet 0,751 (från 0,808).
+7. **Full synk ändrar underlaget** (godkänt av Gilbert). Siffrorna ovan gäller
+   datat före synken.
+8. Allt är offline mot en fryst ögonblicksbild. **Ingen live-lista med
+   Gemma 4 har genererats**; senast verifierade live-lista är §16 (2026-09-22,
+   `qwen-suggestarr`).
+
+### 18.4 Ändringar
+
+| commit | vad | bevis |
+|---|---|---|
+| `56cedeb` | "Ladda fler" räknade godkända rader i offset och sentinel, så lika många köade titlar hoppades över (fel från 5c53e42) | Chromium, 100 köade. 5 godkända: **före** 90 av 95 synliga (`req_040`–`044` saknades, offset 0/40/80), **efter** 95 av 95 (0/35/75). 30 godkända: **före** 40 av 70, **efter** 70 av 70. Inga dubbletter. |
+| `7b92a58` | `POST /history/sync`: ett svar som slog i 50-taket ersätter aldrig en större lagrad historik; "inget svarade" byter aldrig lagrad historik mot demorader | 6 tester, 4 röda utan ändringen |
+| `2930177` | `RERANK_LLM_KEEP = 5` | 2 tester, det ena rött utan ändringen |
+| `dd7c01c` | `evaluation/verify_live.py` + denna rapport | provkörd mot syntetiska data |
+| `9949f1d` | Gemmas topp 5 bara inom relevansgolvet; lane-golv från banans bästa | 3 tester, alla röda utan ändringen |
+| `bb8e0dc` | ett jobb vänder aldrig en avvisning tillbaka till kön och skickar aldrig en avvisad titel till MediaManager | 4 tester, 3 röda utan ändringen |
+
+Massåtgärderna från 5c53e42, verifierade i Chromium: "Select all" på 120 köade →
+`POST /requests/bulk` i satser om 50/50/20 → servern har 120 avvisade
+respektive 120 godkända, kön 0, Approved-fliken "120 total".
+
+### 18.5 Tester
+
+Molncontainer med MongoDB 8.3.7 och lokal testserver, samma kommando som §10.
+
+| kod | gröna | röda | errors |
+|---|---|---|---|
+| 463e858 (baslinje, samma miljö) | 151 | 24 | 2 |
+| 5c53e42 (före molnets ändringar) | 173 | 25 | 2 |
+| bb8e0dc (efter) | **189** | 24 | 2 |
+
+**Mängden röda är identisk med baslinjens.** Alla kräver Simkl-, Trakt- eller
+TMDb-nycklar, Ollama eller nätverk som containern saknar. Den 25:e på 5c53e42
+(`test_pin_poll_validation`) återanvände en anslutning efter en 500 och gick
+grönt 3 av 3 gånger isolerat. `recommendation_tests` + `evaluation_tests`:
+79 gröna. Frontend bygger; enda lint-varningen (`Jobs.jsx:177`) fanns före.
+`check_vision_ui_lock.py` → OK.
+
+### 18.6 Fynd som fanns före och inte åtgärdats
+
+1. Simkl-flödet anropar `GET /oauth2/device` medan kommentaren citerar Simkls
+   svar "use POST /oauth2/device". Oprövat mot Simkl (§19.8 A).
+2. `/simkl/pin/poll` och `/trakt/device/poll` svarar 500 vid nätverksfel (och
+   Trakt-poll när client id saknas) i stället för en status.
+3. `TestHistoryPosters` läser en hårdkodad `test_database` — testfel.
+4. `ProvenanceChips.jsx` renderas fortfarande ingenstans (UI-ändring kräver
+   Gilberts godkännande).
+5. `GET /requests` och `/requests/stats` läser högst 30 000 rader.
+
+---
+
+## 19. Överlämning till den lokala agenten
+
+Detta är den enda gällande överlämningen från molnet. Den lokala agenten kör på
+Gilberts Mac och har det molnet saknade: databasen, tokens, Plex i LAN och
+Ollama på NAS:en. **Inget av molnets arbete är driftsatt eller verifierat på
+riktiga data.**
+
+### 19.1 Gilberts beslut 2026-09-25
+
+1. **Full synk är godkänd:** hela historiken och alla egna betyg importeras,
+   med paginering och deduplicering. Att rankingunderlaget ändras är förväntat.
+   50-radsskyddet (7b92a58) behövs men ersätter inte full synk.
+2. **"Up Coming" på Home visar faktiskt kommande premiärer med verifierade
+   datum.** "Upcoming Tv Shows" ger bara serier enligt sina inställningar. En
+   äldre serie får vara med om en kommande säsong har ett verifierat
+   premiärdatum. Vision UI:s utseende behålls.
+3. **Den personliga rankingen bevaras:** Gemma får inte lyfta svaga
+   smakmatchningar förbi tydligt starkare (kontrollerat och rättat i 9949f1d).
+   Inga nya benchmarkomgångar.
+4. **Kön är mer än paginering:** de obehandlade förslagen, återkommande
+   kandidater och fortsatt köansamling. Gilberts manuella beslut bevaras.
+5. **Lokala ändringar bevaras**, bland annat `recommendation/job_intent.py`.
+   Inget blint grenbyte, ingen överskrivning av arbetsytan.
+6. Bara inloggningssteg lämnas till Gilbert (§19.10).
+
+### 19.2 Status — uppskattning, en och samma grund
+
+Uppdraget är de fem ursprungliga punkterna, 20 procentenheter var. Varje punkt
+räknas i fyra steg: **kod** klar för beslutad omfattning 40 %, **test**
+(enhetstester eller webbläsare på testdata) 20 %, **driftsatt** på Macen 10 %,
+**verifierad** live på riktiga data 30 %. Delsteg anges med skäl.
+
+| punkt | kod | test | drift | live | punkten | av uppdraget |
+|---|---|---|---|---|---|---|
+| Anslutningstest Simkl/Plex | 20 (finns; GET/POST-frågan öppen) | 0 | 0 | 0 | 20 % | 4 |
+| Faktiska synkantal | 10 (bara skyddet) | 5 | 0 | 0 | 15 % | 3 |
+| Upcoming | 10 (jobbens fönsterlogik) | 5 | 0 | 0 | 15 % | 3 |
+| Rankingresultat | 40 | 15 (ingen ny offlinemätning, enligt beslut) | 0 | 0 | 55 % | 11 |
+| Köhantering | 15 (paginering, avvisningar står) | 10 | 0 | 0 | 25 % | 5 |
+| **totalt** | | | | | | **≈ 26 %** |
+
+Molnsessionens tidigare procentsiffror (5–96 %, 72 %) räknades på sessionens
+eget arbete och gäller inte.
+
+### 19.3 Klart i molnet
+
+Gren `origin/claude/great-davinci-zlc97t`, bas `5c53e42` (= `phase-0-local-runtime`
+på GitHub). Sex kodcommits, i ordning, följda av commits som bara rör denna
+överlämning i `HANDOFF.md` och `CLAUDE.md`:
+
+| commit | filer | beroenden och troliga krockar |
+|---|---|---|
+| `56cedeb` | `frontend/src/pages/Requests.jsx` | kräver 5c53e42 (`GET /requests/page`) |
+| `7b92a58` | `backend/server.py` (`SYNC_PAGE`, `sync_history`), `backend/recommendation_tests/test_history_sync_guard.py` (ny) | svaret får `kept`; skrivs om av full synk (§19.8 B) — behåll regeln och testerna |
+| `2930177` | `backend/jobs/engine.py` (`RERANK_LLM_KEEP`), `backend/recommendation_tests/test_content_to_watch.py` | gäller Content to Watch, sparade jobb, `/search/ai` (`api_extra.py`) och `evaluation/job_trace.py`; inte `model_bench.py` |
+| `dd7c01c` | `backend/evaluation/verify_live.py` (ny), `HANDOFF.md`, `CLAUDE.md` | verify_live importerar `jobs.engine.gather_job_candidates`, `providers.tmdb._window_is_upcoming`, `recommendation.pipeline.run_pipeline`, `database.db` och anropar `/api/connections/test/*`, `/api/history/sync`, `/api/recommendations`, `/api/requests/page`, `/api/requests/stats`; HANDOFF/CLAUDE.md krockar lättast med lokala ändringar |
+| `9949f1d` | `backend/recommendation/ranking_engine.py` (`RELEVANCE_FLOOR`, `relevance_cut`, banans bästa), `backend/jobs/engine.py`, `backend/recommendation_tests/test_content_to_watch.py`, `backend/recommendation_tests/test_genre_lanes.py` | kräver 2930177; lokal kod (t.ex. job_intent) som ändrar `rerank_verified_candidates`, `apply_diversity`, `apply_lane_balance` eller `select_final` måste behålla golvfiltret |
+| `bb8e0dc` | `backend/request_providers.py` (`KEPT_STATUSES`), `backend/jobs/engine.py` (`apply_job_action_mode`), `backend/recommendation_tests/test_manual_decisions_stand.py` (ny), `backend/tests/test_job_action_mode.py` | lokala ändringar i `submit` eller `apply_job_action_mode` krockar här |
+
+**Kön, separat (beslut 4):**
+
+- **De obehandlade förslagen (Gilbert: 5 328):** molnet har inte ändrat en
+  enda rad — alla tester kördes mot engångsdatabaser. Tidigare gjort: hela kön
+  syns (d064340), servern paginerar (5c53e42), "Ladda fler" hoppar inte över
+  titlar efter godkännanden (56cedeb). **Ingen genomgång eller städning är
+  gjord.**
+- **Återkommande kandidater:** gjort — ett jobb kan inte längre vända en
+  avvisad titel tillbaka till `pending_approval` eller skicka den till
+  MediaManager (bb8e0dc). Inte gjort — varför exkluderingen missar dem
+  (identitet eller mediatyp som ändrats sedan avvisningen), att `blacklist` och
+  `recommendation_feedback` läses med `to_list(500)`, och att `submit` matchar
+  exakt titel + år.
+- **Fortsatt köansamling:** inget gjort. Varje jobb i `require_approval` körs
+  var 30:e minut (`JOB_INTERVAL_MINUTES`) och köar upp till sitt
+  `final_recommendation_limit` nya titlar per körning; det finns inget tak för
+  obehandlade per jobb.
+
+### 19.4 Steg 1 — säkra arbetsytan
+
+```bash
+cd ~/Documents/CineMind
+git status --short; git stash list; git branch --show-current; git log --oneline -5
+```
+
+- Kör inte `checkout`, `reset`, `clean` eller `stash` på det som finns.
+- Stoppa en eventuell experimentloop i terminalen först.
+- Finns ocommittat arbete (t.ex. `backend/recommendation/job_intent.py`):
+  granska `git status`, committa aldrig `.env` eller data, och lägg arbetet på
+  en egen gren från nuvarande läge — `git switch -c` tar med ändringarna och
+  skriver inte över något:
+  `git switch -c local/wip-2026-09-25 && git add <granskade filer> && git commit -m "WIP: lokalt arbete före molnets commits"`
+- Ta en återställbar kopia av databasen före synken, minst `history`,
+  `media_history`, `requests`, `recommendations`, `blacklist`,
+  `recommendation_feedback` och `connections` (t.ex. `mongodump --db <DB_NAME>`,
+  DB_NAME står i `backend/.env`).
+
+### 19.5 Steg 2 — integrera
+
+```bash
+git fetch origin claude/great-davinci-zlc97t
+git log --oneline 5c53e42..origin/claude/great-davinci-zlc97t    # sex kodcommits + överlämningen
+git merge-base --is-ancestor 5c53e42 HEAD && echo "basen finns lokalt"
+git cherry-pick 5c53e42..origin/claude/great-davinci-zlc97t     # alla, i ordning
+```
+
+Vid konflikt: behåll båda sidornas avsikt och ta aldrig bort lokal kod för att
+få en ren cherry-pick; `git cherry-pick --abort` är alltid ett säkert steg
+tillbaka. Saknar HEAD 5c53e42: stanna och jämför med
+`git log --oneline --left-right HEAD...origin/claude/great-davinci-zlc97t`.
+
+### 19.6 Steg 3 — testa före driftsättning
+
+```bash
+cd ~/Documents/CineMind/backend
+export PATH="$PWD/../.runtime/mongosh/bin:$PATH"
+PYTHONPATH=../.runtime/python:. python3 -m pytest recommendation_tests evaluation_tests -q   # molnet: 79 gröna
+PYTHONPATH=../.runtime/python:. python3 -m pytest tests -q   # mot körande backend (REACT_APP_BACKEND_URL)
+python3 ../scripts/check_vision_ui_lock.py
+```
+
+Med nycklar och Ollama på Macen ska fler av de 26 miljöberoende testerna gå
+grönt än i molnet; `TestHistoryPosters` förblir rött (testfel, §18.6).
+
+### 19.7 Steg 4 — driftsätt
+
+```bash
+cd ~/Documents/CineMind/frontend && PATH="$PWD/../.runtime/node/bin:$PATH" npm run build
+cd .. && bash scripts/sync_runtime.sh
+```
+
+`sync_runtime.sh` kopierar arbetskatalogen som den är — det som driftsätts är
+exakt det integrerade läget, inklusive det lokala job_intent-arbetet.
+
+### 19.8 Steg 5 — återstående arbete, i den ordningen
+
+**A. Anslut och verifiera Simkl och Plex — först, synken behöver dem:** kör
+`verify_live` utan flaggor (§19.9) och läs raderna `connection: simkl` och
+`connection: plex` från den riktiga körmiljön. Saknas eller avvisas en token:
+be Gilbert om inloggningen (§19.10) och kör om. Ger Simkls
+`POST /api/simkl/pin/start` ett 4xx-fel: koden gör `GET /oauth2/device` medan
+kommentaren citerar Simkls svar "use POST /oauth2/device" — pröva POST.
+Klart när båda raderna är PASS.
+
+**B. Full synk (beslut 1)** — `backend/server.py` `sync_history` och `providers/`:
+
+- Trakt: `/sync/history?page=N&limit=100&extended=full` tills
+  `X-Pagination-Page-Count`; egna betyg från `/sync/ratings/movies` och
+  `/sync/ratings/shows` till `media_history` via
+  `recommendation.history_normalizer.persist_normalized_history` (upsert på
+  titel + källa). Hjälpfunktioner finns i `providers/trakt.py`
+  (`trakt_history_params`, `parse_history_entry`, `parse_rating_entry`,
+  `apply_user_ratings`).
+- Simkl: `/sync/all-items?extended=full` utan 50-taket; `user_rating` till
+  `media_history`.
+- Plex: tittarhistorik från `/status/sessions/history/all`, sidvis med
+  `X-Plex-Container-Start/Size` (`providers/plex.py`: `plex_page_headers`,
+  `next_page_start`, `classify_history_payload`); biblioteket till
+  `media_library` via `replace_library`, inte till `history`.
+- AniList läser redan hela listan.
+- Deduplicering: varje tittarhändelse en gång — leverantörens händelse-id där
+  det finns (Trakts history-`id`, Plex `historyKey`), annars källa + titel + år
+  + `watched_at`, även mot de befintliga 10 210 raderna. Ingen rad raderas
+  förrän hela källans hämtning har lyckats; 7b92a58:s regel gäller fortfarande
+  för avbrutna eller avkortade hämtningar.
+- Kör inte `enrich_history_posters` över hela importen i anropet (6 samtidiga
+  TMDb-anrop); `GET /history` fyller på 24 åt gången.
+- Klart när: två synkar i rad ger samma antal (den andra lägger till 0), ingen
+  källa krymper oväntat, `errors` är tomt, och Content to Watch genereras
+  efteråt med 8 val, bäst först.
+
+**C. Upcoming (beslut 2):**
+
+- Backend: kandidater för upcoming-jobb och Home får ett verifierat
+  premiärdatum från TMDb eller AniList — `release_date`/`first_air_date` efter
+  i dag, eller för serier nästa säsongs eller avsnitts datum (TMDb:s
+  TV-detaljer `next_episode_to_air.air_date` och säsongens `air_date`, AniList
+  `nextAiringEpisode`). Spara datum och källa på raden (t.ex. `premiere_date`,
+  `premiere_source`).
+- "Upcoming Tv Shows": bara serier enligt jobbets `media_types` och filter; en
+  äldre serie räknas med när dess kommande säsong har ett verifierat datum
+  inom jobbets fönster.
+- Home (`frontend/src/pages/Home.jsx`, `upcoming`): bara rader med verifierat
+  framtida premiärdatum, sorterade på datum, i dagens kortmarkup och klasser.
+  Tomt läge i befintlig glass-stil, inga nya färger;
+  `check_vision_ui_lock.py` efteråt.
+- `verify_live`: `_release_state` och `_in_window` läser i dag bara
+  release-datum och år; utöka dem till det verifierade premiärfältet, annars
+  flaggas en äldre serie med ny säsong som `outside_year_window`.
+- Klart när: varje val i "Upcoming Tv Shows" är en serie med verifierat datum
+  efter i dag inom fönstret, och Home-panelen visar bara sådana, med datum.
+
+**D. Kön (beslut 4)** — Gilberts manuella beslut bevaras: godkända, avvisade
+och svartlistade rader samt manuellt skapade förfrågningar (utan
+`source_job_id`) rörs inte.
+
+1. Läsrapport först, utan ändringar: de obehandlade per `source_job_id`, typ
+   och release; hur många som bryter mot sitt jobbs nuvarande inställningar
+   (t.ex. filmer från "Upcoming Tv Shows", redan släppta titlar i upcoming-jobb,
+   under jobbets betygsgolv); hur många som är samma titel som en avvisad eller
+   godkänd rad enligt identitetsnycklarna.
+2. Stoppa ansamlingen: ett jobb köar inga nya titlar medan det redan har minst
+   sitt `final_recommendation_limit` i `pending_approval`; befintliga rader
+   orörda (`jobs/engine.py`, `apply_job_action_mode`).
+3. Återkommande kandidater: läs `blacklist` och `recommendation_feedback` utan
+   500-taket i `load_pipeline_inputs`, och låt `LocalRequestProvider.submit`
+   matcha även på `tmdb_id` och typ, så att en titel med ändrat namn eller år
+   inte blir en ny rad.
+4. Städa bara obehandlade rader som bryter mot sitt eget jobbs inställningar:
+   säkerhetskopiera först till `docs/` som tidigare backuper, sätt `rejected`
+   med en orsak (återställbart) och radera inget. Allt annat avgör Gilbert i
+   kön.
+
+**E. Ranking live (beslut 3):** efter synk och driftsättning,
+`verify_live --generate` (§19.9). Loggraden "Ollama rerank put N weak
+match(es)" visar hur ofta golvet grep in — information, ingen mätning.
+
+### 19.9 Steg 6 — verifiera
+
+```bash
+cd ~/Documents/CineMind/backend
+# före synken: skrivskyddat
+PYTHONPATH=../.runtime/python:. python3 -m evaluation.verify_live \
+  --user user_c30bd548254a --output /tmp/verify-before.json
+# den godkända synken + ny Content to Watch
+PYTHONPATH=../.runtime/python:. python3 -m evaluation.verify_live \
+  --user user_c30bd548254a --sync --generate --output /tmp/verify-after.json
+# en andra synk: samma antal, inga dubbletter
+PYTHONPATH=../.runtime/python:. python3 -m evaluation.verify_live \
+  --user user_c30bd548254a --sync --output /tmp/verify-resync.json
+```
+
+| rad i verify_live | godkänt när |
+|---|---|
+| `connection: simkl`, `connection: plex` | PASS |
+| `sync: POST /history/sync` | `errors` tomt; `history_after` per källa ≥ före; andra synken ändrar inga antal |
+| `upcoming: <jobb>` | PASS för varje upcoming-jobb (efter B) |
+| `ranking: Content to Watch best first` | PASS, 8 rader, rank 1–8, `gemma4:12b-it-qat`, `ai_reranked` true |
+| `queue: pages every queued title once` | PASS: `paged_rows` = `distinct_rows` = `queue_total`, `pending_count` = `stats.pending`, `approved_tab_total` = `stats.approved` |
+
+I webbläsaren: godkänn 5 titlar i Requests och scrolla till slutet — varje köad
+titel ska synas exakt en gång. Home: "Up Coming" visar bara titlar med datum
+efter i dag.
+
+### 19.10 Endast för Gilbert: inloggning
+
+Bara om en anslutningsrad säger att token saknas eller avvisas:
+
+- Simkl: Sources → Connect Simkl, ange koden på simkl.com/pin.
+- Trakt: ange enhetskoden på trakt.tv/activate.
+- AniList: godkänn OAuth i webbläsaren.
+- Plex: ny `X-Plex-Token` i Sources om den gamla har gått ut.
+- Appen: logga in igen om sessionen har gått ut.

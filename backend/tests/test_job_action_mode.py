@@ -24,6 +24,8 @@ def _row(**extra):
 def test_require_approval_queues_pending_request_with_poster():
     fake_db = MagicMock()
     fake_db.recommendations.update_one = AsyncMock()
+    # apply_job_action_mode reads the user's rejected requests first; none here.
+    fake_db.requests.find.return_value.to_list = AsyncMock(return_value=[])
     submitted = []
 
     async def fake_submit(self, user_id, item, status="requested"):
@@ -54,6 +56,8 @@ def test_require_approval_queues_pending_request_with_poster():
 def test_auto_request_sends_to_mediamanager():
     fake_db = MagicMock()
     fake_db.recommendations.update_one = AsyncMock()
+    # apply_job_action_mode reads the user's rejected requests first; none here.
+    fake_db.requests.find.return_value.to_list = AsyncMock(return_value=[])
     submitted = []
     send_calls = []
 
@@ -98,6 +102,8 @@ def test_auto_request_sends_to_mediamanager():
 def test_auto_request_without_mediamanager_falls_back_to_pending():
     fake_db = MagicMock()
     fake_db.recommendations.update_one = AsyncMock()
+    # apply_job_action_mode reads the user's rejected requests first; none here.
+    fake_db.requests.find.return_value.to_list = AsyncMock(return_value=[])
     submitted = []
 
     async def fake_submit(self, user_id, item, status="requested"):
