@@ -849,7 +849,7 @@ grönt 3 av 3 gånger isolerat. `recommendation_tests` + `evaluation_tests`:
 ### 18.6 Fynd som fanns före och inte åtgärdats
 
 1. Simkl-flödet anropar `GET /oauth2/device` medan kommentaren citerar Simkls
-   svar "use POST /oauth2/device". Oprövat mot Simkl (§19.8 E).
+   svar "use POST /oauth2/device". Oprövat mot Simkl (§19.8 A).
 2. `/simkl/pin/poll` och `/trakt/device/poll` svarar 500 vid nätverksfel (och
    Trakt-poll när client id saknas) i stället för en status.
 3. `TestHistoryPosters` läser en hårdkodad `test_database` — testfel.
@@ -912,7 +912,7 @@ denna överlämning i `HANDOFF.md` och `CLAUDE.md`:
 | commit | filer | beroenden och troliga krockar |
 |---|---|---|
 | `56cedeb` | `frontend/src/pages/Requests.jsx` | kräver 5c53e42 (`GET /requests/page`) |
-| `7b92a58` | `backend/server.py` (`SYNC_PAGE`, `sync_history`), `backend/recommendation_tests/test_history_sync_guard.py` (ny) | svaret får `kept`; skrivs om av full synk (§19.8 A) — behåll regeln och testerna |
+| `7b92a58` | `backend/server.py` (`SYNC_PAGE`, `sync_history`), `backend/recommendation_tests/test_history_sync_guard.py` (ny) | svaret får `kept`; skrivs om av full synk (§19.8 B) — behåll regeln och testerna |
 | `2930177` | `backend/jobs/engine.py` (`RERANK_LLM_KEEP`), `backend/recommendation_tests/test_content_to_watch.py` | gäller Content to Watch, sparade jobb, `/search/ai` (`api_extra.py`) och `evaluation/job_trace.py`; inte `model_bench.py` |
 | `dd7c01c` | `backend/evaluation/verify_live.py` (ny), `HANDOFF.md`, `CLAUDE.md` | verify_live importerar `jobs.engine.gather_job_candidates`, `providers.tmdb._window_is_upcoming`, `recommendation.pipeline.run_pipeline`, `database.db` och anropar `/api/connections/test/*`, `/api/history/sync`, `/api/recommendations`, `/api/requests/page`, `/api/requests/stats`; HANDOFF/CLAUDE.md krockar lättast med lokala ändringar |
 | `9949f1d` | `backend/recommendation/ranking_engine.py` (`RELEVANCE_FLOOR`, `relevance_cut`, banans bästa), `backend/jobs/engine.py`, `backend/recommendation_tests/test_content_to_watch.py`, `backend/recommendation_tests/test_genre_lanes.py` | kräver 2930177; lokal kod (t.ex. job_intent) som ändrar `rerank_verified_candidates`, `apply_diversity`, `apply_lane_balance` eller `select_final` måste behålla golvfiltret |
@@ -994,7 +994,15 @@ exakt det integrerade läget, inklusive det lokala job_intent-arbetet.
 
 ### 19.8 Steg 5 — återstående arbete, i den ordningen
 
-**A. Full synk (beslut 1)** — `backend/server.py` `sync_history` och `providers/`:
+**A. Anslut och verifiera Simkl och Plex — först, synken behöver dem:** kör
+`verify_live` utan flaggor (§19.9) och läs raderna `connection: simkl` och
+`connection: plex` från den riktiga körmiljön. Saknas eller avvisas en token:
+be Gilbert om inloggningen (§19.10) och kör om. Ger Simkls
+`POST /api/simkl/pin/start` ett 4xx-fel: koden gör `GET /oauth2/device` medan
+kommentaren citerar Simkls svar "use POST /oauth2/device" — pröva POST.
+Klart när båda raderna är PASS.
+
+**B. Full synk (beslut 1)** — `backend/server.py` `sync_history` och `providers/`:
 
 - Trakt: `/sync/history?page=N&limit=100&extended=full` tills
   `X-Pagination-Page-Count`; egna betyg från `/sync/ratings/movies` och
@@ -1021,7 +1029,7 @@ exakt det integrerade läget, inklusive det lokala job_intent-arbetet.
   källa krymper oväntat, `errors` är tomt, och Content to Watch genereras
   efteråt med 8 val, bäst först.
 
-**B. Upcoming (beslut 2):**
+**C. Upcoming (beslut 2):**
 
 - Backend: kandidater för upcoming-jobb och Home får ett verifierat
   premiärdatum från TMDb eller AniList — `release_date`/`first_air_date` efter
@@ -1042,7 +1050,7 @@ exakt det integrerade läget, inklusive det lokala job_intent-arbetet.
 - Klart när: varje val i "Upcoming Tv Shows" är en serie med verifierat datum
   efter i dag inom fönstret, och Home-panelen visar bara sådana, med datum.
 
-**C. Kön (beslut 4)** — Gilberts manuella beslut bevaras: godkända, avvisade
+**D. Kön (beslut 4)** — Gilberts manuella beslut bevaras: godkända, avvisade
 och svartlistade rader samt manuellt skapade förfrågningar (utan
 `source_job_id`) rörs inte.
 
@@ -1063,14 +1071,9 @@ och svartlistade rader samt manuellt skapade förfrågningar (utan
    med en orsak (återställbart) och radera inget. Allt annat avgör Gilbert i
    kön.
 
-**D. Ranking live (beslut 3):** efter synk och driftsättning,
+**E. Ranking live (beslut 3):** efter synk och driftsättning,
 `verify_live --generate` (§19.9). Loggraden "Ollama rerank put N weak
 match(es)" visar hur ofta golvet grep in — information, ingen mätning.
-
-**E. Anslutningstest Simkl/Plex:** raderna `connection: simkl/plex` i
-`verify_live`. Ger Simkls `POST /api/simkl/pin/start` ett 4xx-fel: koden gör
-`GET /oauth2/device` medan kommentaren citerar Simkls svar "use POST
-/oauth2/device" — pröva POST.
 
 ### 19.9 Steg 6 — verifiera
 
