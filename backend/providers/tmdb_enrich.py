@@ -9,7 +9,12 @@ Daredevil: Born Again".
 
 Keywords, cast, creators, companies and collections are what actually separate
 two titles inside one genre, so they are fetched once per title and cached
-permanently - they do not change.
+permanently - they do not change. Except before a title is out: an unreleased
+title gains its cast and keywords as the premiere comes closer, and the cache
+kept whatever TMDb had the first time (68 of 229 verified coming premieres of
+"Upcoming Tv Shows" had no keyword at all on 2026-09-25, so nothing concrete
+could ever link them to a liked title). Such an entry is fetched again after
+UNRELEASED_REFRESH_DAYS; a released title's entry still never expires.
 """
 
 from __future__ import annotations
@@ -23,6 +28,8 @@ import httpx
 
 from config import TMDB_KEY
 
+#: How old a cached entry of a title that was not out yet may get before it is fetched again.
+UNRELEASED_REFRESH_DAYS = 7
 CAST_DEPTH = 8
 KEYWORD_DEPTH = 24
 COMPANY_DEPTH = 4
@@ -99,6 +106,8 @@ def _parse_detail(body: Dict[str, Any], kind: str) -> Dict[str, Any]:
         "vote_count": body.get("vote_count"),
         "tmdb_rating": body.get("vote_average"),
         "year": int(date[:4]) if len(str(date)) >= 4 and str(date)[:4].isdigit() else None,
+        # The day it came out (or will): unreleased_when_fetched reads it.
+        "release_date": str(date)[:10] or None,
         "kind": kind,
     }
 
@@ -145,13 +154,17 @@ async def load_enrichment(
         return {}
 
     found: Dict[str, Dict[str, Any]] = {}
+    refresh: List[str] = []
     cursor = db.media_enrichment.find({"key": {"$in": sorted(wanted)}}, {"_id": 0})
     for doc in await cursor.to_list(len(wanted) + 10):
         payload = doc.get("payload")
         if isinstance(payload, dict):
             found[doc["key"]] = payload
+            if unreleased_when_fetched(doc):
+                # Kept as it is until the new answer is in; a failed fetch changes nothing.
+                refresh.append(doc["key"])
 
-    missing = [key for key in wanted if key not in found]
+    missing = [key for key in wanted if key not in found] + refresh
     key = api_key or TMDB_KEY
     if not missing or not key:
         return found
@@ -177,6 +190,29 @@ async def load_enrichment(
     async with httpx.AsyncClient(timeout=12) as client:
         await asyncio.gather(*(one(client, cache_key) for cache_key in missing))
     return found
+
+
+def unreleased_when_fetched(doc: Dict[str, Any], now: Optional[datetime] = None) -> bool:
+    """Was this cached entry fetched before its title came out, long enough ago to ask again?
+
+    An entry cached before release_date was stored has only a year: it counts
+    as unreleased when that year was not over yet at the fetch.
+    """
+    payload = doc.get("payload") or {}
+    fetched = str(doc.get("fetched_at") or "")[:10]
+    if len(fetched) != 10:
+        return False
+    try:
+        age = ((now or datetime.now(timezone.utc)).date() - datetime.fromisoformat(fetched).date()).days
+    except ValueError:
+        return False
+    if age < UNRELEASED_REFRESH_DAYS:
+        return False
+    release = str(payload.get("release_date") or "")[:10]
+    if len(release) == 10:
+        return release > fetched
+    year = payload.get("year")
+    return year is None or int(year) >= int(fetched[:4])
 
 
 def apply_enrichment(row: Dict[str, Any], payload: Optional[Dict[str, Any]]) -> Dict[str, Any]:

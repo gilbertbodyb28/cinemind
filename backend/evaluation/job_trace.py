@@ -134,7 +134,8 @@ async def trace_job(
     wanted = list(filters.get("include_genres") or [])
 
     warnings: List[Dict[str, Any]] = []
-    inputs, taste, extra = await gather_job_candidates(user_id, job, "preview", warnings)
+    search: Dict[str, Any] = {}
+    inputs, taste, extra = await gather_job_candidates(user_id, job, "preview", warnings, report=search)
     raw_by_source = dict(Counter(row.get("source") or "?" for row in extra).most_common())
     raw_by_source_category: Dict[str, Dict[str, int]] = {}
     for row in extra:
@@ -142,6 +143,16 @@ async def trace_job(
         category = audience_category(row)
         bucket[category] = bucket.get(category, 0) + 1
     result = run_pipeline(job, extra_candidates=list(extra), taste=taste, **inputs)
+    from providers.premieres import is_upcoming_job
+
+    if is_upcoming_job(job):
+        # Exactly as execute_job: an upcoming job widens its search until it has enough.
+        from jobs.upcoming import search_upcoming
+
+        extra, result = await search_upcoming(
+            user_id, job, taste, inputs, list(extra), result,
+            lambda rows: run_pipeline(job, extra_candidates=list(rows), taste=taste, **inputs), report=search,
+        )
 
     merged = [row for row in result["ranked"]] + [row for row in result["rejected"]]
     filter_codes = {
@@ -195,6 +206,7 @@ async def trace_job(
         "dedupe_dropped": len(extra) - len(merged),
         "rejected_by_reason_and_lane": by_reason,
         "stages": stages,
+        "upcoming_search": search or None,
         "llm": rerank_note,
     }
 

@@ -32,6 +32,10 @@ export function todayKey(now = new Date()) {
  * "unknown" when the row carries neither a release date nor a year.
  */
 export function releaseBucket(item, today = todayKey()) {
+  // A verified coming premiere - a new season of an older series too - is upcoming
+  // (request_queue.release_bucket, Gilbert 2026-09-25).
+  const premiere = item?.premiere_date ? String(item.premiere_date).slice(0, 10) : "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(premiere) && premiere > today) return "upcoming";
   const raw = item?.release_date ? String(item.release_date).slice(0, 10) : "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw > today ? "upcoming" : "released";
   const year = Number(raw.slice(0, 4) || item?.year);

@@ -191,3 +191,110 @@ def apply_user_ratings(items: List[Dict[str, Any]], ratings: List[Dict[str, Any]
         if match and match.get("rating") is not None:
             item["rating"] = match["rating"]
             item["rating_scale"] = 10
+
+
+#: Trakt's genre slugs for the canonical names jobs use (recommendation.filter_engine).
+TRAKT_GENRE_SLUGS = {
+    "sci-fi": "science-fiction", "science fiction": "science-fiction", "science-fiction": "science-fiction",
+    "action": "action", "adventure": "adventure", "animation": "animation", "anime": "anime",
+    "comedy": "comedy", "crime": "crime", "documentary": "documentary", "drama": "drama",
+    "family": "family", "fantasy": "fantasy", "history": "history", "horror": "horror",
+    "music": "music", "musical": "musical", "mystery": "mystery", "romance": "romance",
+    "superhero": "superhero", "thriller": "thriller", "war": "war", "western": "western",
+}
+#: Trakt answers a calendar for at most 33 days at a time.
+TRAKT_CALENDAR_DAYS = 33
+TRAKT_UPCOMING_CACHE_HOURS = 6
+
+
+def trakt_genre_filter(names: Optional[List[str]]) -> Optional[str]:
+    """The job's genres as Trakt's `genres` filter (comma = any of them), or None."""
+    from recommendation.filter_engine import canonical_genres
+
+    slugs = []
+    for name in sorted(canonical_genres(names or [])):
+        slug = TRAKT_GENRE_SLUGS.get(str(name).casefold())
+        if slug and slug not in slugs:
+            slugs.append(slug)
+    return ",".join(slugs) or None
+
+
+async def _cached_list(client: httpx.AsyncClient, path: str, params: Dict[str, Any], client_id: str) -> List[Dict[str, Any]]:
+    from datetime import timedelta
+
+    key = "trakt-upcoming:" + path + ":" + "&".join(f"{k}={params[k]}" for k in sorted(params))
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), list):
+        return cached["payload"]
+    try:
+        response = await client.get(f"{TRAKT_API}{path}", params=params, headers=trakt_headers(client_id))
+    except httpx.HTTPError as exc:
+        logging.warning("Trakt %s failed: %s", path, exc.__class__.__name__)
+        return []
+    if response.status_code != 200:
+        logging.warning("Trakt %s answered %s", path, response.status_code)
+        return []
+    payload = response.json() or []
+    await db.provider_cache.update_one(
+        {"key": key},
+        {"$set": {"key": key, "payload": payload, "updated_at": now.isoformat(),
+                  "expires_at": (now + timedelta(hours=TRAKT_UPCOMING_CACHE_HOURS)).isoformat()}},
+        upsert=True,
+    )
+    return payload
+
+
+async def fetch_upcoming_titles(
+    client_id: Optional[str],
+    media_types: Optional[List[str]] = None,
+    start: Optional[str] = None,
+    days: int = 99,
+    genres: Optional[List[str]] = None,
+    pages: int = 2,
+) -> List[Dict[str, Any]]:
+    """What Trakt sees coming: the most anticipated films and series, and the next
+    weeks' season and series premieres, however old the series is.
+
+    Public endpoints (the app's client id, no sign-in). Every row is still checked
+    against TMDb for a verified premiere (providers.premieres) before a job can
+    take it; Trakt only widens where an upcoming job looks.
+    """
+    if not client_id:
+        return []
+    from datetime import date, timedelta
+
+    wanted = {str(item or "").casefold() for item in (media_types or ["movie", "tv", "anime"])}
+    movies = bool(wanted & {"movie", "movies", "film", "anime"})
+    shows = bool(wanted & {"tv", "show", "series", "anime"})
+    genre_filter = trakt_genre_filter(genres)
+    base = {"genres": genre_filter} if genre_filter else {}
+    first = date.fromisoformat((start or (datetime.now(timezone.utc).date() + timedelta(days=1)).isoformat())[:10])
+    rows: List[Dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=15) as client:
+        for kind, path, wanted_kind in (("movies", "/movies/anticipated", movies), ("shows", "/shows/anticipated", shows)):
+            if not wanted_kind:
+                continue
+            for page in range(1, max(1, pages) + 1):
+                for entry in await _cached_list(client, path, {**base, "page": page, "limit": 100}, client_id):
+                    row = parse_recommendation_entry(entry, kind)
+                    if row.get("title") and row["title"] != "Unknown":
+                        row["source"] = "trakt_upcoming"
+                        row["why"] = "On %s Trakt lists of titles people are waiting for." % (entry.get("list_count") or "many")
+                        rows.append(row)
+        if shows:
+            offset = 0
+            while offset < days:
+                span = min(TRAKT_CALENDAR_DAYS, days - offset)
+                day = (first + timedelta(days=offset)).isoformat()
+                for entry in await _cached_list(client, f"/calendars/all/shows/premieres/{day}/{span}", dict(base), client_id):
+                    row = parse_recommendation_entry(entry)
+                    episode = entry.get("episode") or {}
+                    if not row.get("title") or row["title"] == "Unknown":
+                        continue
+                    row["source"] = "trakt_upcoming"
+                    row["why"] = "Season %s premieres %s (Trakt calendar)." % (
+                        episode.get("season") or "?", str(entry.get("first_aired") or "")[:10])
+                    rows.append(row)
+                offset += span
+    return rows
