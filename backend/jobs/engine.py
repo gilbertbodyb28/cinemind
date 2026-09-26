@@ -635,6 +635,7 @@ async def persist_run_results(
     provider: str = "pipeline",
     model: str = "deterministic",
     ai_reranked: bool = False,
+    outcome: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     if trigger == "preview":
         return []
@@ -671,15 +672,29 @@ async def persist_run_results(
             "job_id": job.get("id"),
             "created_at": _now().isoformat(),
         })
+    kept: List[Dict[str, Any]] = []
     if rows:
+        from providers.premieres import is_upcoming_job
+
+        if is_upcoming_job(job):
+            # An upcoming job's earlier picks stay until their premiere
+            # (jobs.upcoming.carry_over); they follow this run's in the list.
+            from jobs.upcoming import carry_over
+
+            kept = await carry_over(user_id, job, rows)
         # A dismissed row stays behind (hidden everywhere) as the memory of that
         # decision: deleting it with the rest of the old list let the next run
         # recommend the rejected title again (exclusion_engine "dismissed").
         await db.recommendations.delete_many({
             "user_id": user_id, "saved": {"$ne": True}, "dismissed": {"$ne": True}, "job_id": job.get("id"),
+            "id": {"$nin": [row["id"] for row in kept]},
         })
         await db.recommendations.insert_many(rows)
-    return await apply_job_action_mode(user_id, job, rows, conn)
+        for position, row in enumerate(kept, start=len(rows) + 1):
+            await db.recommendations.update_one({"user_id": user_id, "id": row["id"]}, {"$set": {"rank": position}})
+    # A kept pick that never reached the queue (it waited for room) is offered again.
+    waiting_for_room = [row for row in kept if not row.get("request_id")]
+    return await apply_job_action_mode(user_id, job, rows + waiting_for_room, conn, outcome=outcome)
 
 
 async def apply_job_action_mode(
@@ -687,15 +702,26 @@ async def apply_job_action_mode(
     job: Dict[str, Any],
     rows: List[Dict[str, Any]],
     conn: Dict[str, Any],
+    outcome: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     """Queue posters for approval or send them into MediaManager.
 
     require_approval → pending Requests with posters + approve/reject buttons.
     auto_request → same MediaManager path as the Approve button.
     recommendations_only → stay on Home / AI Picks (PNG buttons still work there).
+
+    `outcome`, when given, is filled with what actually happened in Requests:
+    new titles queued, waiting ones refreshed, new ones held back for room, and
+    the job's waiting count afterwards. The run toast said "2 sent to Requests"
+    for picks that the full queue had held back.
     """
     mode = job.get("action_mode") or "require_approval"
-    if mode not in {"require_approval", "auto_request"} or not rows:
+    if mode not in {"require_approval", "auto_request"}:
+        return []
+    if not rows:
+        if outcome is not None:
+            outcome.update({"mode": mode, "limit": int(job.get("final_recommendation_limit") or 8),
+                            "queued": 0, "refreshed": 0, "held_back": 0, "sent": 0})
         return []
 
     from fastapi import HTTPException
@@ -714,6 +740,7 @@ async def apply_job_action_mode(
     # 30 minutes with no ceiling, and 10,180 titles waited by 2026-09-25 (Tv
     # 5,531 against a limit of 250). Titles already waiting are refreshed as
     # before; only new rows wait for room. Nothing already queued is touched.
+    # A full share is a notice, not a warning (NOTICE_CODES).
     limit = int(job.get("final_recommendation_limit") or 8)
     waiting = 0
     room: Optional[int] = None
@@ -724,9 +751,13 @@ async def apply_job_action_mode(
             "user_id": user_id, "source_job_id": job.get("id"), "status": {"$in": sorted(PENDING_STATUSES)},
         })
         room = max(0, limit - waiting)
-    held_back = 0
+    held_back = added = refreshed = sent = 0
 
     for row in rows:
+        if row.get("continuation_in_library"):
+            # A coming season of a series already in the library: Up Coming shows
+            # it, and the library's own series brings the season in.
+            continue
         payload = {
             "title": row.get("title"),
             "year": row.get("year"),
@@ -764,8 +795,12 @@ async def apply_job_action_mode(
                 held_back += 1
                 continue
             stored = await local.submit(user_id, payload, "pending_approval")
-            if adds_to_queue and room is not None and stored.get("status") in PENDING_STATUSES:
-                room -= 1
+            if adds_to_queue and stored.get("status") in PENDING_STATUSES:
+                added += 1
+                if room is not None:
+                    room -= 1
+            elif status in PENDING_STATUSES:
+                refreshed += 1
             await db.recommendations.update_one(
                 {"user_id": user_id, "id": row["id"]},
                 {"$set": {
@@ -789,6 +824,7 @@ async def apply_job_action_mode(
                 {**payload, "tmdb_id": result["tmdb_id"], "provider": "mediamanager"},
                 "approved",
             )
+            sent += 1
             await db.recommendations.update_one(
                 {"user_id": user_id, "id": row["id"]},
                 {
@@ -810,8 +846,12 @@ async def apply_job_action_mode(
                 held_back += 1
                 continue
             stored = await local.submit(user_id, payload, status)
-            if adds_to_queue and room is not None and stored.get("status") in PENDING_STATUSES:
-                room -= 1
+            if adds_to_queue and stored.get("status") in PENDING_STATUSES:
+                added += 1
+                if room is not None:
+                    room -= 1
+            elif queued and existing.get("status") in PENDING_STATUSES:
+                refreshed += 1
             await db.recommendations.update_one(
                 {"user_id": user_id, "id": row["id"]},
                 {
@@ -839,13 +879,18 @@ async def apply_job_action_mode(
                 "detail": f"{row.get('title')}: {exc}",
             })
             logging.warning("auto_request failed for %s: %s", row.get("title"), exc)
+    waiting += added
+    if outcome is not None:
+        outcome.update({"mode": mode, "limit": limit, "waiting": waiting, "queued": added,
+                        "refreshed": refreshed, "held_back": held_back, "sent": sent})
     if held_back:
         warnings.append({
             "code": "queue_full",
             "source": "requests",
             "detail": (
-                f"{waiting} title(s) from this job are still waiting in Requests (room for {limit}); "
-                f"{held_back} new title(s) were not queued. They are still in this run's picks."
+                f"{waiting} title(s) from this job are waiting in Requests and it keeps at most {limit} waiting, "
+                f"so {held_back} new title(s) wait for room; they stay in this run's picks. "
+                "Approve or reject titles in Requests to make room."
             ),
         })
     return warnings
@@ -887,6 +932,51 @@ REJECTION_HINTS = {
     "rejected_not_upcoming": "No candidate had a verified premiere date after today inside the job's window.",
 }
 
+#: What a candidate falls on when it is already settled by the user's own
+#: history (exclusion_engine), as opposed to the job's settings (filter_engine).
+SETTLED_OUTCOMES = frozenset({
+    "rejected_already_requested", "rejected_already_watched", "rejected_existing_library",
+    "rejected_already_recommended", "rejected_dismissed", "rejected_blacklisted",
+})
+
+OUTCOME_LABELS = {
+    "rejected_already_requested": "already in Requests",
+    "rejected_already_watched": "already watched",
+    "rejected_existing_library": "already in the library",
+    "rejected_already_recommended": "recommended recently",
+    "rejected_dismissed": "dismissed before",
+    "rejected_blacklisted": "blocked",
+    "rejected_year": "outside the year window",
+    "rejected_genre": "outside the job's genres",
+    "rejected_rating": "below the minimum rating",
+    "rejected_vote_count": "too few votes",
+    "rejected_media_type": "another media type",
+    "rejected_language": "another language",
+    "rejected_country": "another country",
+    "rejected_runtime": "outside the runtime window",
+    "rejected_release_date": "outside the release-date window",
+    "rejected_not_upcoming": "no verified premiere after today",
+}
+
+#: Messages that describe a job working as designed, not something to fix: the
+#: job's share of Requests is full, or a run found nothing it had not already
+#: settled. They are kept on the run as notices; a run with only notices has
+#: completed, and Runtime logs lists them as "okey" rows. Gilbert, 2026-09-25:
+#: a full share is information, not a warning.
+NOTICE_CODES = frozenset({"queue_full", "no_new_picks"})
+
+
+def split_notices(messages: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """(warnings, notices) of a run's messages, in their original order."""
+    warnings = [row for row in messages if row.get("code") not in NOTICE_CODES]
+    notices = [row for row in messages if row.get("code") in NOTICE_CODES]
+    return warnings, notices
+
+
+def _outcome_breakdown(counts: Dict[str, int]) -> str:
+    return ", ".join(f"{hits} {OUTCOME_LABELS.get(outcome, outcome)}"
+                     for outcome, hits in sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
 
 def empty_result_warnings(
     job: Dict[str, Any],
@@ -898,6 +988,15 @@ def empty_result_warnings(
     A job can return 0 for entirely mundane reasons, but it can also be stuck —
     a page cursor past the end of its TMDb query, or a filter no candidate can
     ever satisfy. Both used to look identical from the outside.
+
+    Only the second is a warning (`no_picks`): nothing got past the job's own
+    settings. When candidates did meet them but every one was already settled
+    (watched, waiting in Requests, ...) or had no concrete link to what the user
+    liked (pipeline.TASTE_FLOOR), the job is saturated, not broken, and says so
+    as a notice (`no_new_picks`). Gilbert's Tv run of 2026-09-25 16:34 UTC was
+    reported as "413 fell on rejected_year. No candidate fell inside the job's
+    year window" while 436 candidates were already in Requests and 18 met every
+    setting but fell below the taste floor.
     """
     if result.get("accepted"):
         return []
@@ -914,14 +1013,42 @@ def empty_result_warnings(
     for row in result.get("rejected") or []:
         outcome = row.get("filter_outcome") or "rejected"
         counts[outcome] = counts.get(outcome, 0) + 1
-    if counts:
-        outcome, hits = max(counts.items(), key=lambda item: item[1])
-        total = sum(counts.values())
-        hint = REJECTION_HINTS.get(outcome, "")
+    # Candidates that met every setting and were settled by nothing: scored,
+    # and then held back by the taste floor (or the job's lanes).
+    passed = len(result.get("ranked") or [])
+    total = sum(counts.values()) + passed
+    filtered = {outcome: hits for outcome, hits in counts.items() if outcome not in SETTLED_OUTCOMES}
+    settled = {outcome: hits for outcome, hits in counts.items() if outcome in SETTLED_OUTCOMES}
+    if filtered and sum(filtered.values()) == total:
+        outcome, hits = max(filtered.items(), key=lambda item: item[1])
+        # A hint says "no candidate ...", so it is only given when it is true.
+        hint = (REJECTION_HINTS.get(outcome, "") if hits == total else
+                "No candidate got past the job's settings. Widen them, or add a source that reaches those titles.")
         rows.append({
             "code": "no_picks",
             "source": "filters",
-            "detail": f"0 of {total} candidates accepted; {hits} fell on {outcome}. {hint}".strip(),
+            "detail": f"0 of {total} candidates accepted: {_outcome_breakdown(filtered)}. {hint}".strip(),
+        })
+    elif total:
+        parts = []
+        if settled:
+            parts.append(_outcome_breakdown(settled))
+        if filtered:
+            parts.append(_outcome_breakdown(filtered))
+        if passed:
+            below = int(result.get("below_taste_floor") or 0)
+            if result.get("taste_floor") is not None and below >= passed:
+                parts.append(f"{passed} met every setting but none had a close enough link to what you liked "
+                             "(taste floor)")
+            elif below:
+                parts.append(f"{passed} met every setting; {below} fell below the taste floor and the rest did "
+                             "not fit the job's lanes")
+            else:
+                parts.append(f"{passed} met every setting but did not fit the job's lanes")
+        rows.append({
+            "code": "no_new_picks",
+            "source": "job",
+            "detail": f"Nothing new this run: 0 of {total} candidates picked; {'; '.join(parts)}.",
         })
     elif not rows:
         rows.append({
@@ -965,6 +1092,7 @@ async def gather_job_candidates(
     job: Dict[str, Any],
     trigger: str,
     warnings: List[Dict[str, Any]],
+    report: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Dict[str, List[Dict[str, Any]]], Dict[str, Any], List[Dict[str, Any]]]:
     """Everything a run does before the pipeline: inputs, taste profile, candidates.
 
@@ -1060,9 +1188,16 @@ async def gather_job_candidates(
         )
         extra.extend(linked)
         warnings.extend(linked_warnings)
+    from providers.premieres import is_upcoming_job, verify_premieres
+
+    if is_upcoming_job(job):
+        # The coming seasons, sequels and spin-offs of titles the user likes lead
+        # an upcoming job's pool (jobs.upcoming, providers.continuations).
+        from jobs.upcoming import add_continuations
+
+        extra = await add_continuations(job, taste, inputs, extra, tmdb_key, report)
     if tmdb_key and extra:
         await enrich_rows(extra, tmdb_key)
-    from providers.premieres import is_upcoming_job, verify_premieres
 
     if is_upcoming_job(job) and extra:
         # Only a verified premiere after today passes an upcoming job's filter
@@ -1073,6 +1208,9 @@ async def gather_job_candidates(
         wanted = [row for row in extra if media_type_allowed(row, job.get("media_types"))]
         verified = await verify_premieres(wanted, tmdb_key)
         logging.info("job %s: %s of %s candidates have a verified premiere", job.get("id"), verified, len(wanted))
+        from jobs.upcoming import link_verified
+
+        extra = await link_verified(taste, extra, report)
     return inputs, taste, extra
 
 
@@ -1090,9 +1228,22 @@ async def execute_job(
     started = _now()
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     warnings: List[Dict[str, Any]] = []
+    search: Dict[str, Any] = {}
     try:
-        inputs, taste, extra = await gather_job_candidates(user_id, job, trigger, warnings)
+        inputs, taste, extra = await gather_job_candidates(user_id, job, trigger, warnings, report=search)
         result = run_pipeline(job, catalog=catalog or [], extra_candidates=extra, taste=taste, **inputs)
+        from providers.premieres import is_upcoming_job
+
+        if is_upcoming_job(job):
+            # Too few new picks is not the end of an upcoming run: it widens its
+            # search step by step (jobs.upcoming.broaden).
+            from jobs.upcoming import search_upcoming
+
+            extra, result = await search_upcoming(
+                user_id, job, taste, inputs, extra, result,
+                lambda rows: run_pipeline(job, catalog=catalog or [], extra_candidates=rows, taste=taste, **inputs),
+                report=search,
+            )
         ranked = result.get("ranked") or result["accepted"]
         provider = "pipeline"
         model = "deterministic"
@@ -1122,6 +1273,7 @@ async def execute_job(
             result["accepted"] = select_final(ranked, result.get("job") or job)
         warnings.extend(empty_result_warnings(job, result, extra))
         result["ai_reranked"] = ai_reranked
+        requests_outcome: Dict[str, Any] = {}
         action_warnings = await persist_run_results(
             user_id,
             job,
@@ -1130,9 +1282,11 @@ async def execute_job(
             provider="ollama" if ai_reranked else "pipeline",
             model=model if ai_reranked else "deterministic",
             ai_reranked=ai_reranked,
+            outcome=requests_outcome,
         )
         if action_warnings:
             warnings.extend(action_warnings)
+        warnings, notices = split_notices(warnings)
         finished = _now()
         status = "completed_with_warnings" if warnings else "completed"
         run = {
@@ -1151,6 +1305,11 @@ async def execute_job(
             "provider": provider,
             "model": model,
             "warnings": warnings,
+            "notices": notices,
+            # What reached Requests / MediaManager: new, refreshed, held back for room.
+            "requests": requests_outcome or None,
+            # An upcoming job's search: continuations found and what each widening step added.
+            "upcoming_search": search or None,
             "results": result["accepted"] if trigger == "preview" else [
                 {"id": row.get("title"), "title": row.get("title"), "year": row.get("year"),
                  "type": row.get("type"), "media_type": row.get("media_type"),
@@ -1171,21 +1330,35 @@ async def execute_job(
         await db.job_runs.insert_one(dict(run))
         if trigger != "preview":
             await _advance_schedule(user_id, job, finished)
+            if is_upcoming_job(job):
+                # Up Coming and the Requests order read a premiere on queue rows.
+                try:
+                    from jobs.upcoming import refresh_request_premieres
+                    from providers.keys import resolve_tmdb_api_key
+
+                    conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
+                    await refresh_request_premieres(user_id, resolve_tmdb_api_key(conn))
+                except Exception as exc:
+                    logging.warning("request premieres not refreshed: %s", safe_provider_error(exc))
         run.pop("_id", None)
         payload = {
             "status": "ok" if not warnings else "completed_with_warnings",
             "run": {k: v for k, v in run.items() if k != "_id"},
             "accepted": result["accepted"],
             "warnings": warnings,
+            "notices": notices,
+            "requests": requests_outcome or None,
         }
         if trigger == "preview":
             payload["rejected"] = result.get("rejected") or []
             payload["ranked"] = result.get("ranked") or result["accepted"]
+            payload["upcoming_search"] = search or None
         return payload
     except Exception as exc:
         detail = safe_provider_error(exc)
         logging.warning("Job %s failed: %s", job.get("id"), detail)
         finished = _now()
+        warnings, notices = split_notices(warnings)
         run = {
             "id": run_id,
             "job_id": job["id"],
@@ -1196,6 +1369,7 @@ async def execute_job(
             "finished_at": finished.isoformat(),
             "error": detail,
             "warnings": warnings,
+            "notices": notices,
         }
         await db.job_runs.insert_one(dict(run))
         if trigger != "preview":

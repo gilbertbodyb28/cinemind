@@ -7,7 +7,7 @@ released inside 2026-2029, including series that premiered in March.
 
 from datetime import datetime, timezone
 
-from providers.premieres import premiere_from_anilist, premiere_from_tmdb, premiere_window
+from providers.premieres import premiere_from_anilist, premiere_from_tmdb, premiere_label, premiere_window
 from providers.tmdb import upcoming_lanes
 from recommendation.filter_engine import apply_filters
 
@@ -30,7 +30,7 @@ def test_a_new_season_of_an_older_series_is_a_premiere():
     }
     found = premiere_from_tmdb(details, True, TODAY)
     assert found == {"premiere_date": "2027-03-04", "premiere_kind": "season_premiere", "premiere_season": 5,
-                     "premiere_source": "tmdb:next_episode_to_air"}
+                     "premiere_source": "tmdb:next_episode_to_air", "premiere_precision": "day"}
 
 
 def test_the_next_weekly_episode_of_a_running_season_is_not_a_premiere():
@@ -47,14 +47,58 @@ def test_a_series_premiere_after_today():
     assert (found["premiere_kind"], found["premiere_season"]) == ("series_premiere", 1)
 
 
-def test_anilist_needs_episode_one_or_a_full_start_date():
+def test_anilist_needs_episode_one_or_an_announced_start():
     stamp = int(datetime(2026, 10, 3, 15, tzinfo=timezone.utc).timestamp())
     assert premiere_from_anilist({"nextAiringEpisode": {"airingAt": stamp, "episode": 1}}, TODAY)["premiere_date"] == "2026-10-03"
     assert premiere_from_anilist({"nextAiringEpisode": {"airingAt": stamp, "episode": 7}}, TODAY) is None
-    assert premiere_from_anilist({"status": "NOT_YET_RELEASED", "startDate": {"year": 2027, "month": 4}}, TODAY) is None
-    assert premiere_from_anilist(
-        {"status": "NOT_YET_RELEASED", "startDate": {"year": 2027, "month": 4, "day": 5}}, TODAY,
-    )["premiere_date"] == "2027-04-05"
+    found = premiere_from_anilist(
+        {"status": "NOT_YET_RELEASED", "startDate": {"year": 2027, "month": 4, "day": 5}}, TODAY)
+    assert (found["premiere_date"], found["premiere_precision"]) == ("2027-04-05", "day")
+    # No year announced, or not NOT_YET_RELEASED: nothing to place.
+    assert premiere_from_anilist({"status": "NOT_YET_RELEASED", "startDate": {}}, TODAY) is None
+    assert premiere_from_anilist({"status": "RELEASING", "startDate": {"year": 2027, "month": 4}}, TODAY) is None
+
+
+def test_an_anime_announced_by_month_or_year_is_coming():
+    """Gilbert, 2026-09-26: a year or a month counts. Frieren S3 (October 2026) and
+    Demon Slayer's Infinity Castle part 2 (a year) were never upcoming before."""
+    month = premiere_from_anilist({"status": "NOT_YET_RELEASED", "format": "TV", "startDate": {"year": 2026, "month": 10}}, TODAY)
+    assert (month["premiere_date"], month["premiere_precision"], month["premiere_kind"]) == ("2026-10-31", "month", "series_premiere")
+    year = premiere_from_anilist({"status": "NOT_YET_RELEASED", "format": "MOVIE", "startDate": {"year": 2027}}, TODAY)
+    assert (year["premiere_date"], year["premiere_precision"], year["premiere_kind"]) == ("2027-12-31", "year", "film_release")
+    # February of a leap year ends on the 29th; this month still counts while it is not out.
+    assert premiere_from_anilist({"status": "NOT_YET_RELEASED", "startDate": {"year": 2028, "month": 2}}, TODAY)["premiere_date"] == "2028-02-29"
+    assert premiere_from_anilist({"status": "NOT_YET_RELEASED", "startDate": {"year": 2026, "month": 9}}, TODAY)["premiere_date"] == "2026-09-30"
+    # A stale announcement for a period already over is not coming.
+    assert premiere_from_anilist({"status": "NOT_YET_RELEASED", "startDate": {"year": 2026, "month": 8}}, TODAY) is None
+    assert premiere_from_anilist({"status": "NOT_YET_RELEASED", "startDate": {"year": 2025}}, TODAY) is None
+    assert [premiere_label(month), premiere_label(year)] == ["October 2026", "2027"]
+
+
+def test_an_announced_premiere_is_inside_an_upcoming_jobs_window():
+    assert apply_filters(_series(premiere_date="2029-12-31", premiere_precision="year"), FILTERS) == (True, None)
+    assert apply_filters(_series(premiere_date="2030-12-31", premiere_precision="year"), FILTERS) == (False, "rejected_year")
+
+
+def test_tmdb_without_a_date_asks_anilist(monkeypatch):
+    """TMDb lists a coming anime season without a date; AniList has its month."""
+    import asyncio
+    from providers import premieres
+
+    async def details(client, tmdb_id, series, key, store=True):
+        return {"first_air_date": "2023-09-29", "seasons": [{"season_number": 3, "air_date": None}]}
+
+    async def media(ids, store=True):
+        return {154587: {"id": 154587, "status": "NOT_YET_RELEASED", "format": "TV", "startDate": {"year": 2026, "month": 10}}}
+
+    monkeypatch.setattr(premieres, "_tmdb_details", details)
+    monkeypatch.setattr(premieres, "_anilist_media", media)
+    rows = [{"title": "Frieren", "type": "anime", "tmdb_id": 209867, "anilist_id": 154587},
+            {"title": "Other", "type": "show", "tmdb_id": 1}]
+    found = asyncio.run(premieres.verify_premieres(rows, "key", now=datetime(2026, 9, 26, tzinfo=timezone.utc)))
+    assert found == 1
+    assert (rows[0]["premiere_date"], rows[0]["premiere_precision"]) == ("2026-10-31", "month")
+    assert rows[1]["premiere_date"] is None and rows[1]["premiere_precision"] is None
 
 
 def _series(**extra):

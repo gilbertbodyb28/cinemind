@@ -43,6 +43,24 @@ def stored_keys(item: Dict[str, Any]) -> Set[tuple]:
     return keys
 
 
+#: Request statuses that are the user's own "no" (request_providers.is_user_rejection).
+REJECTED_REQUEST_STATUSES = frozenset({"rejected", "dismissed"})
+
+
+def is_coming_continuation(candidate: Dict[str, Any], today: Optional[str] = None) -> bool:
+    """A coming season, sequel or spin-off of a title the user likes (providers.continuations).
+
+    Its premiere is verified and still to come, so it cannot have been watched
+    and is not in the library, whatever the earlier seasons were: The Simpsons
+    S38, The Rings of Power S3 and Delicious in Dungeon S2 were rejected as
+    "already watched" on 2026-09-25 because their first seasons had been.
+    """
+    if not candidate.get("continuation_of"):
+        return False
+    premiere = str(candidate.get("premiere_date") or "")[:10]
+    return len(premiere) == 10 and premiere > (today or datetime.now(timezone.utc).date().isoformat())
+
+
 def _title_year(item: Dict[str, Any]) -> Optional[tuple]:
     title = title_key(item.get("title"))
     year = coerce_int(item.get("year"))
@@ -59,6 +77,7 @@ def build_exclusion_context(
 ) -> Dict[str, Any]:
     blacklist_rows = list(blacklist)
     recommended_rows = list(recommended)
+    requested_rows = list(requested)
     recommended_at: Dict[tuple, datetime] = {}
     recommended_keys: Set[tuple] = set()
     for item in recommended_rows:
@@ -83,7 +102,13 @@ def build_exclusion_context(
         "library": {key for item in library for key in stored_keys(item)},
         "recommended": recommended_keys,
         "recommended_at": recommended_at,
-        "requested": {key for item in requested for key in stored_keys(item)},
+        "requested": {key for item in requested_rows for key in stored_keys(item)},
+        # A "no" in the queue still stands for a coming season of the same title
+        # (apply_exclusions lets continuations past the rest of "requested").
+        "requested_rejected": {
+            key for item in requested_rows if item.get("status") in REJECTED_REQUEST_STATUSES
+            for key in stored_keys(item)
+        },
         "blacklist": {key for item in blacklist_rows for key in identity_keys(item)},
         # Older feedback blacklist rows did not store media type. Match their
         # title/year without making all candidate deduplication type-blind.
@@ -119,12 +144,22 @@ def apply_exclusions(
         return False, "rejected_blacklisted"
     if exclusions.get("dismissed") and keys & context.get("dismissed", set()):
         return False, "rejected_dismissed"
-    if exclusions.get("already_watched") and keys & context["watched"]:
+    # A coming continuation of a liked title is new content under an old id:
+    # the watched and library records are about the seasons before it, and a
+    # queue row for the series is decided (or refreshed) by the job's own
+    # request path. Only a "no" in the queue keeps it out here.
+    continuation = is_coming_continuation(candidate)
+    if exclusions.get("already_watched") and keys & context["watched"] and not continuation:
         return False, "rejected_already_watched"
     if exclusions.get("already_in_library") and keys & context["library"]:
-        return False, "rejected_existing_library"
+        if not continuation:
+            return False, "rejected_existing_library"
+        # Shown in Up Coming, never queued: the library already has the series
+        # (jobs.engine.apply_job_action_mode).
+        candidate["continuation_in_library"] = True
     if exclusions.get("already_requested") and keys & context["requested"]:
-        return False, "rejected_already_requested"
+        if not continuation or keys & context.get("requested_rejected", set()):
+            return False, "rejected_already_requested"
     if exclusions.get("already_recommended") and keys & context["recommended"]:
         feedback_ok = exclusions.get("allow_if_feedback_changed") and keys & (context.get("feedback_changed") or set())
         if not feedback_ok:

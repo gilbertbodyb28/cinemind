@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from auth import get_current_user
 from database import db
 from jobs.engine import (
+    NOTICE_CODES,
     _parse_stamp,
     create_job,
     delete_job,
@@ -214,7 +215,11 @@ BUG_CODE_SUFFIXES = ("_failed", "_http_error", "_unusable")
 
 
 def _level_for_code(code: str) -> str:
-    return "bug" if str(code or "").endswith(BUG_CODE_SUFFIXES) else "warning"
+    if str(code or "").endswith(BUG_CODE_SUFFIXES):
+        return "bug"
+    # A full queue share or a run with nothing new: the job worked as designed.
+    # Runs before 2026-09-25 stored these among their warnings; they read the same.
+    return "ok" if code in NOTICE_CODES else "warning"
 
 
 # These two say "go and sync", so a later successful sync answers them.
@@ -281,7 +286,7 @@ async def runtime_logs(
                 "code": "run_failed",
                 "detail": run.get("error") or "Run failed",
             })
-        for warning in run.get("warnings") or []:
+        for warning in list(run.get("warnings") or []) + list(run.get("notices") or []):
             code = warning.get("code") or "warning"
             if _warning_already_resolved(warning, stamp, synced_at):
                 continue
@@ -293,12 +298,18 @@ async def runtime_logs(
                 "detail": warning.get("detail") or WARNING_HINTS.get(code, ""),
             })
         if run.get("status") == "completed":
+            detail = f"{run.get('accepted_count') or 0} picks from {run.get('candidate_count') or 0} candidates"
+            outcome = run.get("requests") or {}
+            if outcome.get("mode") == "require_approval":
+                detail += f"; {outcome.get('queued') or 0} new in Requests"
+            elif outcome.get("mode") == "auto_request":
+                detail += f"; {outcome.get('sent') or 0} sent to MediaManager"
             rows.append({
                 **base,
                 "level": "ok",
                 "source": "job",
                 "code": "run_completed",
-                "detail": f"{run.get('accepted_count') or 0} picks from {run.get('candidate_count') or 0} candidates",
+                "detail": detail,
             })
 
     for state in sync_states:

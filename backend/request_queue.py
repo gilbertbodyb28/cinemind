@@ -16,7 +16,7 @@ APPROVED_STATUSES = ("approved", "available", "completed")
 QUEUE_HIDDEN = ("rejected", "archived", *APPROVED_STATUSES)
 
 VIEWS = {"queue", "approved"}
-SORTS = {"added_desc", "added_asc", "release_desc", "release_asc", "match_desc", "title_asc"}
+SORTS = {"upcoming_first", "added_desc", "added_asc", "release_desc", "release_asc", "match_desc", "title_asc"}
 MAX_PAGE = 200
 
 #: Fields filtering, sorting, facets and match scoring read. Everything else
@@ -24,6 +24,8 @@ MAX_PAGE = 200
 LIGHT_FIELDS = (
     "id", "status", "title", "year", "type", "release_date", "genres", "rating",
     "match_score", "recommendation_id", "updated_at", "created_at", "delivery_status",
+    # A verified coming premiere (jobs.upcoming.refresh_request_premieres).
+    "premiere_date", "premiere_kind", "premiere_season", "premiere_precision",
 )
 
 
@@ -39,7 +41,16 @@ def type_bucket(row: Dict[str, Any]) -> str:
     return "tv"
 
 
+def _coming_premiere(row: Dict[str, Any], today: str) -> str:
+    """The verified premiere still to come ("" if none): a film, a series or a new season."""
+    premiere = str(row.get("premiere_date") or "")[:10]
+    return premiere if len(premiere) == 10 and premiere > today else ""
+
+
 def release_bucket(row: Dict[str, Any], today: str) -> str:
+    # A new season of an older series is upcoming too (Gilbert, 2026-09-25).
+    if _coming_premiere(row, today):
+        return "upcoming"
     raw = str(row.get("release_date") or "")[:10]
     if len(raw) == 10 and raw[4] == "-" and raw[7] == "-" and raw.replace("-", "").isdigit():
         return "upcoming" if raw > today else "released"
@@ -112,8 +123,14 @@ def matches(row: Dict[str, Any], params: Dict[str, Any], today: str) -> bool:
     return True
 
 
-def sort_rows(rows: List[Dict[str, Any]], sort: str) -> List[Dict[str, Any]]:
+def sort_rows(rows: List[Dict[str, Any]], sort: str, today: str = "") -> List[Dict[str, Any]]:
     """Python's sort is stable like Array.prototype.sort, so ties keep the base order."""
+    if sort == "upcoming_first":
+        # Upcoming ahead of generic picks (Gilbert, 2026-09-25): verified coming
+        # premieres first, soonest first, then everything else newest first.
+        newest = sorted(rows, key=_added_key, reverse=True)
+        return sorted(newest, key=lambda row: (0, _coming_premiere(row, today)) if _coming_premiere(row, today)
+                      else (1, ""))
     if sort == "added_desc":
         return sorted(rows, key=_added_key, reverse=True)
     if sort == "added_asc":
@@ -172,6 +189,6 @@ def page_rows(
     """
     filtered = [row for row in rows if matches(row, params, today)]
     if params.get("sort") in SORTS:
-        filtered = sort_rows(filtered, params["sort"])
+        filtered = sort_rows(filtered, params["sort"], today)
     pending_ids = [row["id"] for row in filtered if row.get("status") in PENDING_STATUSES]
     return filtered[offset:offset + limit], len(filtered), pending_ids

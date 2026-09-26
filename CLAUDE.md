@@ -21,12 +21,16 @@ See `AGENTS.md`.
 
 Rebuilt and measured 2026-09-22. Full root-cause report, before/after metrics
 and the Ollama benchmark live in `HANDOFF.md`. Read it before changing
-anything below. **Open work starts at `HANDOFF.md` omgång 8 (2026-09-25 evening):**
+anything below. **Open work starts at `HANDOFF.md` omgång 12 (2026-09-26):**
+Upcoming is CineMind's first priority (Gilbert); omgång 10 and 12 are deployed
+on the NAS (06:15 UTC) and verified live, but not committed.
+Omgång 9 state:
 CineMind runs on the NAS (omgång 7, `scripts/deploy_nas.sh`); everything in the
-workspace is deployed there; Trakt, Simkl and Plex need Gilbert to sign in again
-(the Tv job fails every run until Trakt and Simkl work), and the queue backlog
-is a clean-up decision for Gilbert (`evaluation/queue_cleanup.py`, manifest
-`arch_20260925_152824`; older manifests predate the upcoming-premiere fix).
+workspace is deployed there; all four sources were signed in again 15:58 UTC.
+Gilbert's three jobs keep at most 650 titles waiting each (his choice); the
+clean-up `arch_20260925_165033` is applied (3,910 archived, `queue_cleanup revert`
+restores them). Tv (2,156 waiting) and Upcoming US (3,982) stay full until
+Gilbert decides on titles; what to do with that surplus is his decision.
 
 ## Do not reintroduce the bugs that were just removed
 
@@ -169,7 +173,23 @@ Added 2026-09-25, omgång 6 (`HANDOFF.md` §38–46):
   approved → not sent again (cloud `bb8e0dc`, adapted).
 - **A job keeps at most its `final_recommendation_limit` titles waiting.** New
   titles only take the room left; waiting ones are refreshed; nothing queued is
-  touched; the run warns `queue_full`. 10,180 titles were waiting on 2026-09-25.
+  touched. 10,180 titles were waiting on 2026-09-25. A full share is a notice,
+  not a warning (`jobs.engine.NOTICE_CODES`, Gilbert 2026-09-25): the run
+  completes, the notice is kept in `run.notices`, and Runtime logs lists it as
+  "okey" — old runs' `queue_full` included. `run.requests` says what actually
+  reached Requests (queued / refreshed / held back / waiting); the toast used to
+  call held-back picks "sent to Requests".
+- **A run that finds nothing new is saturated, not broken.** `no_picks` is a
+  warning only when nothing got past the job's own settings, and a filter's hint
+  ("No candidate fell inside the year window") only when that filter removed
+  every candidate. Otherwise the run gives the notice `no_new_picks` with the
+  whole breakdown: already in Requests, watched, outside the settings, below the
+  taste floor. Tv at 16:34 UTC blamed its year window while 436 candidates were
+  already in Requests and 18 fell below the floor.
+- **The limit is not what caps a run's picks; the taste floor is.** Measured
+  2026-09-25 (`job_trace`): Tv 1,105 candidates → 70 past settings and
+  exclusions → 2 clear the floor; Upcoming US 6, Upcoming Tv Shows 9. With 650
+  instead of 250 / 200 / 12 each run picks exactly the same titles.
 - **A dismissal is remembered.** A new run never deletes dismissed
   recommendation rows, and `exclusion_engine` rejects their titles
   (`rejected_dismissed`). Deleting them with the old list let a pick rejected on
@@ -211,6 +231,53 @@ Added 2026-09-25, omgång 8 (`HANDOFF.md` omgång 8):
   `upcoming_only` job verifies premieres first (`queue_cleanup._verified_premieres`,
   `verify_premieres(store=False, unanswered=...)`); otherwise every waiting series
   reads as "not upcoming".
+
+Added 2026-09-25, omgång 10 (`HANDOFF.md` omgång 10) — Upcoming first:
+
+- **An upcoming job never stops at too few picks** (`jobs/upcoming.py`). A job
+  with `upcoming_only` puts the coming continuations of liked titles first, and
+  with fewer than `UPCOMING_TARGET` new picks widens step by step
+  (`taste_window` → `deeper_pages` → `other_sources`: Trakt anticipated and
+  premiere calendar, AniList further down, TMDb /movie/upcoming), re-running the
+  pipeline after each step, until the target is met or every step was tried;
+  `run.upcoming_search` records each step. The bar never moves: filters,
+  exclusions, the taste floor and the queue rules apply to every step's titles.
+- **A coming continuation of a liked title is a franchise link**
+  (`providers/continuations.py`, `ranking_engine.continuation_link`): a TMDb
+  season ≥ 2 of a liked series, a coming film in a liked film's collection,
+  AniList sequel / spin-off / side-story chains (matched by name without year
+  and season tags). Only a liked title in *this* profile counts, like
+  `seed_support`; it feeds `franchise_affinity` and `specific_score`, and the
+  reason says "is season 3 of X, which you rated 10/10". One row per season:
+  TMDb's wins over AniList's, which lends it its id.
+- **A coming season is not "already watched" or "in the library"**
+  (`exclusion_engine.is_coming_continuation`); a "no" in the queue still stands,
+  and a coming season of a series in the library is shown, never queued.
+- **An upcoming job's open picks stay until their premiere**
+  (`jobs.upcoming.carry_over`); each run used to replace the list, and Up Coming
+  shrank to the newest run's picks.
+- **Up Coming is everything coming that is the user's** (Gilbert): picks of
+  enabled jobs, waiting and approved queue rows with a verified premiere (premiere
+  fields on request rows by `refresh_request_premieres` — never status or
+  `updated_at`), coming seasons even in the library. Only blacklist, a dismissal
+  or a rejection hides one (`shown_picks.upcoming_hidden_reason`, read-only).
+  Requests lists coming premieres first (`upcoming_first`, the default).
+- **Upcoming taste lanes ask inside the premiere window, without a vote floor**
+  (`tmdb.window_params`); every other job's lanes ask exactly as before.
+- **An unreleased title's metadata is fetched again after 7 days**
+  (`tmdb_enrich.unreleased_when_fetched`); a released title's never expires.
+
+Added 2026-09-26, omgång 12 (`HANDOFF.md` omgång 12):
+
+- **An announced month or year is a premiere** (Gilbert, 2026-09-26). AniList gave
+  a day for 81 of its 400 top NOT_YET_RELEASED anime (13 of 57 films).
+  `premieres.announced_date`: `premiere_date` is the last day of the period and
+  `premiere_precision` says `month` / `year`; a title with no year is still not
+  upcoming. A TMDb row TMDb has no date for is asked on AniList too.
+- **Along an AniList chain the franchise before a subtitle names the liked title**
+  (`continuations.chain_keys`), and a linked AniList title takes the liked title's
+  missing metadata (`_root_fields`): announced films have no genres and fell
+  under the floor while continuing a 10/10 series.
 
 ## Changing weights, prompts or the model
 
@@ -273,4 +340,8 @@ reuses the existing `.chip` classes. Omgång 6 touched `DeviceConnect.jsx`
 from `/api/upcoming`, premiere date, empty state), `Jobs.jsx` (the "Only
 upcoming premieres" chip) and `Requests.jsx` (cloud paging fix) — existing
 `glass` / `chip` / `chip-rose` classes and listed tokens only; the lock passed.
+Omgång 10: Gilbert unlocked one layout change on 2026-09-25 — Up Coming before
+Content to Watch on Home (top right beside New Trailer, first on a phone, and
+shown when Content to Watch is empty). Only the order changed; `Requests.jsx`
+got the "Upcoming premieres first" sort option. Nothing else is unlocked.
 Run `python3 scripts/check_vision_ui_lock.py` after any frontend change.

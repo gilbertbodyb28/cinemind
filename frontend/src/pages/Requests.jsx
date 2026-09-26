@@ -23,6 +23,8 @@ const PENDING = new Set(["pending_approval", "pending", "requested"]);
 /** Approved titles move to their own tab, so the queue only shows what still needs a decision. */
 const DONE = new Set(["rejected", "approved", "available", "completed"]);
 const SORTS = [
+  // Upcoming ahead of generic picks (Gilbert, 2026-09-25): verified coming premieres first.
+  { value: "upcoming_first", label: "Upcoming premieres first" },
   { value: "added_desc", label: "Newest results first" },
   { value: "added_asc", label: "Oldest results first" },
   { value: "release_desc", label: "Newest release first" },
@@ -73,7 +75,7 @@ export default function Requests() {
   const [toYear, setToYear] = useState("any");
   const [fromRating, setFromRating] = useState("any");
   const [toRating, setToRating] = useState("any");
-  const [sort, setSort] = useState("added_desc");
+  const [sort, setSort] = useState("upcoming_first");
   const [detailItem, setDetailItem] = useState(null);
   // The account's Ollama model. Seeded from the saved value so the picker opens
   // on what this account actually uses, not on the build-time fallback.
@@ -257,7 +259,7 @@ export default function Requests() {
     setToYear("any");
     setFromRating("any");
     setToRating("any");
-    setSort("added_desc");
+    setSort("upcoming_first");
   };
 
   const filtersActive =

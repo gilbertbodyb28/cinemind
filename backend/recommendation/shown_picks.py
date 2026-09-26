@@ -107,3 +107,42 @@ async def retire_settled(user_id: str, picks: List[Dict[str, Any]], database: An
             {"$set": {"retired": True, "retired_reason": reason, "retired_at": now}},
         )
     return kept
+
+
+#: A retired pick Up Coming still shows: queued or decided under another row is
+#: still the user's and still coming (Gilbert, 2026-09-25: "allt kommande").
+UPCOMING_KEEPS_RETIRED = frozenset({"already_requested"})
+
+
+def _coming_season(pick: Dict[str, Any], today: str) -> bool:
+    """A verified coming season or sequel: the earlier seasons settle nothing about it."""
+    premiere = str(pick.get("premiere_date") or "")[:10]
+    if len(premiere) != 10 or premiere <= today:
+        return False
+    return bool(pick.get("continuation_of")) or pick.get("premiere_kind") == "season_premiere"
+
+
+def upcoming_hidden_reason(pick: Dict[str, Any], context: Dict[str, Any], today: str) -> Optional[str]:
+    """Why Up Coming leaves this title out, or None to show it. Read-only.
+
+    Up Coming is everything still to come that is the user's (Gilbert,
+    2026-09-25): new picks, titles waiting in Requests or approved there, and
+    coming seasons or sequels of titles they like even when the series is in
+    the library or was watched. Only a "no" hides a title - blacklisted,
+    dismissed, rejected in Requests - and watched / in the library still hide a
+    title whose premiere is its first, since that says it is not coming.
+    """
+    keys = identity_keys(pick)
+    if keys & context["blacklist"]:
+        return "blacklisted"
+    if any(context["dismissed"].get(key, set()) - {pick.get("id")} for key in keys):
+        return "rejected_elsewhere"
+    statuses = {status for key in keys for _request, _recommendation, status in context["requested"].get(key, [])}
+    if statuses & {"rejected", "dismissed"}:
+        return "rejected_elsewhere"
+    if not _coming_season(pick, today):
+        if keys & context["watched"]:
+            return "already_watched"
+        if keys & context["library"]:
+            return "in_library"
+    return None

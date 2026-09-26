@@ -552,6 +552,41 @@ def upcoming_lanes(lane: Dict[str, Any], kind: str, window: Dict[str, str]) -> L
     return lanes
 
 
+def window_params(endpoint: str, window: Optional[Dict[str, str]]) -> List[Dict[str, Any]]:
+    """Discover parameters that keep a taste lane inside an upcoming job's window.
+
+    [{}] without a window, so the lane asks exactly what it asked before. With
+    one: films by release date; series twice, by first air date (a new series)
+    and by any episode in the window (a new season of an older one) - the same
+    split as upcoming_lanes. No vote floor: nobody has voted on a title that is
+    not out yet, and the taste lanes' floor of 20 and 80 votes returned nothing
+    but released titles, which the upcoming filter then threw away (550 of
+    1,166 candidates of "Upcoming Tv Shows" on 2026-09-25).
+    """
+    if not window:
+        return [{}]
+    end = window.get("to")
+    if endpoint == "movie":
+        return [{"primary_release_date.gte": window["from"], **({"primary_release_date.lte": end} if end else {}),
+                 "vote_count.gte": None}]
+    return [
+        {"first_air_date.gte": window["from"], **({"first_air_date.lte": end} if end else {}), "vote_count.gte": None},
+        {"air_date.gte": window["from"], **({"air_date.lte": end} if end else {}), "vote_count.gte": None},
+    ]
+
+
+async def upcoming_movies(api_key: Optional[str] = None, pages: int = 3, region: str = "US") -> List[Dict[str, Any]]:
+    """TMDb's own list of films about to open (/movie/upcoming), for an upcoming job's wider search."""
+    out: List[Dict[str, Any]] = []
+    for page in range(1, max(1, pages) + 1):
+        rows, total = await _tmdb_page("movie/upcoming", {"page": page, "region": region}, api_key=api_key)
+        for row in rows:
+            out.append(_normalize_tmdb_result(row, "movie", "tmdb_upcoming"))
+        if not total or page >= total:
+            break
+    return out
+
+
 def default_vote_floor(filters: Dict[str, Any]) -> Optional[int]:
     """vote_count.gte for a discover query whose job names no vote floor.
 
@@ -869,6 +904,7 @@ async def taste_keyword_discover(
     api_key: Optional[str] = None,
     start_page: int = 1,
     per_lane: int = 40,
+    window: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     """Discover built from the themes of the user's own favourites in this lane.
 
@@ -904,15 +940,17 @@ async def taste_keyword_discover(
         preferred = lane_filters.get("preferred_languages") or []
         if len(preferred) == 1:
             params["with_original_language"] = preferred[0]
-        for step in range(2):
-            page = ((max(1, int(start_page or 1)) - 1 + step) % 10) + 1
-            rows, total = await _tmdb_page(f"discover/{endpoint}", {**params, "page": page}, api_key=api_key)
-            for row in rows[:per_lane]:
-                normalized = _normalize_tmdb_result(row, endpoint, "taste_keyword_discover")
-                normalized["source_seed"] = "themes: " + ", ".join(names[:3])
-                out.append(normalized)
-            if not total or page >= total:
-                break
+        for timing in window_params(endpoint, window):
+            timed = {key: value for key, value in {**params, **timing}.items() if value is not None}
+            for step in range(2):
+                page = ((max(1, int(start_page or 1)) - 1 + step) % 10) + 1
+                rows, total = await _tmdb_page(f"discover/{endpoint}", {**timed, "page": page}, api_key=api_key)
+                for row in rows[:per_lane]:
+                    normalized = _normalize_tmdb_result(row, endpoint, "taste_keyword_discover")
+                    normalized["source_seed"] = "themes: " + ", ".join(names[:3])
+                    out.append(normalized)
+                if not total or page >= total:
+                    break
     return out
 
 
@@ -921,6 +959,8 @@ async def taste_seeded_discover(
     taste: Dict[str, Any],
     api_key: Optional[str] = None,
     per_lane: int = 20,
+    window: Optional[Dict[str, str]] = None,
+    pairs_limit: int = 4,
 ) -> List[Dict[str, Any]]:
     """Discover lanes built from the profile's strongest genre combinations.
 
@@ -942,7 +982,7 @@ async def taste_seeded_discover(
             and (animated_ok or not canonical_genres(str(name).split("|")) & ANIMATION_GENRES)
         ),
         key=lambda pair: -(pair[1]["affinity"] * pair[1].get("confidence", 0)),
-    )[:4]
+    )[:pairs_limit]
     if not pairs:
         return []
     media_types = job.get("media_types") or ["movie", "tv"]
@@ -975,11 +1015,13 @@ async def taste_seeded_discover(
             preferred = lane_filters.get("preferred_languages") or []
             if len(preferred) == 1:
                 params["with_original_language"] = preferred[0]
-            rows, _ = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)
-            for row in rows[:per_lane]:
-                normalized = _normalize_tmdb_result(row, endpoint, "taste_seeded_discover")
-                normalized["source_seed"] = name
-                out.append(normalized)
+            for timing in window_params(endpoint, window):
+                timed = {key: value for key, value in {**params, **timing}.items() if value is not None}
+                rows, _ = await _tmdb_page(f"discover/{endpoint}", timed, api_key=api_key)
+                for row in rows[:per_lane]:
+                    normalized = _normalize_tmdb_result(row, endpoint, "taste_seeded_discover")
+                    normalized["source_seed"] = name
+                    out.append(normalized)
     return out
 
 
@@ -1125,10 +1167,13 @@ async def fetch_job_candidates(
                     row["type"] = "anime"
                     row["format"] = "MOVIE"
                     extra.append(row)
+        # An upcoming job asks its taste lanes for what premieres in its window;
+        # without it they returned released titles the upcoming filter discarded.
         if taste and (taste.get("genre_pairs") or {}):
-            extra.extend(await taste_seeded_discover(discover_job, taste, api_key=key))
+            extra.extend(await taste_seeded_discover(discover_job, taste, api_key=key, window=window))
         if taste and job_intent(job) and wants_lane(job_intent(job), "live_action"):
-            extra.extend(await taste_keyword_discover(discover_job, taste, api_key=key, start_page=start_page))
+            extra.extend(await taste_keyword_discover(discover_job, taste, api_key=key, start_page=start_page,
+                                                      window=window))
     if "tmdb_similar" in wanted or "tmdb_discover" in wanted:
         extra.extend(await tmdb_related(history, "similar", api_key=key, taste=taste, job=job, start_page=start_page))
     if "tmdb_recommendations" in wanted or "tmdb_discover" in wanted:

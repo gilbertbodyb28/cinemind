@@ -1,8 +1,9 @@
 """A small in-memory stand-in for the Motor collections these tests touch.
 
 It understands the query and update operators the code under test uses
-($in, $nin, $ne, $exists, $regex, $or; $set, $unset, $inc, $setOnInsert) and
-nothing more, so a test fails loudly when the code starts relying on another.
+($in, $nin, $ne, $exists, $regex, $gt, $lt, $or; $set, $unset, $inc,
+$setOnInsert) and nothing more, so a test fails loudly when the code starts
+relying on another.
 """
 
 import re
@@ -25,7 +26,11 @@ def _matches_value(value: Any, condition: Any) -> bool:
                 flags = re.IGNORECASE if "i" in str(condition.get("$options") or "") else 0
                 if not isinstance(value, str) or not re.search(arg, value, flags):
                     return False
-            if op not in {"$in", "$nin", "$ne", "$exists", "$regex", "$options"}:
+            if op == "$gt" and not (value is not None and value > arg):
+                return False
+            if op == "$lt" and not (value is not None and value < arg):
+                return False
+            if op not in {"$in", "$nin", "$ne", "$exists", "$regex", "$options", "$gt", "$lt"}:
                 raise NotImplementedError(op)
         return True
     return value == condition

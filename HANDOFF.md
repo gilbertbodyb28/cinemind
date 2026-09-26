@@ -1661,3 +1661,367 @@ för första gången sedan 10:12** (1 041 kandidater, 2 val, `queue_full` 5 530/
 Upcoming 16:00: samma 9 verifierade premiärer. Kön: 10 532 rader, 10 085 väntande, 0 nya sedan
 09:43 UTC; inget aktuellt val är avgjort någon annanstans. Tv ger bara 2 nya val eftersom de
 5 530 väntande utesluts — rensningsplanen `arch_20260925_152824` är fortfarande Gilberts beslut.
+
+# OMGÅNG 9 — varningarna i Runtime logs, 650 per jobb och kön (2026-09-25 16:45–18:00 UTC)
+
+Gilberts uppdrag (skärmbilder från Jobs och Runtime logs 16:32–16:40 UTC): ta reda på varför
+körningarna varnar, låt jobben "requesta 650 i stället för 250 och 200", och rätta de andra
+varningarna på bilderna. **Hans val** (frågat i sessionen): högst 650 väntande per jobb, en full
+andel visas som info i stället för varning; arkivera de 3 910 raderna i planen `arch_20260925_165033`.
+
+## Varför det varnade (läst ur NAS-databasen och med `job_trace`, inget skrivet)
+
+| varning | orsak |
+|---|---|
+| `queue_full` på varje körning | Taket räknar jobbets väntande titlar: Tv 5 530 mot 250, Upcoming US 4 021 mot 200, Upcoming Tv Shows 534 mot 12. Ansamlingen är från före taket (RO-44) och från gamla inställningar; inget nytt hade köats sedan 09:43 UTC. Ett högre tak ensamt hade bara gett Upcoming Tv Shows plats. |
+| `no_picks`, Tv 16:34 | Texten skyllde på årsfönstret ("No candidate fell inside the job's year window") fast 413 av 1 041 föll där; resten låg redan i Requests, var sedda eller under betygsgolvet, och de 18 som klarade alla inställningar låg under smakgolvet. Tipset gavs för den största orsaken även när den inte gällde alla. |
+| `run_failed`, Tv 14:42–15:42 UTC | Trakt-inloggningen var avvisad; löst när Gilbert loggade in 15:52–15:58 UTC. Token gäller till 2026-10-02 och förnyas automatiskt (klient-id och hemlighet finns på NAS:en). Inga Trakt-fel sedan dess. |
+| Toasten "2 sent to Requests" | Räknade valen, inte vad som köades: de två hölls tillbaka av den fulla kön. |
+
+**650 ändrar inte hur många titlar en körning väljer; det gör smakgolvet** (`pipeline.TASTE_FLOOR`,
+läsande förhandsvisning 16:45 UTC med `select_final` på 650):
+
+| jobb | kandidater | förbi inställningar och uteslutningar | klarar smakgolvet | val med 650 |
+|---|---|---|---|---|
+| Tv | 1 105 | 70 | 2 | 2 |
+| Upcoming US + Anime/Donghua | 1 411 | 67 | 6 | 6 |
+| Upcoming Tv Shows | 919 | 54 | 9 | 9 |
+
+Tv: 431 kandidater låg redan i kön och 411 utanför 2018–2029 (likhetsbanorna: tmdb_recommendations
+209, tmdb_similar 72, trakt 52, taste_keyword_discover 49, simkl 29). De bästa som föll på golvet:
+Debris (personal 3,94, specific 0,19), Jury Duty (3,28 / 0,27), Driver's Ed (3,37 / 0,24).
+
+## Ändrat
+
+Kod (`jobs/engine.py`, `api_extra.py`, `frontend/src/pages/Jobs.jsx`, test):
+- `NOTICE_CODES` (`queue_full`, `no_new_picks`) och `split_notices`: sådana meddelanden sparas i
+  `run.notices`, körningen blir `completed`, och Runtime logs visar dem som "okey" — även gamla
+  körningars `queue_full`, som ligger bland deras `warnings`.
+- `empty_result_warnings`: `no_picks` (varning) bara när inget kom förbi jobbets egna
+  inställningar, och ett filters tips bara när det filtret tog alla. Annars notisen
+  `no_new_picks` med hela uppdelningen (i Requests, sedda, utanför inställningarna, under smakgolvet).
+- `apply_job_action_mode(..., outcome=)` → `run.requests` = mode, limit, waiting (efter körningen),
+  queued, refreshed, held_back, sent. `run_completed` i Runtime logs säger "N new in Requests";
+  toasten "N new in Requests · M already waiting · K wait for room (W waiting, limit L)".
+  `queue_full`-texten säger att jobbet håller högst L väntande och hur man gör plats.
+- Jobs: notiser som vanliga `chip` i körhistoriken och förhandsvisningen (befintlig klass,
+  `check_vision_ui_lock.py` OK).
+
+Data på NAS:en, efter säkerhetskopian `.runtime/backups/2026-09-25-omgang9/` (requests 10 532
+rader, jobs 3, md5 i `manifest.json`):
+- De tre jobben via `jobs.engine.update_job` (validerat, som Edit → Save): `final_recommendation_limit`
+  650 och `candidate_limit` 650 (Tv 250/300, Upcoming US 200/220, Upcoming Tv Shows 12/120 förut).
+  Discover går då 10 sidor per bana (taket i `discover_page_span`) i stället för 6–8.
+- `queue_cleanup apply --batch arch_20260925_165033` 17:38 UTC: 3 910 arkiverade
+  (fails_job_filters 3 742, already_watched 156, duplicate_row 12). Väntande: Tv 5 530 → 2 156,
+  Upcoming Tv Shows 534 → 37, Upcoming US 4 021 → 3 982. Inget raderat (10 532 rader kvar).
+  Ångra: `MONGO_URL=mongodb://192.168.50.94:27018 PYTHONPATH=../.runtime/python:. python3 -m
+  evaluation.queue_cleanup --user user_c30bd548254a revert --batch arch_20260925_165033`.
+- Rättelse till omgång 8: "Tv 3 374, Upcoming Tv Shows 497, avstängda jobbet 39" var planens
+  `archive_by_job` (det som arkiveras), inte det som blir kvar.
+
+## Tester och driftsättning
+
+`recommendation_tests` + `evaluation_tests` 188 gröna (ny: `test_run_notices.py`, 7);
+`tests/test_job_action_mode.py` + `tests/test_empty_job_results.py` 22 gröna med `--noconftest`
+(ingen databas rörd). Frontend bygger. Driftsatt 17:37 UTC med `scripts/deploy_nas.sh`, och
+17:50 och 17:53 UTC igen för textjusteringar (`empty_result_warnings`, toasten): md5 för
+`jobs/engine.py` och `api_extra.py` på NAS:en = arbetsytan, samma `main.a0ee479a.js`, `/api/` 200,
+inga fel i loggen.
+
+## Verifierat efter ändringen (schemalagda körningar, läst ur NAS-databasen)
+
+| körning (UTC) | status | kandidater | val | i Requests |
+|---|---|---|---|---|
+| Upcoming Tv Shows 17:45 | completed | 922 | 9 | **9 nya** (37 → 46 väntande) — de första nya köraderna sedan 09:43 |
+| Upcoming US + Anime/Donghua 17:47 | completed | 1 591 | 7 | 0 nya, 7 väntar på plats (3 982 väntande, notis `queue_full`) |
+| Tv 17:49 | completed | 1 180 | 1 (Sisi) | 0 nya, 1 väntar på plats (2 156 väntande, notis `queue_full`) |
+
+De nio nya: The Detective Is Already Dead, Dreamland, The Patrick Star Show, Magical Explorer,
+The Grim Lover, Good Boy, Take Charge of My Heart, Sacred Jewel, Dive into You (samma verifierade
+premiärer som Up Coming visar). Runtime logs (`runtime_logs` anropad direkt i containern, läsande):
+WARNING 61 → 47, och alla rader efter 17:39 UTC är "okey" (`run_completed` "… 9 new in Requests",
+`queue_full`). Det som är kvar under FAILED/ERROR/BUGS/WARNING är äldre än ändringen: `run_failed`
+Trakt senast 15:42, `delivery_failed` senast 12:50, `sync_error` 06:46, `no_picks` i gammal
+formulering senast 16:34, `taste_source_excluded` 06:31, resten 2026-09-08–09-22.
+
+Inte verifierat: toasten och chipsen i webbläsaren (kräver Gilberts inloggning; en Run now köar
+titlar). Datat de läser (`requests`, `notices`) är kontrollerat ovan och bygget innehåller texten.
+
+## Kvar / fynd
+
+1. **Tv (2 156 väntande) och Upcoming US (3 982) är fulla mot 650.** De köar nytt först när ~1 510
+   resp. ~3 330 titlar är beslutade eller arkiverade; notisen säger det utan varning. Ytterligare
+   rensning är Gilberts beslut.
+2. **Smakgolvet, inte taket, avgör antalet val per körning** (2–9). Fler val kräver fler kandidater
+   med konkret koppling.
+3. **Anime-uppföljare från AniList kan aldrig klara golvet:** raderna saknar tmdb_id, keywords,
+   cast och studio (t.ex. Reincarnated as a Sword Season 2, anilist 159042; Shangri-La Frontier
+   Season 3, 189323; Black Clover Season 2, 195604) → personal 4,4–5,2 men specific 0,0 <
+   `SPECIFIC_FLOOR` 0,3; kopplingen till säsong 1 syns inte. Överlämnat till sessionen
+   "Upcoming prioritering i CineMind", som arbetar med uppföljare och nya säsonger.
+4. **75 godkännanden nådde aldrig MediaManager** (`delivery_status: not_delivered`, "Could not reach
+   MediaManager", godkända 2026-09-22 07:07 – 09-25 12:50, när MediaManager kördes mot Macen):
+   26 står som godkända, 49 har gamla körningar tryckt tillbaka till väntande (RO-46). Det är 61 av
+   ERROR-raderna i Runtime logs. Att skicka dem igen startar nedladdningar i MediaManager — Gilberts
+   beslut (Approved → Send to MediaManager).
+5. Nya jobb börjar fortfarande på 8 (`Jobs.jsx` `empty()`, `api_extra` 8); bara de tre befintliga har 650.
+6. Omgång 9 är inte committad (Gilbert har inte bett om det).
+
+# OMGÅNG 10 — Upcoming först: uppföljare, stegvis breddad sökning, "allt kommande" (2026-09-25 17:40–18:50 UTC)
+
+Gilberts uppdrag: Upcoming är CineMinds högsta prioritet — filmer, TV-serier, anime, nya titlar,
+gamla serier med nya säsonger, fortsättningar/spin-offs och framtida säsonger; det som räknas är att
+innehållet är kommande och passar hans smak, inte om serien eller franchisen är gammal. Sökningen
+får inte sluta vid för få eller inga träffar utan ska breddas stegvis (andra källor, närliggande
+genrer, relaterade titlar, nya säsonger). Befintliga regler ändras inte i onödan.
+**Hans val** (frågat i sessionen): (1) "Upcoming US + Anime/Donghua 2026–2029" får "Only upcoming
+premieres"; (2) Up Coming visar *allt kommande som är hans*: nya förslag, titlar som väntar i Requests
+eller som han godkänt, och nya säsonger/uppföljare av titlar han gillar även om serien finns i
+biblioteket — kvar till premiären, aldrig det han avvisat; (3) Upcoming går före generiska
+rekommendationer i sökningen, i Requests och på Home (han låste upp just flytten av Up Coming före
+Content to Watch).
+
+## Uppmätt före (läsande, NAS-databasen, "Upcoming Tv Shows", 17:55 UTC)
+
+1 166 kandidater → 229 verifierade premiärer (176 seriepremiärer, 53 nya säsonger) → 45 förbi
+inställningar och uteslutningar → **1 över smakgolvet**. Varför:
+
+| fynd | uppmätt |
+|---|---|
+| Nya säsonger av serier han sett stoppades som "redan sedd" | 7: The Simpsons S38 (10/10), The Rings of Power S3, Delicious in Dungeon S2 (10/10), Tougen Anki S2, Reincarnated as a Sword S2, The Iceblade Sorcerer S2, Rakshasa Street S5 (10/10) |
+| AniList-uppföljare saknade koppling till säsongen han sett | personal 4,4–5,2, specific 0,0 < `SPECIFIC_FLOOR`. Av dem är bara Reincarnated as a Sword, Iceblade Sorcerer, Black Clover och Ranma1/2 hans; Shangri-La Frontier, A Returner's Magic och Appraisal Skill finns inte i historiken, A Wild Last Boss har 3 avsnitt (inte gillad) — dem håller golvet rätteligen ute |
+| Filmuppföljare söktes aldrig | 13 kommande filmer i TMDb-samlingar av gillade filmer: Avengers: Doomsday, Secret Wars, Dune: Part Three, Avatar 4/5, Frozen III, Black Panther 3, Jumanji: Open World, Godzilla x Kong: Supernova … |
+| Varje körning ersatte jobbets lista | de 9 valen 17:46 hamnade i Requests; nästa körning hittade 1 ny → Up Coming hade krympt till 1 kort |
+| Filmer täcktes inte | bara det TV-only jobbet hade `upcoming_only`; Up Coming "Movies" var tomt |
+| Smakbanorna sökte släppta titlar | 550 av 1 166 avvisade `rejected_not_upcoming` |
+| Metadata för osläppta titlar uppdaterades aldrig | 68 av 229 verifierade premiärer utan ett enda nyckelord (`media_enrichment` går aldrig ut) |
+
+## Ändrat (kod)
+
+- **`providers/continuations.py`** (ny): kommande fortsättningar av *gillade* titlar (profilens
+  positiva, aldrig en avvisad; sedd ≠ gillad). TMDb: säsong ≥ 2 av en gillad serie (verifierad
+  premiär); kommande filmer i en gillad films TMDb-samling (cache 7 d / 12 h). AniList: SEQUEL /
+  SPIN_OFF / SIDE_STORY framåt från gillade anime (genom redan sända säsonger, 3 steg), och bakåt
+  (PREQUEL / PARENT) från kommande AniList-titlar till en gillad titel matchad på namn utan årtal och
+  säsongstagg ("Ranma1/2 (2024) Season 3" → "Ranma1/2"). En rad per kommande säsong: TMDb:s vinner,
+  AniList-id:t följer med (`drop_duplicate_seasons`). Raden bär `continuation_of`.
+- **`recommendation/ranking_engine.py`**: `continuation_link` — en fortsättning är den starkaste
+  franchise-kopplingen, rabatterad med bevisen bakom den gillade titeln som i `best_specific`; den
+  går in i `franchise_affinity` och `specific_score`, bara om titeln finns i *den här* profilen
+  (en utelämnad titel lånar inget, som `seed_support`). Varför-texten börjar "is season 2 of X, which
+  you rated 10/10". `_liked_mark` säger "watched 3 times" för film (var "3 episodes of").
+- **`recommendation/exclusion_engine.py`**: `is_coming_continuation` — en verifierad kommande
+  fortsättning är varken "redan sedd" eller "i biblioteket"; ett nej i kön står kvar
+  (`requested_rejected`); en fortsättning av en serie i biblioteket visas men köas aldrig
+  (`continuation_in_library`, `apply_job_action_mode`).
+- **`jobs/upcoming.py`** (ny) + hakar i `jobs/engine.py`: för jobb med `upcoming_only`
+  (1) fortsättningarna först i poolen (`gather_job_candidates`), (2) färre än `UPCOMING_TARGET` (20)
+  nya val → bredda steg för steg (`broaden`): `taste_window` (profilens genrepar och teman inom
+  premiärfönstret), `deeper_pages` (jobbets egna banor ett sidspann längre), `other_sources` (Trakt
+  anticipated + premiärkalendern, AniList längre ned, TMDb /movie/upcoming). Pipelinen körs om efter
+  varje steg; stoppar vid målet eller när alla steg är provade; ett steg som fallerar avslutar inte
+  sökningen. `run.upcoming_search` sparar vad varje steg gav (även i förhandsvisning och `job_trace`).
+  (3) `carry_over`: tidigare öppna val stannar i listan till premiären (inom jobbets gräns); de som
+  väntade på plats erbjuds kön igen. (4) `refresh_request_premieres`: efter varje upcoming-körning
+  får upp till 300 väntande/godkända köer ett verifierat premiärdatum — bara premiärfälten, aldrig
+  status eller `updated_at`. `python3 -m jobs.upcoming --user <id>` gör alla på en gång.
+- **`providers/tmdb.py`**: `window_params` — smakbanorna (`taste_seeded_discover`,
+  `taste_keyword_discover`) frågar inom premiärfönstret för upcoming-jobb, utan röstgolv; utan fönster
+  exakt som förut. `upcoming_movies`.
+- **`providers/trakt.py`**: `fetch_upcoming_titles` (anticipated-listor + `/calendars/all/shows/premieres`,
+  jobbets genrer som Trakt-filter, cache 6 h, publika anrop).
+- **`providers/tmdb_enrich.py`**: en post hämtad innan titeln kom ut hämtas om efter 7 dagar
+  (`unreleased_when_fetched`); släppta titlar går fortfarande aldrig ut.
+- **`GET /api/upcoming`** (`server.py`, `shown_picks.upcoming_hidden_reason`): alla aktiverade jobbs
+  val + väntande och godkända köer med verifierad premiär + nya säsonger även när serien finns i
+  biblioteket; döljs bara av svartlista, avfärdad rad eller avvisning i Requests (läsande kontroll,
+  skriver inga `retired`). En per titel, högst `limit` per sort (anime / TV / film). Kort från kön
+  bär `request_id` (Approve/Reject verkar på köraden; godkända visas som klara).
+- **Requests**: ny standardsortering "Upcoming premieres first" (`request_queue.upcoming_first`);
+  filtret "Upcoming" räknar en kommande säsong (`release_bucket`, spegeln i `mediaFilters.js`).
+- **Home** (`Home.jsx`): Up Coming före Content to Watch — överst till höger bredvid New Trailer, först
+  på mobil — och visas även när Content to Watch är tom. Bara ordningen ändrad, befintliga klasser;
+  `check_vision_ui_lock.py` OK. Kontrollerat i en lokal attrapp med påhittade titlar (skärmbilder:
+  dator, mobil 375 px utan sidoscroll, tom Content to Watch; inga konsolfel).
+
+## Mätning
+
+- **Offline, oförändrat** (`snap_live.json` 2026-09-24, 8 veck, HEAD mot arbetsytan): 0 skillnader —
+  holdout P@5 0,400, NDCG@5 0,371, NDCG@10 0,336, parvis 0,716; kronologiskt P@5 0,400, NDCG@5 0,470.
+  Ögonblicksbilden har inga fortsättningar, så inget uppmätt värde kan röra sig; kontrollarmarna är
+  därmed också oförändrade.
+- **Riktiga data, läsande `job_trace`-väg** (samma kod som körningen, bara cache skriven):
+
+| jobb | före | efter | varav fortsättningar | breddning |
+|---|---|---|---|---|
+| Upcoming Tv Shows | 1 val | **12** | 9-1-1: Nashville S2, Delicious in Dungeon S2, Reincarnated as a Sword S2, Rakshasa Street S5, Iceblade Sorcerer II, Black Clover S2, The Simpsons S38, Ranma1/2 S3 | `other_sources` gav 4 (Black Dagger Brotherhood S2, Grimsburg S3, Cat's Eyes S2, Undercover S6) |
+| Upcoming US + Anime/Donghua (nu `upcoming_only`) | — | **33** | + Avengers: Doomsday, Black Panther 3, Dune: Part Three, Jumanji: Open World, The Rookie S9 | behövdes inte (33 ≥ 20) |
+
+  Ingen fortsättning hamnade under smakgolvet; The Rookie S9 faller på Upcoming Tv Shows genrer
+  (crime/drama) och Avatar 5 (2031) utanför 2026–2029, som inställningarna säger.
+
+## Tester
+
+`recommendation_tests` + `evaluation_tests` **213 gröna** (nya: `test_upcoming_search.py`, 25);
+`tests/test_job_action_mode.py`, `test_empty_job_results.py`, `test_requests_queue_order.py`,
+`test_job_stagger.py`, `test_runtime_logs.py` 39 gröna med `--noconftest`. Frontend bygger.
+
+## Data på NAS:en
+
+- Säkerhetskopia `.runtime/backups/2026-09-25-omgang10/jobs.jsonl` (3 jobb, md5 i `manifest.json`).
+- `job_87f31614e5a8` fick `filters.upcoming_only: true` via `jobs.engine.update_job` (Gilberts val);
+  fönster 2026–2029 och film/TV/anime oförändrade. Gäller redan med den gamla koden på NAS:en.
+
+## Inte gjort — väntar
+
+1. **Driftsättning**: `bash scripts/deploy_nas.sh` nekades av sessionens behörighetskontroll
+   ("Production Deploy"); Gilbert kör den eller godkänner. NAS:en kör fortfarande omgång 9.
+2. Efter driftsättningen: säkerhetskopiera `requests`, kör `python3 -m jobs.upcoming --user
+   user_c30bd548254a` (premiärdatum på köns väntande/godkända rader; annars 300 per upcoming-körning),
+   och verifiera de första schemalagda körningarna (`run.upcoming_search`, antal val, `carry_over`),
+   `GET /api/upcoming` per sort och Requests-ordningen.
+3. Inte committat (varken omgång 9 eller 10).
+
+## Kvar / fynd
+
+1. Samma fortsättning kan väljas av båda upcoming-jobben; Upcoming US har `already_recommended` och
+   hoppar över den om Upcoming Tv Shows redan har den, Up Coming visar ett kort per titel och kön
+   känner igen titeln (förnyas, dubbleras inte).
+2. AniList har en minutbudget; `other_sources` läser 8 sidor till och slutar tyst vid 429.
+3. Tv (2 156) och Upcoming US (3 982) är fortsatt fulla mot 650: Upcoming US val syns i Up Coming men
+   köas först när det finns plats. Rensning är Gilberts beslut (se omgång 9).
+
+# OMGÅNG 11 — CineMind-fliken syntes inte i MediaManagers sidomeny (2026-09-25 18:25–18:45 UTC)
+
+Gilbert: "ser inte cinemind fliken i sidebaren som du skapade på min … nas media manager app".
+Bara MediaManager ändrat; CineMinds kod, databas och container orörda (omgång 10 är fortfarande
+inte driftsatt).
+
+- **Orsak:** omgång 7 lade posten bara i MM:s klassiska sidomeny (`nav/app-sidebar.svelte`). MM har
+  fyra navigeringar, och vilken som visas beror på tema och sidomenyläge som sparas i webbläsaren
+  (`mediamanager.appearance`, `mediamanager.sidebar-preferences`): Glass 27 har egen meny, och
+  hover-railen (ChatGPT App / "chatgpt-hover") likaså. Live före: den byggda layouten (nod 2)
+  länkade `dashboard/episode-scanner` 6 gånger men `dashboard/cinemind` 1 gång.
+- **Ändrat på NAS:en** (`/vol2/1000/MediaManager/web/src/lib/components/`, via SSH, md5 före och
+  efter): CineMind (ikon Popcorn) i `glass27/glass27-navigation.svelte`, `nav/chatgpt-app-rail.svelte`
+  och `media-manager-liquid-glass/media-manager-liquid-glass-navigation.svelte` (tre listor; ingår inte
+  i bygget, ändrad som scannern), sidtiteln i `glass27-header`, `vision-header`, `liquid-header`.
+  Backup `backups/pre-cinemind-nav-20260925T183419Z.tgz`; md5 och detaljer i MM:s `HANDOFF.md`,
+  avsnittet "CineMind i MediaManager". Hur man lägger in allt igen: `deploy/mediamanager/README.md`.
+- **Test och bygge:** svelte-check 0 fel (6 285 filer). `docker compose up -d --build --no-deps
+  mediamanager` → avbild `2f79aacf…` (förra taggad `mediamanager-enhanced:pre-cinemind-nav-20260925`
+  för återställning), health 200 efter ~15 s, entry `app.C-7Q1vQx.js`, nod 2 länkar
+  `dashboard/cinemind` 6 gånger. `/web/dashboard/cinemind` och `:8001/dashboard` svarar 200.
+- **Renderat:** det byggda paketet (kopierat ur containern) serverat lokalt med en påhittad
+  superanvändare för `/api/v1/users/me` och 404 för allt annat, i den inbyggda webbläsaren:
+  CineMind syns och är markerad som aktiv i den klassiska menyn, i Glass 27 (System) och i
+  hover-railen (ikonläge: alla 18 poster ryms i 1 357 px, CineMind som fjärde). Tillfällig
+  `mm-nav-preview` i `.claude/launch.json` borttagen efteråt.
+- **Inte sett:** Gilberts egen inloggade vy (sessionen loggar inte in). Han behöver ladda om sidan
+  (Cmd+Shift+R) eller öppna MM-fönstret på nytt; HTML:en har `no-cache`, det gamla paketet ger 404.
+- **Fynd, inte åtgärdade (fanns före, gäller Avsnittsscanner likadant):** Glass 27 markerar
+  "Dashboard" som aktiv på varje undersida och rubriken säger "Dashboard", eftersom
+  `isActive` och `exactRouteTrails` jämför med `/dashboard…` medan `page.url.pathname` börjar med
+  basvägen `/web`; sidtitlarna som lades in syns därför inte än. Hover-railen i etikettläge är
+  bredare än ett 1 357 px fönster (Dashboard, Discover och AI Recommendations hamnar utanför till
+  vänster); ikonläget, standard, ryms.
+- **Samtidigt på NAS:en:** en annan session körde MM:s pytest i den gamla avbilden från
+  `/tmp/mm-base` och har en kopia `/tmp/mm-scanfix` (backend + tester, ingen `web/`), så dess
+  scannerfix skriver inte över menyerna. MM:s logg efter omstarten 18:38 visar två fel som inte rör
+  menyerna och inte utreddes: Plex 401 i MM:s egna rekommendationer (användare `e2551a48…`) och
+  `OSError` vid import av Clevatess S02E07.
+
+# OMGÅNG 12 — varför Upcoming inte hittar kommande filmer, serier och anime (2026-09-26 05:50–06:15 UTC, läsande)
+
+Gilbert: "kolla upp varför min cinemind app inte letar och eller hittar ej släppta kommande tv serier
+filmer anime filmer anime tv". Inget skrivet i NAS-databasen; bara `job_trace` (cache) och frågor.
+
+- **NAS:en kör omgång 9.** `jobs/upcoming.py` och `providers/continuations.py` finns inte där;
+  `tmdb.py`/`server.py` = HEAD, `jobs/engine.py` = omgång 9. Omgång 10 är aldrig driftsatt.
+- **Live, senaste 24 h:** Upcoming Tv Shows 77 körningar, senaste 0 val (`no_new_picks`: 939
+  kandidater, 594 utan verifierad premiär, 43 under smakgolvet, 7 "redan sedda" — nya säsonger).
+  Upcoming US + Anime/Donghua 11 val per körning men `queue_full` (3 723 väntar mot 650), så inget
+  når Requests. Up Coming på Home: 12 kort, 11 från Upcoming US (svaga, match 47–68, inga
+  uppföljare) + 1 koreansk serie; **ingen anime, ingen animefilm**.
+- **Omgång 10-koden mot NAS-databasen (`job_trace`, läsande):** Upcoming Tv Shows 0 → 12 val
+  (5 anime, 1 donghua, 2 animation, 2 engelsk TV, 2 annat språk; `other_sources` gav 4);
+  Upcoming US 11 → 39 (15 film, 13 TV, 5 anime, 1 donghua), bl.a. Avengers: Doomsday, Dune: Part
+  Three, Delicious in Dungeon S2, Black Clover S2, Iceblade Sorcerer II, Rakshasa Street.
+  Fortfarande 0 animefilmer: 3 i poolen, alla utan verifierat datum.
+- **Datumkravet stänger ute det mesta av anime.** AniList NOT_YET_RELEASED (400, popularitet):
+  bara 81 har exakt dag. TV/ONA 67 av 287 (utan dag: Frieren S3, Dandadan S3, Bocchi S2, Witch Hat
+  Atelier S2, [Oshi no Ko] Final); film 13 av 57 (utan dag: Demon Slayer Infinity Castle del 2/3,
+  Solo Leveling, One Piece Film: God Valley, Haikyuu!!). `premieres.premiere_from_anilist` kräver
+  år+månad+dag (regeln "never a year, a month", omgång 6); `anilist.fetch_upcoming` hoppar dessutom
+  över titlar utan år när jobbet har `min_year`.
+- Tester på arbetsytan: 213 + 39 gröna.
+- Sidofynd, inte åtgärdat: demo-rader från `api_extra.py` (Library Sentinel, Shelf Drama, Owned
+  Sci-Fi m.fl., utan `job_id`) ligger bland Gilberts rekommendationer på NAS:en; de har inget
+  premiärdatum och syns inte i Up Coming.
+
+## Gilberts beslut och vad som gjordes (06:05–06:35 UTC)
+
+Frågat i sessionen: (1) **driftsätt omgång 10 — ja**; (2) **annonserade titlar med bara år eller
+månad räknas som kommande — ja** (titlar utan år gör det fortfarande inte).
+
+- **`providers/premieres.py`**: `announced_date` / `premiere_from_anilist` godtar NOT_YET_RELEASED med
+  år+månad (`premiere_date` = månadens sista dag) eller bara år (31 dec), med nytt fält
+  `premiere_precision` (`day` / `month` / `year`, i `PREMIERE_FIELDS`); alla läsare som jämför
+  `premiere_date > today` fungerar oförändrat. En TMDb-rad som TMDb inte har datum för men som har
+  AniList-id frågas nu även hos AniList (Frieren S3). `premiere_label` ger "October 2026" / "2027".
+- **`providers/continuations.py`**: `chain_keys` — längs en AniList PREQUEL/PARENT-kedja matchas
+  också franchisen före undertiteln ("Sword Art Online: Alicization – War of Underworld Part 2" →
+  gillade "Sword Art Online"; kräver minst 4 tecken före ": ", så "Re:Zero" matchar inte "Re").
+  En kopplad AniList-titel ärver den gillade titelns saknade metadata (`_root_fields`, bara tomma
+  fält): ONE PIECE FILM: GOD VALLEY hade inga genrer och fick personal 0,85 mot golvet 2,5 trots
+  One Piece 10/10; nu 6,36. `_same_premiere` jämför år/månad-datum med TMDb:s dag inom perioden.
+  Varför-texterna använder `premiere_label`.
+- `server.upcoming_request_card` och `request_queue.LIGHT_FIELDS` bär `premiere_precision`;
+  **Home** `premiereLabel` visar "Oct 2026" / "2027" för sådana (bara text, lås OK).
+- Tester: `recommendation_tests` + `evaluation_tests` **217 gröna** (nya i
+  `test_upcoming_premieres.py` och `test_upcoming_search.py`), `tests/…` 39 gröna. Offline
+  (`snap_live.json`, 8 veck): oförändrat — holdout P@5 0,400, NDCG@5 0,371, NDCG@10 0,336,
+  parvis 0,716; kronologiskt P@5 0,400, NDCG@5 0,470.
+- `job_trace` mot NAS-databasen före driftsättning: Upcoming Tv Shows 12 → 18 val (anime 5 → 11:
+  Frieren S3, Dandadan S3, One Punch Man S3 del 2, Sakamoto Days S2, Shield Hero S5, Slime S4 del 3);
+  anime förbi filtren 44 → 145. Upcoming US 39 → 47 (anime 5 → 13, animefilmer 0 → 2). Ett tänkt
+  jobb med bara animefilmer: 19 förbi filtren; SAO: Integral Domain, One Piece Film: God Valley och
+  BAAD klarar golvet, övriga saknar koppling till något gillat och hålls ute som förut.
+- **Säkerhetskopia** före driftsättning: `.runtime/backups/2026-09-26-omgang12/`
+  (jobs 4, requests 10 544, recommendations 94 rader; `manifest.md5`).
+- **Driftsatt 06:15 UTC** (`scripts/deploy_nas.sh`); md5 för premieres/continuations/upcoming i
+  containern = arbetsytan; `/api/` 200, inga fel i loggen. `python3 -m jobs.upcoming --user
+  user_c30bd548254a` i containern: 6 000 köer fick premiärfält, 139 med kommande premiär.
+- **Verifierat live:** Upcoming Tv Shows 06:15:42 → 18 val (var 0 i varje körning i natt);
+  Upcoming US 06:17:18 → 33 val (var 11), bl.a. Avengers: Doomsday, Dune: Part Three, SAO: Integral
+  Domain, One Piece Film: God Valley — `queue_full` håller fortfarande tillbaka 58 från Requests
+  (3 723 väntar mot 650; Gilberts beslut). `upcoming_premieres` anropad i containern: **142 kort**
+  (50 TV, 50 film — taket per sort —, 42 anime), var 12 utan anime.
+- Inte gjort: inget committat (omgång 9, 10 och 12 ligger i arbetsytan). Gilberts inloggade vy av
+  Home inte sedd (sessionen loggar inte in).
+
+## Omdriftsättning och kontroll live (2026-09-26 06:42–06:50 UTC)
+
+Gilbert: "driftsätt omgång 10 nu … verifiera". Arbetsytan och NAS:en var redan identiska (md5 för
+hela backend, även i containern) efter driftsättningen 06:15; `scripts/deploy_nas.sh` kördes igen
+06:43. Förkontroller: 217 + 42 tester gröna, låset OK, `cinemind` beror bara på `cinemind-mongo`
+(MediaManager rörs inte; avsnittsscanner-sessionen tillfrågad). Säkerhetskopia:
+`.runtime/backups/2026-09-26-omgang10-redeploy/` (requests 10 558, jobs; `manifest.md5`).
+
+- Containrar: `mediamanager_cinemind` healthy, `restart=unless-stopped`, bilden byggd från
+  `/vol2/1000/MediaManager/cinemind` (överlever omstart); `/api/`, `/` och `localhost:8001` 200.
+  MediaManager: `/api/v1/health` och `/web/` 200 efter min deploy och efter avsnittsscanner-
+  sessionens ombyggnad 06:47. MediaManagers logg har egna fel (Plex-token 401 → Gilbert loggar in
+  på Plex i MediaManager; tv-import OSError) — rapporterade till den sessionen, inte ändrade.
+- `python3 -m jobs.upcoming --user user_c30bd548254a`: 0 nya (alla fick fält 06:15), 139 köer med
+  kommande premiär.
+- Schemalagt efter deploy: Upcoming Tv Shows 06:45 → 14 val av 1 086 (fortsättningar: 6 säsonger,
+  6 anime, 7 AniList-kopplade), 19 öppna val (`carry_over`); Upcoming US 06:47 → alla fyra steg
+  (`job_lanes` → `taste_window` → `deeper_pages` → `other_sources`), 3 nya mot målet 20,
+  `queue_full` håller tillbaka 72 (3 723 väntar mot 650, Gilberts beslut). Modell qwen-suggestarr.
+- `upcoming_premieres(limit=50)`: 143 kort (`upcoming_kind` tv 50 / movie 50 / anime 43), inget
+  passerat datum, soonest-first per sort, 13 fortsättningskort ("season 38 of The Simpsons, which
+  you rated 10/10"), 3 månads- och 6 årsdatum. `/requests/page?sort=upcoming_first`: kommande
+  premiärer först (27/9 The Simpsons … 3/10 Black Clover S2).
+- Fortfarande inte committat (omgång 9, 10, 12).

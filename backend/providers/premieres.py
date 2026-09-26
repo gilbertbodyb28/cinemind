@@ -6,28 +6,36 @@ as its settings say - an older series counts when a coming season has a verified
 premiere date. Until then the Home panel showed Content to Watch picks 2-5, and
 the job's 2026-2029 window let through everything first released since January.
 
-A date counts as verified only when the provider gives the full day, after today:
+A premiere counts as verified when a provider gives its date, after today:
 
 - film: TMDb `release_date`;
 - series: TMDb `first_air_date` (series premiere), or the first episode of a
   coming season - `next_episode_to_air` with episode 1, or a season's `air_date`;
-- anime without a TMDb id: AniList `nextAiringEpisode` for episode 1, or the
-  full `startDate` of a title AniList lists as NOT_YET_RELEASED.
+- anime (and a TMDb title TMDb has no date for): AniList `nextAiringEpisode` for
+  episode 1, or the `startDate` of a title AniList lists as NOT_YET_RELEASED.
 
-A year, a month, or the next weekly episode of a season already running is not
-a premiere. Answers are cached for PREMIERE_CACHE_HOURS in provider_cache.
+AniList announces most anime by year or month only (2026-09-26: 81 of its 400
+most popular NOT_YET_RELEASED titles had a day; 13 of 57 films). Gilbert decided
+that day that such an announcement counts: `premiere_precision` says "month" or
+"year", and `premiere_date` is the last day of that period, so every reader that
+compares it with today keeps working and an announced title sorts after the
+dated ones of its month. A title with no announced year is still not upcoming,
+and neither is the next weekly episode of a season already running. Answers are
+cached for PREMIERE_CACHE_HOURS in provider_cache.
 """
 
 from __future__ import annotations
 
 import asyncio
+import calendar
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import httpx
 
-PREMIERE_FIELDS = ("premiere_date", "premiere_kind", "premiere_season", "premiere_source", "premiere_checked_at")
+PREMIERE_FIELDS = ("premiere_date", "premiere_kind", "premiere_season", "premiere_source", "premiere_precision",
+                   "premiere_checked_at")
 PREMIERE_CACHE_HOURS = 12
 ANILIST_GRAPHQL = "https://graphql.anilist.co"
 #: Parallel TMDb detail calls; TMDb allows ~50 per second.
@@ -73,12 +81,12 @@ def premiere_from_tmdb(details: Dict[str, Any], series: bool, today: str) -> Opt
         release = _full_date(details.get("release_date"))
         if release and release > today:
             return {"premiere_date": release, "premiere_kind": "film_release", "premiere_season": None,
-                    "premiere_source": "tmdb:release_date"}
+                    "premiere_source": "tmdb:release_date", "premiere_precision": "day"}
         return None
     first = _full_date(details.get("first_air_date"))
     if first and first > today:
         return {"premiere_date": first, "premiere_kind": "series_premiere", "premiere_season": 1,
-                "premiere_source": "tmdb:first_air_date"}
+                "premiere_source": "tmdb:first_air_date", "premiere_precision": "day"}
     options = []
     nxt = details.get("next_episode_to_air") or {}
     nxt_date = _full_date(nxt.get("air_date"))
@@ -93,25 +101,54 @@ def premiere_from_tmdb(details: Dict[str, Any], series: bool, today: str) -> Opt
         return None
     date, number, source = min(options)
     return {"premiere_date": date, "premiere_kind": "season_premiere", "premiere_season": number,
-            "premiere_source": source}
+            "premiere_source": source, "premiere_precision": "day"}
+
+
+def announced_date(start: Dict[str, Any]) -> Optional[Tuple[str, str]]:
+    """(last day of the announced period, precision) for an AniList startDate, or None."""
+    try:
+        year = int(start.get("year") or 0)
+        month = int(start.get("month") or 0)
+        day = int(start.get("day") or 0)
+    except (TypeError, ValueError):
+        return None
+    if not year:
+        return None
+    if month and day:
+        return "%04d-%02d-%02d" % (year, month, day), "day"
+    if month:
+        return "%04d-%02d-%02d" % (year, month, calendar.monthrange(year, month)[1]), "month"
+    return "%04d-12-31" % year, "year"
 
 
 def premiere_from_anilist(media: Dict[str, Any], today: str) -> Optional[Dict[str, Any]]:
     """The next premiere in an AniList Media answer, or None."""
     film = str(media.get("format") or "").upper() == "MOVIE"
+    kind = "film_release" if film else "series_premiere"
     airing = media.get("nextAiringEpisode") or {}
     if airing.get("airingAt") and int(airing.get("episode") or 0) == 1:
         date = datetime.fromtimestamp(int(airing["airingAt"]), tz=timezone.utc).date().isoformat()
         if date > today:
-            return {"premiere_date": date, "premiere_kind": "film_release" if film else "series_premiere",
-                    "premiere_season": None, "premiere_source": "anilist:nextAiringEpisode"}
-    start = media.get("startDate") or {}
-    if media.get("status") == "NOT_YET_RELEASED" and start.get("year") and start.get("month") and start.get("day"):
-        date = "%04d-%02d-%02d" % (int(start["year"]), int(start["month"]), int(start["day"]))
-        if date > today:
-            return {"premiere_date": date, "premiere_kind": "film_release" if film else "series_premiere",
-                    "premiere_season": None, "premiere_source": "anilist:startDate"}
+            return {"premiere_date": date, "premiere_kind": kind, "premiere_season": None,
+                    "premiere_source": "anilist:nextAiringEpisode", "premiere_precision": "day"}
+    announced = announced_date(media.get("startDate") or {}) if media.get("status") == "NOT_YET_RELEASED" else None
+    if announced and announced[0] > today:
+        return {"premiere_date": announced[0], "premiere_kind": kind, "premiere_season": None,
+                "premiere_source": "anilist:startDate", "premiere_precision": announced[1]}
     return None
+
+
+def premiere_label(row: Dict[str, Any]) -> str:
+    """"2026-10-12", "October 2026" or "2027": the premiere as precisely as it is known."""
+    date = str(row.get("premiere_date") or "")[:10]
+    precision = row.get("premiere_precision")
+    if len(date) != 10:
+        return ""
+    if precision == "year":
+        return date[:4]
+    if precision == "month":
+        return "%s %s" % (calendar.month_name[int(date[5:7])], date[:4])
+    return date
 
 
 async def _cached(key: str) -> Optional[Dict[str, Any]]:
@@ -212,7 +249,7 @@ async def verify_premieres(rows: Iterable[Dict[str, Any]], api_key: Optional[str
     rows = list(rows)
     for row in rows:
         row.update({"premiere_date": None, "premiere_kind": None, "premiere_season": None,
-                    "premiere_source": None, "premiere_checked_at": stamp})
+                    "premiere_source": None, "premiere_precision": None, "premiere_checked_at": stamp})
     tmdb_rows = [row for row in rows if row.get("tmdb_id") not in (None, "") and key]
     on_tmdb = {id(row) for row in tmdb_rows}
     anilist_rows = [row for row in rows if id(row) not in on_tmdb and row.get("anilist_id") not in (None, "")]
@@ -234,6 +271,10 @@ async def verify_premieres(rows: Iterable[Dict[str, Any]], api_key: Optional[str
                 row.update(found)
 
         await asyncio.gather(*(one(row) for row in tmdb_rows))
+    # TMDb lists a coming anime season without a date long before AniList's
+    # announced month or year is on it (Frieren S3): ask AniList for those too.
+    anilist_rows += [row for row in tmdb_rows if not row.get("premiere_date") and row.get("anilist_id") not in (None, "")
+                     and str(row["anilist_id"]).isdigit()]
     if anilist_rows:
         media = await _anilist_media(sorted({int(row["anilist_id"]) for row in anilist_rows}), store=store)
         for row in anilist_rows:

@@ -17,12 +17,16 @@ const TRAILER_SORTS = [
   { key: "rating", label: "Top rated" },
 ];
 
-// "Season 4 · Oct 12, 2026": what premieres, and the verified day (GET /upcoming).
+// "Season 4 · Oct 12, 2026": what premieres, and when (GET /upcoming). An anime
+// announced by month or year only shows "Oct 2026" or "2027" (premiere_precision).
 function premiereLabel(r) {
   if (!r.premiere_date) return "";
-  const day = new Date(`${r.premiere_date}T00:00:00Z`).toLocaleDateString(undefined, {
-    day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
-  });
+  const precision = r.premiere_precision;
+  const day = precision === "year"
+    ? String(r.premiere_date).slice(0, 4)
+    : new Date(`${r.premiere_date}T00:00:00Z`).toLocaleDateString(undefined, precision === "month"
+      ? { month: "short", year: "numeric", timeZone: "UTC" }
+      : { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
   const what = r.premiere_kind === "season_premiere" && r.premiere_season
     ? `Season ${r.premiere_season}`
     : r.premiere_kind === "series_premiere" ? "Series premiere" : "Release";
@@ -173,6 +177,58 @@ export default function Home() {
     setHeroIdx((i) => (i + dir + filtered.length) % filtered.length);
   };
 
+  // Up Coming goes before Content to Watch (Gilbert, 2026-09-25: Upcoming is
+  // CineMind's first priority; he unlocked this one layout change), and it is
+  // shown even when Content to Watch is empty.
+  const upcomingPanel = (
+    <section data-testid="upcoming-panel">
+      <div className="flex items-center justify-between gap-3 mb-4 px-1">
+        <h2 className="font-display text-2xl font-bold">Up Coming</h2>
+        <label className="relative inline-flex items-center glass rounded-full pl-3 pr-3 py-1.5 text-sm cursor-pointer hover:border-[rgba(216,178,106,0.4)] transition-colors ml-auto">
+          <select
+            data-testid="upcoming-kind-select"
+            aria-label="Filter Up Coming"
+            value={comingKind}
+            onChange={(e) => chooseComingKind(e.target.value)}
+            className="appearance-none bg-transparent outline-none font-medium text-[#F6EFE4] cursor-pointer"
+          >
+            <option value="all" className="bg-[#17130F] text-[#F6EFE4]">All</option>
+            <option value="anime" className="bg-[#17130F] text-[#F6EFE4]">Anime</option>
+            <option value="tv" className="bg-[#17130F] text-[#F6EFE4]">TV series</option>
+            <option value="movie" className="bg-[#17130F] text-[#F6EFE4]">Movies</option>
+          </select>
+        </label>
+        <Link data-testid="upcoming-see-all" to="/recommendations" className="chip hover:chip-rose transition-colors">See all</Link>
+      </div>
+      <div className={POSTER_GRID}>
+        {upcoming.map((r) => (
+          <div key={r.id} data-testid={`upcoming-card-${r.id}`} className="group relative text-left">
+            <div className="poster-frame relative rounded-3xl">
+              <button type="button" onClick={() => setActive(r)} className="block w-full text-left">
+                <img src={r.poster} alt={r.title} className="w-full aspect-[2/3] object-cover" />
+                <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
+                  <MatchStat score={r.match_score} />
+                  <RatingStat rating={r.tmdb_rating} />
+                </div>
+              </button>
+              <RecPosterActions rec={r} onApproved={markApproved} onRejected={dismiss} />
+            </div>
+            <h3 className="font-display font-bold text-xl truncate mt-3">{r.title}</h3>
+            <p data-testid={`upcoming-date-${r.id}`} className="text-[11px] text-[#EBD3A3] mt-1">{premiereLabel(r)}</p>
+            <p className="text-[11px] text-[#A5987F] mt-1 line-clamp-2 leading-snug">{r.synopsis}</p>
+          </div>
+        ))}
+      </div>
+      {!upcoming.length && (
+        <div data-testid="upcoming-empty" className="glass rounded-3xl p-6 text-sm text-[#8C7F6D]">
+          {comingKind === "all"
+            ? "No verified premieres coming up yet."
+            : `No verified ${{ anime: "anime", tv: "TV series", movie: "movie" }[comingKind]} premieres coming up yet.`}
+        </div>
+      )}
+    </section>
+  );
+
   return (
     <div data-testid="home-page" className="float-in">
       {/* Category tabs */}
@@ -195,14 +251,17 @@ export default function Home() {
       </div>
 
       {!recs.length ? (
-        <div data-testid="home-empty" className="glass rounded-3xl p-14 text-center">
-          <Sparkles className="w-10 h-10 mx-auto text-[#6E6355] mb-4" />
-          <h2 className="font-display text-2xl font-bold">Your screen is empty</h2>
-          <p className="text-slate-400 mt-2 text-sm max-w-md mx-auto">Generate your first batch of AI picks — CineMind reads your Trakt, Simkl and Plex history to find what you'll actually love.</p>
-          <button data-testid="home-generate-button" onClick={generate} disabled={generating} className="mt-7 glass-strong px-6 py-3 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:brutal-shadow-rose transition-shadow">
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {generating ? "Thinking…" : "Generate picks"}
-          </button>
+        <div className="space-y-4 lg:space-y-5">
+          {upcomingPanel}
+          <div data-testid="home-empty" className="glass rounded-3xl p-14 text-center">
+            <Sparkles className="w-10 h-10 mx-auto text-[#6E6355] mb-4" />
+            <h2 className="font-display text-2xl font-bold">Your screen is empty</h2>
+            <p className="text-slate-400 mt-2 text-sm max-w-md mx-auto">Generate your first batch of AI picks — CineMind reads your Trakt, Simkl and Plex history to find what you'll actually love.</p>
+            <button data-testid="home-generate-button" onClick={generate} disabled={generating} className="mt-7 glass-strong px-6 py-3 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:brutal-shadow-rose transition-shadow">
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {generating ? "Thinking…" : "Generate picks"}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid lg:grid-cols-[300px_1fr] gap-4 lg:gap-5">
@@ -253,6 +312,9 @@ export default function Home() {
               {!trailerList.length && <p className="text-xs text-[#8C7F6D] py-6 text-center">Nothing matches this filter.</p>}
             </div>
           </section>
+
+          {/* ---- Up Coming, first on a phone and above the hero beside New Trailer ---- */}
+          <div className="order-first lg:order-none">{upcomingPanel}</div>
 
           {/* ---- Hero ---- */}
           <section data-testid="hero-panel" className="relative rounded-3xl overflow-hidden border border-white/10 min-h-[420px]">
@@ -305,53 +367,6 @@ export default function Home() {
             )}
           </section>
 
-          {/* ---- Up Coming ---- */}
-          <section data-testid="upcoming-panel">
-            <div className="flex items-center justify-between gap-3 mb-4 px-1">
-              <h2 className="font-display text-2xl font-bold">Up Coming</h2>
-              <label className="relative inline-flex items-center glass rounded-full pl-3 pr-3 py-1.5 text-sm cursor-pointer hover:border-[rgba(216,178,106,0.4)] transition-colors ml-auto">
-                <select
-                  data-testid="upcoming-kind-select"
-                  aria-label="Filter Up Coming"
-                  value={comingKind}
-                  onChange={(e) => chooseComingKind(e.target.value)}
-                  className="appearance-none bg-transparent outline-none font-medium text-[#F6EFE4] cursor-pointer"
-                >
-                  <option value="all" className="bg-[#17130F] text-[#F6EFE4]">All</option>
-                  <option value="anime" className="bg-[#17130F] text-[#F6EFE4]">Anime</option>
-                  <option value="tv" className="bg-[#17130F] text-[#F6EFE4]">TV series</option>
-                  <option value="movie" className="bg-[#17130F] text-[#F6EFE4]">Movies</option>
-                </select>
-              </label>
-              <Link data-testid="upcoming-see-all" to="/recommendations" className="chip hover:chip-rose transition-colors">See all</Link>
-            </div>
-            <div className={POSTER_GRID}>
-              {upcoming.map((r) => (
-                <div key={r.id} data-testid={`upcoming-card-${r.id}`} className="group relative text-left">
-                  <div className="poster-frame relative rounded-3xl">
-                    <button type="button" onClick={() => setActive(r)} className="block w-full text-left">
-                      <img src={r.poster} alt={r.title} className="w-full aspect-[2/3] object-cover" />
-                      <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
-                        <MatchStat score={r.match_score} />
-                        <RatingStat rating={r.tmdb_rating} />
-                      </div>
-                    </button>
-                    <RecPosterActions rec={r} onApproved={markApproved} onRejected={dismiss} />
-                  </div>
-                  <h3 className="font-display font-bold text-xl truncate mt-3">{r.title}</h3>
-                  <p data-testid={`upcoming-date-${r.id}`} className="text-[11px] text-[#EBD3A3] mt-1">{premiereLabel(r)}</p>
-                  <p className="text-[11px] text-[#A5987F] mt-1 line-clamp-2 leading-snug">{r.synopsis}</p>
-                </div>
-              ))}
-            </div>
-            {!upcoming.length && (
-              <div data-testid="upcoming-empty" className="glass rounded-3xl p-6 text-sm text-[#8C7F6D]">
-                {comingKind === "all"
-                  ? "No verified premieres coming up among your picks yet."
-                  : `No verified ${{ anime: "anime", tv: "TV series", movie: "movie" }[comingKind]} premieres coming up among your picks yet.`}
-              </div>
-            )}
-          </section>
         </div>
       )}
 

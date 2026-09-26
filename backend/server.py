@@ -1739,32 +1739,70 @@ def upcoming_kind(doc: Dict[str, Any]) -> str:
     return "tv" if details_endpoint(doc.get("type") or doc.get("media_type")) == "tv" else "movie"
 
 
+#: Queue statuses Up Coming shows: still waiting for a decision, or approved.
+UPCOMING_REQUEST_STATUSES = ["pending_approval", "pending", "requested", "approved", "available", "completed"]
+#: Cards per kind (anime / TV series / movies), so Home's filter always has its own.
+UPCOMING_PER_KIND_MAX = 50
+
+
+def upcoming_request_card(req: Dict[str, Any]) -> Dict[str, Any]:
+    """A queue row as an Up Coming card. The Approve / Reject buttons act on the
+    request itself (ApproveRejectOverlay reads request_id; an approved one is done)."""
+    approved = req.get("status") in {"approved", "available", "completed"}
+    card = {key: req.get(key) for key in (
+        "title", "year", "type", "media_type", "format", "poster", "backdrop", "genres", "match_score",
+        "tmdb_id", "anilist_id", "canonical_media_id", "tmdb_rating", "original_language", "status",
+        "premiere_date", "premiere_kind", "premiere_season", "premiere_source", "premiere_precision", "source_job_id",
+    )}
+    card.update({
+        "id": req["id"],
+        "request_id": req["id"],
+        "recommendation_id": req.get("recommendation_id"),
+        "synopsis": req.get("synopsis") or req.get("overview") or "",
+        "in_library": approved,
+        "needs_approval": req.get("status") in {"pending_approval", "pending", "requested"},
+        "from_requests": True,
+    })
+    return card
+
+
 @api.get("/upcoming")
 async def upcoming_premieres(limit: int = 12, user: User = Depends(get_current_user)):
-    """Home "Up Coming": the user's picks that premiere after today, soonest first.
+    """Home "Up Coming": everything still to come that is the user's, soonest first.
+
+    Gilbert, 2026-09-25 ("allt kommande"): new picks, titles waiting in Requests
+    or approved there, and coming seasons or sequels of titles he likes even
+    when the series is in his library - each until its premiere, never what he
+    rejected (recommendation.shown_picks.upcoming_hidden_reason). Each run of an
+    upcoming job used to replace its list, so a pick that went to Requests
+    dropped out of the panel at the next run.
 
     Only a verified date counts (providers.premieres): a film's release, a
-    series premiere, or the first episode of a coming season of an older series.
-    The panel used to show Content to Watch picks 2-5, whatever their dates.
-    Rows of a disabled job are left out; the check is cached on each row.
+    series premiere, or the first episode of a coming season. Picks are
+    re-checked here when their check is older than UPCOMING_RECHECK; queue rows
+    carry the check the upcoming jobs put on them (jobs.upcoming.
+    refresh_request_premieres). Rows of a disabled job are left out. At most
+    `limit` cards per kind (anime, TV series, movies), so each of Home's
+    filters has its own soonest titles.
     """
     from providers.keys import resolve_tmdb_api_key
     from providers.premieres import PREMIERE_FIELDS, today_iso, verify_premieres
     from recommendation.exclusion_engine import identity_keys
+    from recommendation.shown_picks import UPCOMING_KEEPS_RETIRED, settled_context, upcoming_hidden_reason
 
-    limit = max(1, min(int(limit), 50))
+    limit = max(1, min(int(limit), UPCOMING_PER_KIND_MAX))
     enabled = {job["id"]: job.get("enabled", True) for job in await db.jobs.find(
         {"user_id": user.user_id}, {"_id": 0, "id": 1, "enabled": 1}).to_list(None)}
     docs = await db.recommendations.find(
-        {"user_id": user.user_id, "dismissed": {"$ne": True}, "in_library": {"$ne": True}, "retired": {"$ne": True}},
+        {"user_id": user.user_id, "dismissed": {"$ne": True}},
         {"_id": 0, "user_id": 0},
-    ).to_list(3000)
-    docs = [doc for doc in docs if enabled.get(doc.get("job_id"), True)]
-    # A title rejected on Home, or watched, queued or decided since, is not
-    # "coming up" under another job's row either (recommendation.shown_picks).
-    from recommendation.shown_picks import retire_settled
-
-    docs = await retire_settled(user.user_id, docs, db)
+    ).to_list(5000)
+    docs = [
+        doc for doc in docs
+        if enabled.get(doc.get("job_id"), True)
+        and (not doc.get("retired") or doc.get("retired_reason") in UPCOMING_KEEPS_RETIRED
+             or doc.get("continuation_of") or doc.get("premiere_kind") == "season_premiere")
+    ]
     now = datetime.now(timezone.utc)
     stale = []
     for doc in docs:
@@ -1784,22 +1822,46 @@ async def upcoming_premieres(limit: int = 12, user: User = Depends(get_current_u
                 {"$set": {field: doc.get(field) for field in PREMIERE_FIELDS}},
             )
     today = today_iso(now)
-    coming = [doc for doc in docs if str(doc.get("premiere_date") or "") > today]
-    # One card per title: the same premiere can be a pick of more than one job.
-    coming.sort(key=lambda doc: (str(doc["premiere_date"]), -(doc.get("match_score") or 0)))
+    requests = await db.requests.find(
+        {"user_id": user.user_id, "status": {"$in": UPCOMING_REQUEST_STATUSES}, "premiere_date": {"$gt": today}},
+        {"_id": 0, "user_id": 0},
+    ).to_list(None)
+    by_request = {req["id"]: req for req in requests}
+    context = await settled_context(user.user_id, db)
+    coming = []
+    for doc in docs:
+        if str(doc.get("premiere_date") or "") <= today:
+            continue
+        if upcoming_hidden_reason(doc, context, today):
+            continue
+        req = by_request.get(doc.get("request_id") or "")
+        if req:
+            # The pick's own queue row says where the decision stands.
+            doc["status"] = req.get("status")
+            doc["in_library"] = doc.get("in_library") or req.get("status") in {"approved", "available", "completed"}
+        coming.append(doc)
+    for req in requests:
+        card = upcoming_request_card(req)
+        if not upcoming_hidden_reason(card, context, today):
+            coming.append(card)
+    # One card per title: the same premiere can be a pick of several jobs and a
+    # queue row too. A pick (it carries the reason it was chosen) comes first.
+    coming.sort(key=lambda doc: (str(doc["premiere_date"]), bool(doc.get("from_requests")),
+                                 -(doc.get("match_score") or 0)))
     seen: set = set()
+    per_kind: Dict[str, int] = {}
     picks = []
     for doc in coming:
         keys = identity_keys(doc)
         if keys & seen:
             continue
         seen |= keys
-        picks.append(doc)
-        if len(picks) >= limit:
-            break
-    # Home's filter reads this: Anime (anime and donghua), TV series or Movies.
-    for doc in picks:
+        # Home's filter reads this: Anime (anime and donghua), TV series or Movies.
         doc["upcoming_kind"] = upcoming_kind(doc)
+        if per_kind.get(doc["upcoming_kind"], 0) >= limit:
+            continue
+        per_kind[doc["upcoming_kind"]] = per_kind.get(doc["upcoming_kind"], 0) + 1
+        picks.append(doc)
     return await backfill_posters(user.user_id, picks)
 
 

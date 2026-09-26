@@ -290,6 +290,40 @@ def seed_support(candidate: Dict[str, Any], liked_by_title: Dict[str, Dict[str, 
     return round(1.0 - missing, 4), [title for _, title in strengths]
 
 
+def continuation_link(candidate: Dict[str, Any], liked_by_title: Dict[str, Dict[str, Any]],
+                      peak: float) -> Tuple[float, Optional[Dict[str, Any]]]:
+    """0..1: a coming season, sequel or spin-off of a title this profile likes.
+
+    The strongest franchise link there is (providers.continuations), discounted
+    by the evidence behind the liked title the way best_specific discounts any
+    link. Only a liked title in *this* profile counts, as for seed_support: a
+    title held out of the profile lends nothing to its own sequel.
+    """
+    from .similarity import EVIDENCE_BASE
+
+    info = candidate.get("continuation_of") or {}
+    liked = liked_by_title.get(str(info.get("title") or "").casefold())
+    if not liked:
+        return 0.0, None
+    evidence = min(1.0, max(0.0, float(liked.get("score") or 0.0)) / (peak or 1.0))
+    return round(EVIDENCE_BASE + (1.0 - EVIDENCE_BASE) * evidence, 4), liked
+
+
+def continuation_phrase(candidate: Dict[str, Any], liked: Dict[str, Any]) -> str:
+    """"is season 3 of X, which you rated 10/10" - the reason a continuation is here."""
+    info = candidate.get("continuation_of") or {}
+    relation = info.get("relation")
+    if relation == "season" and info.get("season"):
+        what = "is season %s of %s" % (info["season"], liked.get("title"))
+    elif relation == "spin_off":
+        what = "is a spin-off of %s" % liked.get("title")
+    elif relation == "side_story":
+        what = "is a side story to %s" % liked.get("title")
+    else:
+        what = "continues %s" % liked.get("title")
+    return "%s, %s" % (what, _liked_mark(liked))
+
+
 def _matched(
     candidate: Dict[str, Any],
     fields: Tuple[str, ...],
@@ -327,6 +361,10 @@ def _liked_mark(liked: Optional[Dict[str, Any]]) -> str:
         return "which you approved in Requests"
     plays = int(liked.get("plays") or 0)
     if plays > 1:
+        # A film's plays are viewings: "Dune, which you watched 3 episodes of" was
+        # how Dune: Part Three was explained on 2026-09-25.
+        if str(liked.get("media_type") or "") in {"movie", "anime_movie"}:
+            return "which you watched %d times" % plays
         return "which you watched %d episodes of" % plays
     return "which you liked"
 
@@ -337,7 +375,8 @@ def _explain(components: Dict[str, float], weights: Dict[str, float], candidate:
              liked_row: Optional[Dict[str, Any]] = None,
              seeds: Optional[List[str]] = None,
              negative_hit: Optional[Dict[str, Any]] = None,
-             link_row: Optional[Dict[str, Any]] = None) -> Tuple[str, List[str], List[str]]:
+             link_row: Optional[Dict[str, Any]] = None,
+             continued: Optional[Dict[str, Any]] = None) -> Tuple[str, List[str], List[str]]:
     """Reasons taken from the contributions that actually decided the rank.
 
     v1 fell back to the profile's top two genres whenever nothing matched, so a
@@ -399,8 +438,14 @@ def _explain(components: Dict[str, float], weights: Dict[str, float], candidate:
     }
     # Personal reasons first: format, language and quality are true of almost
     # every pick in a job and never explain why this one suits the viewer.
+    if continued is not None:
+        # The franchise term is the continuation here; say what it continues.
+        phrases["franchise_affinity"] = continuation_phrase(candidate, continued)
     personal = [phrases[name] for name, value in contributions
                 if value > 0.15 and name in phrases and name in PERSONAL_COMPONENTS][:3]
+    if continued is not None:
+        phrase = phrases["franchise_affinity"]
+        personal = [phrase] + [item for item in personal if item != phrase][:2]
     context = [phrases[name] for name, value in contributions
                if value > 0.15 and name in phrases and name not in PERSONAL_COMPONENTS]
     positive = (personal + context)[:3] if personal else []
@@ -525,6 +570,7 @@ def score_candidates(
                                        peak=negative_peak) if negatives else {"score": 0.0}
         support, supporting = seed_support(candidate, liked_by_title, peak)
         link = best_specific(candidate, positives, idf) if positives else {"score": 0.0, "title": None}
+        continuation, continued = continuation_link(candidate, liked_by_title, peak)
         components = {
             "taste_similarity": candidate_affinity(candidate, taste),
             "liked_title_similarity": liked_hit["score"],
@@ -532,7 +578,10 @@ def score_candidates(
             "recent_interest": recency_affinity(candidate, taste),
             "keyword_affinity": keyword_affinity(candidate, taste, idf),
             "people_affinity": people_affinity(candidate, taste),
-            "franchise_affinity": franchise_affinity(candidate, taste),
+            # A coming season or sequel of a liked title is that title's own
+            # franchise (continuation_link); 0 for every other candidate.
+            "franchise_affinity": max(franchise_affinity(candidate, taste), continuation)
+            if continuation else franchise_affinity(candidate, taste),
             "media_type_fit": media_type_affinity(candidate, taste),
             "language_fit": language_fit(candidate, taste),
             "era_fit": era_fit(candidate, taste),
@@ -555,8 +604,11 @@ def score_candidates(
         row["score_components"] = {name: round(value, 4) for name, value in components.items()}
         row["score_contributions"] = {name: round(value, 4) for name, value in contributions.items()}
         row["personal_score"] = round(personal, 4)
-        row["specific_score"] = specific_evidence(candidate, taste, link, support, components)
-        if link.get("title"):
+        row["specific_score"] = max(specific_evidence(candidate, taste, link, support, components), continuation)
+        if continued is not None and continuation >= float(link.get("score") or 0.0):
+            row["specific_link"] = continued.get("title")
+            row["continuation_link"] = continued.get("title")
+        elif link.get("title"):
             row["specific_link"] = link["title"]
         row["deterministic_score"] = round(total, 4)
         row["rank_score"] = total
@@ -570,6 +622,7 @@ def score_candidates(
             components, weights, candidate, liked_hit, taste, intent,
             liked_row=liked_row, seeds=supporting, negative_hit=negative_hit,
             link_row=liked_by_title.get(str(link.get("title") or "").casefold()),
+            continued=continued,
         )
         # The evidence-based reason always wins. A provider's generic blurb
         # ("Suggested from AniList titles on your list") told the user nothing

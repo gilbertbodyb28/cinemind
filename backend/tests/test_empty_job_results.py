@@ -47,7 +47,7 @@ def test_empty_run_names_the_filter_that_ate_everything():
     }
     rows = empty_result_warnings({"candidate_sources": ["seed_expand"]}, result, [{"title": "x"}])
     assert [row["code"] for row in rows] == ["no_picks"]
-    assert "9 fell on rejected_year" in rows[0]["detail"]
+    assert "9 outside the year window" in rows[0]["detail"]
     assert "year window" in rows[0]["detail"]
 
 

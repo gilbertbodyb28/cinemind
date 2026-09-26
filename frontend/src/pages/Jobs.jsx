@@ -253,16 +253,35 @@ export default function Jobs() {
           // which is the usual reason that tab looks empty after a run.
           const picks = r.data.accepted?.length ?? r.data.run?.accepted_count ?? 0;
           const mode = r.data.run?.action_mode || job.action_mode || "require_approval";
-          const where = mode === "require_approval"
-            ? `${picks} sent to Requests`
-            : mode === "auto_request"
-              ? `${picks} sent to MediaManager`
-              : `${picks} picks — this job is set to Recommendations only, so nothing lands in Requests`;
+          // What actually reached Requests: picks held back by a full queue share
+          // used to be counted as "sent".
+          const outcome = r.data.requests || r.data.run?.requests;
+          let where;
+          if (mode === "require_approval" && outcome) {
+            where = `${outcome.queued || 0} new in Requests`;
+            if (outcome.refreshed) where += ` · ${outcome.refreshed} already waiting`;
+            if (outcome.held_back) where += ` · ${outcome.held_back} wait for room (${outcome.waiting} waiting, limit ${outcome.limit})`;
+          } else if (mode === "auto_request" && outcome) {
+            where = `${outcome.sent || 0} sent to MediaManager`;
+            if (outcome.queued) where += ` · ${outcome.queued} new in Requests`;
+          } else {
+            where = mode === "require_approval"
+              ? `${picks} sent to Requests`
+              : mode === "auto_request"
+                ? `${picks} sent to MediaManager`
+                : `${picks} picks — this job is set to Recommendations only, so nothing lands in Requests`;
+          }
+          const notices = (r.data.notices || []).map((row) => `${row.source} · ${row.code}`).join(", ");
           if (r.data.status === "completed_with_warnings") {
             // Name the warnings in the toast; the full list lives in Runtime logs.
             const codes = (r.data.warnings || []).map((row) => `${row.source} · ${row.code}`).join(", ");
             toast.warning(`Finished with warnings · ${where}`, {
               description: codes ? `${codes} — open Runtime logs for the details` : "Open Runtime logs for the details",
+              action: { label: "Logs", onClick: () => navigate("/logs") },
+            });
+          } else if (notices) {
+            toast.success(`Job finished · ${where}`, {
+              description: `${notices} — details in Runtime logs`,
               action: { label: "Logs", onClick: () => navigate("/logs") },
             });
           } else toast.success(`Job finished · ${where}`);
@@ -486,10 +505,13 @@ export default function Jobs() {
               </div>
             ))}
           </div>
-          {!!preview.warnings?.length && (
+          {!!(preview.warnings?.length || preview.notices?.length) && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {preview.warnings.map((row) => (
+              {(preview.warnings || []).map((row) => (
                 <span key={`${row.source}-${row.code}`} className="chip chip-amber">{row.source} · {row.code}</span>
+              ))}
+              {(preview.notices || []).map((row) => (
+                <span key={`notice-${row.source}-${row.code}`} className="chip" title={row.detail}>{row.source} · {row.code}</span>
               ))}
             </div>
           )}
@@ -528,10 +550,13 @@ export default function Jobs() {
                     ))}
                   </div>
                 )}
-                {!!run.warnings?.length && (
+                {!!(run.warnings?.length || run.notices?.length) && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {run.warnings.map((row) => (
+                    {(run.warnings || []).map((row) => (
                       <span key={`${run.id}-${row.source}-${row.code}`} className="chip chip-amber">{row.source} · {row.code}</span>
+                    ))}
+                    {(run.notices || []).map((row) => (
+                      <span key={`${run.id}-notice-${row.source}-${row.code}`} className="chip">{row.source} · {row.code}</span>
                     ))}
                   </div>
                 )}
