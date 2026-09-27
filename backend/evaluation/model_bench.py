@@ -425,7 +425,7 @@ def evaluate_model(
     # Mirror production: providers/ollama.py sends exactly these.
     options = {
         "temperature": 0, "top_p": 1, "top_k": 1, "seed": 11,
-        "repeat_penalty": 1.0, "num_ctx": 8192, "num_predict": 1024,
+        "repeat_penalty": 1.0, "num_ctx": 32768, "num_predict": 1024,
         **(options or {}),
     }
     taste_prompt = taste_prompt or compact_taste_prompt

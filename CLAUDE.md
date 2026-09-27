@@ -327,7 +327,7 @@ Labels are personal Trakt/AniList ratings ≥ 8 or explicit likes, never
   Not deployed yet (`HANDOFF.md` §41).
 - Rerank pool: 12 candidates, short opaque handles (`r01`…), JSON-schema
   constrained. Long slug IDs made the model give up after the first one.
-- Inference: greedy, fixed seed, `num_ctx 8192`. Ranking wants the same answer
+- Inference: greedy, fixed seed, `num_ctx 32768`. Ranking wants the same answer
   twice.
 - The LLM re-ranks validated catalogue candidates. It is never the title
   database — current and upcoming titles come from TMDb and AniList.

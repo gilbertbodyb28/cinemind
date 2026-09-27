@@ -33,7 +33,7 @@ async def call_ollama(
             "top_k": 1,
             "seed": 11,
             "repeat_penalty": 1.0,
-            "num_ctx": 8192,
+            "num_ctx": 32768,
             "num_predict": 1024,
             **(options or {}),
         },
