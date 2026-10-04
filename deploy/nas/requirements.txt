@@ -2,7 +2,7 @@
 # pinned to the versions the Mac runtime runs. The repo's backend/requirements.txt
 # is the old Emergent environment and is not needed to run CineMind.
 fastapi==0.110.1
-starlette==0.37.2
+starlette==1.7.0
 uvicorn==0.25.0
 pydantic==2.13.5
 httpx==0.28.1
