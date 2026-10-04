@@ -16,7 +16,7 @@
     "web-vitals": "4.2.4"
   },
   "devDependencies": {
-    "autoprefixer": "10.4.20",
+    "autoprefixer": "10.6.1",
     "postcss": "8.4.49",
     "postcss-flexbugs-fixes": "5.0.2",
     "postcss-loader": "6.2.1",
