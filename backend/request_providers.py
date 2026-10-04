@@ -23,7 +23,8 @@ QUEUE_STATUSES = {"pending_approval", "pending", "requested", "request_failed"}
 PENDING_STATUSES = {"pending_approval", "pending", "requested"}
 AUTOMATED_STATUSES = {"pending_approval", "request_failed"}
 #: Refreshed when a job suggests a title that is already waiting in the queue.
-SUGGESTION_FIELDS = ("match_score", "recommendation_id")
+#: weak_match: the suggestion filled a job's results from below the taste floor.
+SUGGESTION_FIELDS = ("match_score", "recommendation_id", "weak_match")
 
 
 def _scope(row: Dict[str, Any]) -> Optional[str]:
@@ -254,6 +255,8 @@ class LocalRequestProvider:
                 pass
         if item.get("external_request_id"):
             doc["external_request_id"] = item["external_request_id"]
+        if item.get("weak_match") is not None:
+            doc["weak_match"] = bool(item["weak_match"])
         # What the title *is*, so the already-requested check matches it again:
         # an anime film stored as plain "anime" looked like a series, was never
         # recognised as queued, and came back in every run.

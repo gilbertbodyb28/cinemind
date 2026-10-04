@@ -146,6 +146,41 @@ async def enrich_history_posters(
         await asyncio.gather(*[one(hc, item) for item in targets])
 
 
+#: Poster lookups one persist runs at the same time. A saved job persists up to
+#: 1,500 results a run (jobs.engine.MAX_FINAL_LIMIT), and every title from Trakt's
+#: lists arrives without a poster: all of them at once was a burst TMDb answers 429.
+POSTER_CONCURRENCY = 8
+#: A title's poster by its TMDb id is kept this long (provider_cache).
+POSTER_CACHE_DAYS = 14
+
+
+async def _poster_by_id(hc: httpx.AsyncClient, tmdb_id: Any, kind: str, api_key: str) -> Optional[Dict[str, Any]]:
+    """Poster and backdrop of the title the row already names, cached.
+
+    A row that carries its TMDb id (Trakt, AniList, Simkl rows do) is looked up
+    by that id: the title search picked whatever TMDb ranked first for the name
+    and wrote that title's id over the row's own.
+    """
+    from datetime import datetime, timedelta, timezone
+    from database import db
+
+    endpoint = "tv" if str(kind or "").casefold() in {"show", "tv", "series", "anime"} else "movie"
+    cache_key = "tmdb-poster:%s:%s" % (endpoint, tmdb_id)
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": cache_key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), dict):
+        return cached["payload"] or None
+    meta = await tmdb_details(hc, tmdb_id, endpoint, api_key)
+    if meta is not None:
+        await db.provider_cache.update_one(
+            {"key": cache_key},
+            {"$set": {"key": cache_key, "payload": meta, "updated_at": now.isoformat(),
+                      "expires_at": (now + timedelta(days=POSTER_CACHE_DAYS)).isoformat()}},
+            upsert=True,
+        )
+    return meta
+
+
 async def enrich_with_tmdb(
     recs: List[Dict[str, Any]],
     api_key: Optional[str] = None,
@@ -161,31 +196,69 @@ async def enrich_with_tmdb(
     ]
     if not targets:
         return recs
+    gate = asyncio.Semaphore(POSTER_CONCURRENCY)
+
+    async def one(hc: httpx.AsyncClient, rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        async with gate:
+            if rec.get("tmdb_id") not in (None, "", 0):
+                # Its own entry, poster or not: a name search could hand it another title's id.
+                return await _poster_by_id(hc, rec["tmdb_id"], tmdb_kind(rec), key)
+            return await tmdb_lookup(hc, rec["title"], rec.get("year"), tmdb_kind(rec), key)
+
     async with httpx.AsyncClient(timeout=10) as hc:
         results = []
         if key:
-            results = await asyncio.gather(
-                *[tmdb_lookup(hc, rec["title"], rec.get("year"), tmdb_kind(rec), key) for rec in targets]
-            )
+            results = await asyncio.gather(*[one(hc, rec) for rec in targets])
         else:
             results = [None] * len(targets)
     for rec, meta in zip(targets, results):
         if meta:
             rec.update({k: v for k, v in meta.items() if v})
-        if (not rec.get("poster") or rec.get("poster") == PLACEHOLDER_POSTER) and tvdb_api_key:
-            from .tvdb import tvdb_poster_lookup
+    still = [rec for rec in targets if not rec.get("poster") or rec.get("poster") == PLACEHOLDER_POSTER]
+    if still and tvdb_api_key:
+        # TVDb for what TMDb has no poster for - most titles that are not out yet.
+        # One at a time and uncached this took a quarter of a second per title,
+        # minutes for a run of 1,500 results; now a few at a time, and remembered.
+        async def fallback(rec: Dict[str, Any]) -> None:
+            async with gate:
+                found = await _tvdb_poster_cached(rec, tvdb_api_key)
+            if found and found.get("poster"):
+                rec["poster"] = found["poster"]
+                if found.get("tvdb_id"):
+                    rec["tvdb_id"] = found["tvdb_id"]
 
-            fallback = await tvdb_poster_lookup(
-                rec.get("title") or "",
-                rec.get("year"),
-                rec.get("type") or rec.get("media_type") or "movie",
-                tvdb_api_key,
-            )
-            if fallback and fallback.get("poster"):
-                rec["poster"] = fallback["poster"]
-                if fallback.get("tvdb_id"):
-                    rec["tvdb_id"] = fallback["tvdb_id"]
+        await asyncio.gather(*(fallback(rec) for rec in still))
     return recs
+
+
+#: How long a TVDb poster answer is kept: a found poster, and "none yet" (which
+#: changes as a title comes closer to its premiere).
+TVDB_POSTER_DAYS = 30
+TVDB_NO_POSTER_DAYS = 3
+
+
+async def _tvdb_poster_cached(rec: Dict[str, Any], tvdb_api_key: str) -> Optional[Dict[str, Any]]:
+    from datetime import datetime, timedelta, timezone
+    from database import db
+    from recommendation.media_identity import title_key
+
+    from .tvdb import tvdb_poster_lookup
+
+    kind = rec.get("type") or rec.get("media_type") or "movie"
+    cache_key = "tvdb-poster:%s:%s:%s" % (kind, title_key(rec.get("title")), rec.get("year") or "")
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": cache_key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), dict):
+        return cached["payload"] or None
+    found = await tvdb_poster_lookup(rec.get("title") or "", rec.get("year"), kind, tvdb_api_key)
+    days = TVDB_POSTER_DAYS if found and found.get("poster") else TVDB_NO_POSTER_DAYS
+    await db.provider_cache.update_one(
+        {"key": cache_key},
+        {"$set": {"key": cache_key, "payload": found or {}, "updated_at": now.isoformat(),
+                  "expires_at": (now + timedelta(days=days)).isoformat()}},
+        upsert=True,
+    )
+    return found
 
 
 TMDB_MOVIE_GENRES = {
@@ -367,6 +440,29 @@ def _normalize_tmdb_result(row: Dict[str, Any], media_type: str, source: str) ->
     }
 
 
+#: How often a request TMDb answered 429 (too many requests) is asked again, and
+#: the longest wait in between. A job that gathers 30,000 candidates asks TMDb
+#: for well over a thousand pages on its first run; a rate-limited page used to
+#: come back empty and end its lane there.
+TMDB_RATE_LIMIT_RETRIES = 3
+TMDB_RATE_LIMIT_WAIT = 10.0
+
+
+async def _tmdb_get(path: str, params: Dict[str, Any]) -> Optional[httpx.Response]:
+    response = None
+    for attempt in range(TMDB_RATE_LIMIT_RETRIES + 1):
+        async with httpx.AsyncClient(timeout=8) as client:
+            response = await client.get(f"https://api.themoviedb.org/3/{path}", params=params)
+        if response.status_code != 429 or attempt == TMDB_RATE_LIMIT_RETRIES:
+            return response
+        try:
+            wait = float(response.headers.get("Retry-After") or 1.0)
+        except ValueError:
+            wait = 1.0
+        await asyncio.sleep(min(TMDB_RATE_LIMIT_WAIT, max(0.5, wait)))
+    return response
+
+
 async def _tmdb_page(
     path: str,
     params: Dict[str, Any],
@@ -391,9 +487,8 @@ async def _tmdb_page(
         body = cached["payload"]
         return body.get("results") or [], int(body.get("total_pages") or 0)
     try:
-        async with httpx.AsyncClient(timeout=8) as client:
-            response = await client.get(f"https://api.themoviedb.org/3/{path}", params={"api_key": key, **params})
-        if response.status_code != 200:
+        response = await _tmdb_get(path, {"api_key": key, **params})
+        if response is None or response.status_code != 200:
             return [], 0
         body = response.json() or {}
         payload = {"results": body.get("results") or [], "total_pages": int(body.get("total_pages") or 0)}
@@ -428,9 +523,8 @@ async def _tmdb_list(path: str, params: Dict[str, Any], api_key: Optional[str] =
     if cached and isinstance(cached.get("payload"), list):
         return cached["payload"]
     try:
-        async with httpx.AsyncClient(timeout=8) as client:
-            response = await client.get(f"https://api.themoviedb.org/3/{path}", params={"api_key": key, **params})
-        if response.status_code != 200:
+        response = await _tmdb_get(path, {"api_key": key, **params})
+        if response is None or response.status_code != 200:
             return []
         payload = response.json().get("results") or []
         await db.provider_cache.update_one(
@@ -463,6 +557,43 @@ async def _keyword_ids(names: Optional[List[str]], api_key: Optional[str] = None
             if row.get("id") and str(row["id"]) not in ids:
                 ids.append(str(row["id"]))
     return "|".join(ids)
+
+
+#: TMDb keyword ids behind "Gay romance" (filter_engine.GAY_ROMANCE), looked up
+#: 2026-09-29 with titles per keyword (films / series): lgbt 7,123 / 978, gay
+#: theme 4,916 / 318, queer 1,081 / 108, lesbian 808 / 96, male homosexuality
+#: 536 / 29, transgender 460 / 42, coming out 359 / 38, bisexuality 226 / 31 ...
+LGBTQ_KEYWORD_IDS = (
+    158718, 258533, 250606, 264386, 10180, 290527, 1862, 3183, 329968, 275157, 363345, 15136, 286187,
+    346769, 380747, 378259, 379747, 377925, 265777, 9833, 271167, 324058, 315382, 214564,
+)
+#: ... and the same-sex romance keywords: boys' love (bl) 777 / 1,525, gay
+#: romance 236 / 402, lesbian romance 33 / 43, girls' love (gl), lgbt romance ...
+SAME_SEX_ROMANCE_KEYWORD_IDS = (289844, 240305, 319872, 280003, 353629, 351185, 365317, 384569, 383699, 346492, 338720)
+
+
+def theme_lanes(include_genres: Optional[List[str]], endpoint: str) -> List[Dict[str, Any]]:
+    """Discover lanes for a job genre TMDb has no genre id for (filter_engine.GAY_ROMANCE).
+
+    TMDb reads a comma in with_keywords as AND and a pipe as OR, never both in
+    one query ("lgbt|gay theme,romance" answers what "lgbt,romance" does), so
+    "any LGBTQ keyword and a romance" is asked as a Romance-genre lane for films
+    and a lane of same-sex romance keywords. Series have no Romance genre on
+    TMDb: they are asked for every LGBTQ keyword. The filter then decides on
+    each title's own keywords (filter_engine.is_gay_romance).
+    """
+    from recommendation.filter_engine import GAY_ROMANCE, canonical_genres
+
+    if GAY_ROMANCE not in canonical_genres(include_genres or []):
+        return []
+    lgbtq = "|".join(str(item) for item in LGBTQ_KEYWORD_IDS)
+    romance = "|".join(str(item) for item in SAME_SEX_ROMANCE_KEYWORD_IDS)
+    if endpoint == "movie":
+        return [
+            {"with_keywords": lgbtq, "with_genres": str(TMDB_MOVIE_GENRES["romance"])},
+            {"with_keywords": romance, "with_genres": None},
+        ]
+    return [{"with_keywords": romance + "|" + lgbtq, "with_genres": None}]
 
 
 #: TMDb refuses page numbers above this.
@@ -527,6 +658,34 @@ def _window_is_upcoming(filters: Dict[str, Any]) -> bool:
     if not start:
         return False
     return str(start)[:10] > today.date().isoformat()
+
+
+def rating_windows(filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The discover filters a lane asks with, split where a minimum rating stops applying.
+
+    A job's minimum rating is for titles that are out (filter_engine.
+    not_released_yet). TMDb gives a title that is not out a vote_average of 0.0,
+    so a query with vote_average.gte=8 never returns one: a window reaching past
+    today is asked in two parts - what is out, with the rating floor, and what
+    is still to come, with neither a rating nor a vote floor. A lane of coming
+    episodes (an upcoming job's new seasons) is all still to come.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    if filters.get("min_rating") in (None, "") or _window_is_upcoming(filters):
+        return [filters]
+    if filters.get("air_date_from"):
+        return [{**filters, "min_rating": None}]
+    today = datetime.now(timezone.utc).date()
+    end = str(filters.get("max_release_date") or "")[:10] or (
+        f"{int(filters['max_year'])}-12-31" if filters.get("max_year") else None
+    )
+    if end and end <= today.isoformat():
+        return [filters]
+    released = {**filters, "max_release_date": today.isoformat()}
+    coming = {**filters, "min_release_date": (today + timedelta(days=1)).isoformat(),
+              "min_rating": None, "min_vote_count": None, "discover_vote_floor": 0}
+    return [released, coming]
 
 
 #: Filters that place a discover query in time; an upcoming lane sets its own.
@@ -614,10 +773,54 @@ def default_vote_floor(filters: Dict[str, Any]) -> Optional[int]:
     return 50
 
 
-def discover_page_span(job: Dict[str, Any]) -> int:
-    """How many pages one run walks — 20 rows per page."""
+#: The most candidates one run of a job gathers (jobs.engine.MAX_CANDIDATE_LIMIT).
+MAX_CANDIDATE_BUDGET = 30000
+#: Pages of one discover lane fetched at the same time.
+DISCOVER_PAGE_CONCURRENCY = 6
+#: From this budget on, a job reads more than the default lanes give: more genre
+#: pairs, more pages of its taste lanes, every liked title as a "more like this"
+#: seed. Below it every lane asks exactly what it asked before 2026-09-27.
+LARGE_BUDGET = 2000
+#: The most "more like this" seeds one run asks about (taste_engine keeps 240
+#: lane seeds).
+MAX_SEEDS_PER_RUN = 240
+
+
+def candidate_budget(job: Dict[str, Any]) -> int:
+    """How many candidates this job's run may gather: its candidate limit, at most 30,000."""
     limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
-    return min(10, max(1, (limit + 19) // 20))
+    return max(1, min(limit, MAX_CANDIDATE_BUDGET))
+
+
+def discover_page_span(job: Dict[str, Any]) -> int:
+    """How many pages one run walks — 20 rows per page.
+
+    Until 2026-09-27 at most 10 pages (200 titles) per lane, whatever the job's
+    candidate limit: the three jobs at 650 and "Up" at 4,000 all gathered 1,000 -
+    2,300 candidates a run. Gilbert asked for 30,000; a lane now reads as many
+    pages as its share of the budget needs, up to TMDb's own ceiling of 500.
+    """
+    return min(TMDB_MAX_PAGE, max(1, (candidate_budget(job) + 19) // 20))
+
+
+def anime_lane_budget(budget: int, per: int) -> int:
+    """Candidates for one anime or donghua discover lane (60 before large budgets)."""
+    return min(per, max(60, budget // 8))
+
+
+def taste_lane_depth(budget: int) -> Tuple[int, int, int]:
+    """(genre pairs, pages per pair, keyword pages) of the taste lanes for a budget."""
+    if budget < LARGE_BUDGET:
+        return 4, 1, 2
+    return 12, min(10, max(2, budget // 3000)), min(20, max(4, budget // 1500))
+
+
+def seeds_per_run(job: Optional[Dict[str, Any]]) -> int:
+    """"More like this" seeds one run asks TMDb about."""
+    budget = candidate_budget(job or {})
+    if budget < LARGE_BUDGET:
+        return SEEDS_PER_RUN
+    return max(SEEDS_PER_RUN, min(MAX_SEEDS_PER_RUN, budget // 100))
 
 
 async def tmdb_discover(
@@ -628,6 +831,17 @@ async def tmdb_discover(
     taste: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     filters = job.get("filters") or {}
+    windows = rating_windows(filters)
+    if len(windows) > 1:
+        # What is out gets half the lane, what is still to come the rest.
+        share = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
+        released = await tmdb_discover({**job, "filters": windows[0], "candidate_limit": max(20, share // 2),
+                                        "final_recommendation_limit": 1}, media_type, api_key, start_page, taste)
+        coming = await tmdb_discover({**job, "filters": windows[1], "candidate_limit": max(20, share - len(released)),
+                                      "final_recommendation_limit": 1}, media_type, api_key, start_page, taste)
+        seen = {row.get("tmdb_id") for row in released}
+        return released + [row for row in coming if row.get("tmdb_id") not in seen]
+    filters = windows[0]
     endpoint = "tv" if media_type in {"tv", "show", "anime"} else "movie"
     limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
     # TMDb returns 20 per page; cap pages so a 100-limit job actually asks for ~100 rows.
@@ -707,27 +921,22 @@ async def tmdb_discover(
     collected: List[Dict[str, Any]] = []
     seen_ids = set()
 
+    # The pages the cursor may cycle through: the quality window for a small
+    # job, every page its budget reaches for a large one (discover_page_span).
+    window = min(TMDB_MAX_PAGE, max(TMDB_CURSOR_PAGES, max_pages))
+
     async def _collect(extra_params: Dict[str, Any], cap: Optional[int] = None, tags: Optional[List[str]] = None) -> None:
         nonlocal collected
         ceiling = min(limit, cap) if cap else limit
-        # Learned from the first response. Until then assume TMDb's hard ceiling.
-        last_page = TMDB_MAX_PAGE
-        for step in range(max_pages):
-            page = ((first_page - 1 + step) % max(1, min(last_page, TMDB_CURSOR_PAGES))) + 1
+        if len(collected) >= ceiling:
+            return
+
+        def _params(page: int) -> Dict[str, Any]:
             params = {**base, **extra_params, "page": page}
-            params = {key: value for key, value in params.items() if value is not None}
-            rows, total_pages = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)
-            if total_pages:
-                last_page = total_pages
-            if not rows and step == 0 and total_pages and page > total_pages:
-                # The stored cursor had run past the end of this query. Wrap and retry
-                # once, so a job can never be stranded on a page that does not exist.
-                page = ((first_page - 1) % max(1, min(total_pages, TMDB_CURSOR_PAGES))) + 1
-                params = {**base, **extra_params, "page": page}
-                params = {key: value for key, value in params.items() if value is not None}
-                rows, _ = await _tmdb_page(f"discover/{endpoint}", params, api_key=api_key)
-            if not rows:
-                break
+            return {key: value for key, value in params.items() if value is not None}
+
+        def _take(rows: List[Dict[str, Any]]) -> bool:
+            """Add one page's rows; True once the lane is full."""
             for row in rows:
                 tid = row.get("id")
                 if tid in seen_ids:
@@ -738,11 +947,42 @@ async def tmdb_discover(
                     normalized["tags"] = sorted({*(normalized.get("tags") or []), *tags})
                 collected.append(normalized)
                 if len(collected) >= ceiling:
+                    return True
+            return False
+
+        # The first page also says how many pages the query really has.
+        page = ((first_page - 1) % window) + 1
+        rows, total_pages = await _tmdb_page(f"discover/{endpoint}", _params(page), api_key=api_key)
+        if not rows and total_pages and page > total_pages:
+            # The stored cursor had run past the end of this query. Wrap and retry
+            # once, so a job can never be stranded on a page that does not exist.
+            page = ((first_page - 1) % max(1, min(total_pages, window))) + 1
+            rows, _ = await _tmdb_page(f"discover/{endpoint}", _params(page), api_key=api_key)
+        if not rows or _take(rows):
+            return
+        span = max(1, min(total_pages or TMDB_MAX_PAGE, window))
+        # The rest of this run's pages, in cursor order and never one twice; a
+        # few at a time, so a 500-page lane takes seconds rather than minutes.
+        pages = [((page - 1 + step) % span) + 1 for step in range(1, min(max_pages, span))]
+        for start in range(0, len(pages), DISCOVER_PAGE_CONCURRENCY):
+            batch = pages[start:start + DISCOVER_PAGE_CONCURRENCY]
+            answers = await asyncio.gather(*(
+                _tmdb_page(f"discover/{endpoint}", _params(number), api_key=api_key) for number in batch
+            ))
+            for rows, _ in answers:
+                # An empty page is the end of the query (or TMDb said no): the lane is done.
+                if not rows or _take(rows):
                     return
 
     keyword_ids = await _keyword_ids(filters.get("keywords"), api_key=api_key)
+    themes = theme_lanes(filters.get("include_genres"), endpoint)
 
     async def _collect_lanes(extra: Dict[str, Any], cap: Optional[int] = None) -> None:
+        # A genre without a TMDb genre id (Gay romance) is its own keyword lane,
+        # with a reserved quota like the job's keywords below.
+        for theme in themes:
+            theme_cap = len(collected) + max(5, limit // 4)
+            await _collect({**extra, **theme}, cap=min(theme_cap, cap) if cap else theme_cap)
         # Keywords widen the job: the keyword lane runs first with a reserved
         # quota so the popular genre lane cannot fill the limit on its own.
         if keyword_ids:
@@ -830,15 +1070,16 @@ def related_seeds(
             continue
         seen.add(tid)
         fitting.append(item)
-    if not intent or len(fitting) <= SEEDS_PER_RUN:
-        return fitting[:limit if not intent else SEEDS_PER_RUN]
+    per_run = seeds_per_run(job)
+    if not intent or len(fitting) <= per_run:
+        return fitting[:limit if not intent else per_run]
     anchors = fitting[:SEED_ANCHORS]
     # Only titles the user demonstrably likes rotate in. The lane list runs 240
     # deep, down to titles watched once, and "more like" one of those is noise.
     rest = [item for item in fitting[SEED_ANCHORS:] if float(item.get("evidence") or 0.0) >= POSITIVE_EVIDENCE]
     if not rest:
         return anchors
-    window = SEEDS_PER_RUN - SEED_ANCHORS
+    window = per_run - SEED_ANCHORS
     offset = ((max(1, int(start_page or 1)) - 1) * window) % len(rest)
     rotated = (rest[offset:] + rest[:offset])[:window]
     return anchors + rotated
@@ -857,15 +1098,28 @@ async def tmdb_related(
         # /similar is metadata-based and noisy; it is asked about the strongest
         # titles only, the rotating seeds go to /recommendations.
         seeds = seeds[:SEED_ANCHORS]
-    out: List[Dict[str, Any]] = []
-    for item in seeds:
+    # A large job also reads TMDb's second page of recommendations for every seed.
+    pages = 2 if kind == "recommendations" and candidate_budget(job or {}) >= LARGE_BUDGET else 1
+    per_seed = RELATED_ROWS_PER_SEED * pages
+
+    async def one(item: Dict[str, Any]) -> List[Dict[str, Any]]:
         endpoint = "tv" if (item.get("type") or item.get("media_type")) in {"show", "tv", "anime"} else "movie"
-        rows = await _tmdb_list(f"{endpoint}/{item['tmdb_id']}/{kind}", {"page": 1}, api_key=api_key)
-        for row in rows[:RELATED_ROWS_PER_SEED]:
+        rows: List[Dict[str, Any]] = []
+        for page in range(1, pages + 1):
+            rows.extend(await _tmdb_list(f"{endpoint}/{item['tmdb_id']}/{kind}", {"page": page}, api_key=api_key))
+        found = []
+        for row in rows[:per_seed]:
             normalized = _normalize_tmdb_result(row, endpoint, f"tmdb_{kind}")
             normalized["source_seed"] = item.get("title")
             normalized["why"] = ""
-            out.append(normalized)
+            found.append(normalized)
+        return found
+
+    out: List[Dict[str, Any]] = []
+    # In seed order, a few seeds at a time: 240 seeds one by one took a minute.
+    for start in range(0, len(seeds), DISCOVER_PAGE_CONCURRENCY):
+        for found in await asyncio.gather(*(one(item) for item in seeds[start:start + DISCOVER_PAGE_CONCURRENCY])):
+            out.extend(found)
     return out
 
 
@@ -905,6 +1159,7 @@ async def taste_keyword_discover(
     start_page: int = 1,
     per_lane: int = 40,
     window: Optional[Dict[str, str]] = None,
+    pages: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Discover built from the themes of the user's own favourites in this lane.
 
@@ -940,10 +1195,11 @@ async def taste_keyword_discover(
         preferred = lane_filters.get("preferred_languages") or []
         if len(preferred) == 1:
             params["with_original_language"] = preferred[0]
+        depth = pages or taste_lane_depth(candidate_budget(job))[2]
         for timing in window_params(endpoint, window):
             timed = {key: value for key, value in {**params, **timing}.items() if value is not None}
-            for step in range(2):
-                page = ((max(1, int(start_page or 1)) - 1 + step) % 10) + 1
+            for step in range(depth):
+                page = ((max(1, int(start_page or 1)) - 1 + step) % max(10, depth)) + 1
                 rows, total = await _tmdb_page(f"discover/{endpoint}", {**timed, "page": page}, api_key=api_key)
                 for row in rows[:per_lane]:
                     normalized = _normalize_tmdb_result(row, endpoint, "taste_keyword_discover")
@@ -960,7 +1216,8 @@ async def taste_seeded_discover(
     api_key: Optional[str] = None,
     per_lane: int = 20,
     window: Optional[Dict[str, str]] = None,
-    pairs_limit: int = 4,
+    pairs_limit: Optional[int] = None,
+    pages: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Discover lanes built from the profile's strongest genre combinations.
 
@@ -970,6 +1227,9 @@ async def taste_seeded_discover(
     from recommendation.filter_engine import ANIMATION_GENRES, canonical_genres
 
     lane_filters = job_intent_lane_filters(job)
+    default_pairs, default_pages, _ = taste_lane_depth(candidate_budget(job))
+    pairs_limit = pairs_limit or default_pairs
+    pages = pages or default_pages
     animated_ok = not lane_filters.get("discover_without_genres") or (
         TMDB_ANIMATION_ID not in lane_filters["discover_without_genres"]
     )
@@ -1017,11 +1277,14 @@ async def taste_seeded_discover(
                 params["with_original_language"] = preferred[0]
             for timing in window_params(endpoint, window):
                 timed = {key: value for key, value in {**params, **timing}.items() if value is not None}
-                rows, _ = await _tmdb_page(f"discover/{endpoint}", timed, api_key=api_key)
-                for row in rows[:per_lane]:
-                    normalized = _normalize_tmdb_result(row, endpoint, "taste_seeded_discover")
-                    normalized["source_seed"] = name
-                    out.append(normalized)
+                for page in range(1, pages + 1):
+                    rows, total = await _tmdb_page(f"discover/{endpoint}", {**timed, "page": page}, api_key=api_key)
+                    for row in rows[:per_lane]:
+                        normalized = _normalize_tmdb_result(row, endpoint, "taste_seeded_discover")
+                        normalized["source_seed"] = name
+                        out.append(normalized)
+                    if not total or page >= total:
+                        break
     return out
 
 
@@ -1083,10 +1346,12 @@ async def fetch_job_candidates(
         return []
     extra: List[Dict[str, Any]] = []
     media_types = job.get("media_types") or ["movie", "tv"]
-    limit = max(int(job.get("candidate_limit") or 40), int(job.get("final_recommendation_limit") or 8))
+    limit = candidate_budget(job)
     filters = job.get("filters") or {}
     by_media = filters.get("by_media_type") if isinstance(filters.get("by_media_type"), dict) else {}
-    discover_job = {**job, "candidate_limit": limit}
+    # Each lane's share of the budget is its candidate_limit; the job's result
+    # limit (up to 1,500) must not raise every lane to that size.
+    discover_job = {**job, "candidate_limit": limit, "final_recommendation_limit": 1}
     if "tmdb_discover" in wanted:
         kinds = []
         if any(item in media_types for item in ("movie", "movies")):
@@ -1145,7 +1410,7 @@ async def fetch_job_candidates(
                 # Kids' anime (TMDb "Kids") stays out unless the job asked for kids.
                 if TMDB_KIDS_TV_ID in (intent_filters.get("discover_without_genres") or []):
                     lane_filters["discover_without_genres"] = [TMDB_KIDS_TV_ID]
-                anime_job = {**discover_job, "candidate_limit": min(per, 60), "filters": lane_filters}
+                anime_job = {**discover_job, "candidate_limit": anime_lane_budget(limit, per), "filters": lane_filters}
                 for filters_now in (upcoming_lanes(lane_filters, "tv", window) if window else [lane_filters]):
                     extra.extend(await tmdb_discover({**anime_job, "filters": filters_now}, "tv",
                                                      api_key=key, start_page=start_page, taste=taste))
@@ -1157,7 +1422,7 @@ async def fetch_job_candidates(
                     continue
                 anime_movie_job = {
                     **anime_job,
-                    "candidate_limit": max(12, min(per // 2, 30)),
+                    "candidate_limit": max(12, min(per // 2, max(30, limit // 20))),
                     "filters": {**lane_filters, "include_genres": ["animation"]},
                 }
                 if window:
@@ -1178,6 +1443,16 @@ async def fetch_job_candidates(
         extra.extend(await tmdb_related(history, "similar", api_key=key, taste=taste, job=job, start_page=start_page))
     if "tmdb_recommendations" in wanted or "tmdb_discover" in wanted:
         extra.extend(await tmdb_related(history, "recommendations", api_key=key, taste=taste, job=job, start_page=start_page))
+    if taste and candidate_budget(job) >= LARGE_BUDGET:
+        # What the viewer's own creators and cast made or have coming (providers.people).
+        from providers.people import people_candidates
+        from providers.premieres import is_upcoming_job, premiere_window
+
+        people_window = premiere_window(filters) if is_upcoming_job(job) else None
+        try:
+            extra.extend(await people_candidates(job, taste, key, window=people_window))
+        except Exception as exc:  # a lane that fails must not take the others with it
+            logging.warning("people lane failed for %s: %s", job.get("id"), exc.__class__.__name__)
     return extra
 
 

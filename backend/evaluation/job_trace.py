@@ -102,6 +102,7 @@ async def trace_job(
     max_year: Any = "keep",
     llm: bool = False,
     sample: int = 12,
+    filter_overrides: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     from database import db
     from jobs.engine import apply_model_order, gather_job_candidates, rerank_keep, rerank_verified_candidates
@@ -118,9 +119,10 @@ async def trace_job(
         job = await db.jobs.find_one({"user_id": user_id, "id": job_id}, {"_id": 0})
     if not job:
         raise SystemExit(f"job {job_id} not found for {user_id}")
-    from jobs.engine import with_job_intent
+    from jobs.engine import clamp_limits, with_job_intent, with_result_rules
 
-    job = with_job_intent(json.loads(json.dumps(job)))
+    # Exactly the rules a run applies: limits, the job's intent, its minimum of results.
+    job = with_result_rules(with_job_intent(clamp_limits(json.loads(json.dumps(job)))))
     filters = dict(job.get("filters") or {})
     if include is not None:
         filters["include_genres"] = include
@@ -128,6 +130,7 @@ async def trace_job(
         filters["min_year"] = min_year
     if max_year != "keep":
         filters["max_year"] = max_year
+    filters.update(filter_overrides or {})
     job["filters"] = filters
     if media_types:
         job["media_types"] = media_types
@@ -143,16 +146,13 @@ async def trace_job(
         category = audience_category(row)
         bucket[category] = bucket.get(category, 0) + 1
     result = run_pipeline(job, extra_candidates=list(extra), taste=taste, **inputs)
-    from providers.premieres import is_upcoming_job
+    # Exactly as execute_job: a job short of what it looks for widens its search.
+    from jobs.upcoming import search_more
 
-    if is_upcoming_job(job):
-        # Exactly as execute_job: an upcoming job widens its search until it has enough.
-        from jobs.upcoming import search_upcoming
-
-        extra, result = await search_upcoming(
-            user_id, job, taste, inputs, list(extra), result,
-            lambda rows: run_pipeline(job, extra_candidates=list(rows), taste=taste, **inputs), report=search,
-        )
+    extra, result = await search_more(
+        user_id, job, taste, inputs, list(extra), result,
+        lambda rows: run_pipeline(job, extra_candidates=list(rows), taste=taste, **inputs), report=search,
+    )
 
     merged = [row for row in result["ranked"]] + [row for row in result["rejected"]]
     filter_codes = {
@@ -206,7 +206,8 @@ async def trace_job(
         "dedupe_dropped": len(extra) - len(merged),
         "rejected_by_reason_and_lane": by_reason,
         "stages": stages,
-        "upcoming_search": search or None,
+        "search": search or None,
+        "result_counts": result.get("results"),
         "llm": rerank_note,
     }
 
@@ -233,6 +234,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser.add_argument("--media", help="comma list overriding media_types")
     parser.add_argument("--min-year")
     parser.add_argument("--max-year")
+    parser.add_argument("--filters", help='JSON merged into the job\'s filters, e.g. \'{"min_rating": 8}\'')
     parser.add_argument("--llm", action="store_true", help="also run the Ollama re-rank")
     parser.add_argument("--sample", type=int, default=12)
     parser.add_argument("--output")
@@ -249,6 +251,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         include=_csv(args.include), media_types=_csv(args.media),
         min_year=_year(args.min_year), max_year=_year(args.max_year),
         llm=args.llm, sample=args.sample,
+        filter_overrides=json.loads(args.filters) if args.filters else None,
     ))
     text = json.dumps(report, indent=2, ensure_ascii=False)
     if args.output:

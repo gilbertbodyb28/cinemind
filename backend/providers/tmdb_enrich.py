@@ -232,6 +232,8 @@ def apply_enrichment(row: Dict[str, Any], payload: Optional[Dict[str, Any]]) -> 
         row["genres"] = payload["genres"]
     if row.get("year") in (None, "") and payload.get("year"):
         row["year"] = payload["year"]
+    if row.get("release_date") in (None, "") and payload.get("release_date"):
+        row["release_date"] = payload["release_date"]
     return row
 
 

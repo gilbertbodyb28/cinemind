@@ -6,6 +6,7 @@ import WatchlistButton from "@/components/WatchlistButton";
 import { toast } from "sonner";
 import { modelLabel } from "@/lib/models";
 import { POSTER_GRID, SendToLibraryButton, MatchStat, RatingStat } from "@/components/ApproveRejectOverlay";
+import { formatReleaseDate } from "@/lib/utils";
 
 const TYPES = [{ key: "all", label: "All" }, { key: "movie", label: "Movies" }, { key: "show", label: "Shows" }];
 const SORTS = [{ key: "saved", label: "Recently saved" }, { key: "match", label: "Match score" }, { key: "rating", label: "TMDB rating" }];
@@ -135,9 +136,15 @@ export default function Saved() {
               </div>
             </div>
             <div className="mt-3">
-              <h3 className="font-display font-bold text-base line-clamp-1">{r.title}</h3>
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="font-display font-bold text-base line-clamp-1">{r.title}</h3>
+                {r.year != null && <span className="font-display font-bold text-base shrink-0">{r.year}</span>}
+              </div>
+              {formatReleaseDate(r.release_date) && (
+                <div className="font-display font-bold text-base">{formatReleaseDate(r.release_date)}</div>
+              )}
               <div className="text-xs text-slate-500 font-mono mt-0.5 flex items-center gap-1.5">
-                <span>{r.year} · {r.type}</span>
+                <span>{r.type}</span>
                 {r.model && <span className="text-slate-600">· {modelLabel(r.model)}</span>}
               </div>
             </div>

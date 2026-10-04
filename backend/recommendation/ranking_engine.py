@@ -12,6 +12,7 @@ import math
 
 from .media_identity import coerce_int, content_lane
 from .similarity import (
+    SpecificIndex,
     best_similarity,
     best_specific,
     franchise_affinity,
@@ -563,13 +564,14 @@ def score_candidates(
     # Keyword rarity over everything this run compares: a keyword on half the
     # pool ("sequel", "based on novel or book") says nothing about two titles.
     idf = keyword_idf(list(candidates) + positives + negatives)
+    link_index = SpecificIndex(positives) if positives else None
     scored: List[Dict[str, Any]] = []
     for candidate in candidates:
         liked_hit = best_similarity(candidate, positives, idf=idf)
         negative_hit = best_similarity(candidate, negatives, limit=NEGATIVE_REFERENCES or None, idf=idf,
                                        peak=negative_peak) if negatives else {"score": 0.0}
         support, supporting = seed_support(candidate, liked_by_title, peak)
-        link = best_specific(candidate, positives, idf) if positives else {"score": 0.0, "title": None}
+        link = best_specific(candidate, positives, idf, index=link_index) if positives else {"score": 0.0, "title": None}
         continuation, continued = continuation_link(candidate, liked_by_title, peak)
         components = {
             "taste_similarity": candidate_affinity(candidate, taste),

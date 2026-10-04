@@ -45,6 +45,9 @@ def stored_keys(item: Dict[str, Any]) -> Set[tuple]:
 
 #: Request statuses that are the user's own "no" (request_providers.is_user_rejection).
 REJECTED_REQUEST_STATUSES = frozenset({"rejected", "dismissed"})
+#: Request statuses of a title still waiting for the user's decision
+#: (request_providers.PENDING_STATUSES). Every other status is settled.
+WAITING_REQUEST_STATUSES = frozenset({"pending_approval", "pending", "requested"})
 
 
 def is_coming_continuation(candidate: Dict[str, Any], today: Optional[str] = None) -> bool:
@@ -74,6 +77,7 @@ def build_exclusion_context(
     requested: Iterable[Dict[str, Any]],
     blacklist: Iterable[Dict[str, Any]],
     feedback: Optional[Iterable[Dict[str, Any]]] = None,
+    job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     blacklist_rows = list(blacklist)
     recommended_rows = list(recommended)
@@ -109,6 +113,23 @@ def build_exclusion_context(
             key for item in requested_rows if item.get("status") in REJECTED_REQUEST_STATUSES
             for key in stored_keys(item)
         },
+        # Waiting for the user's decision versus settled (approved, rejected,
+        # archived, ...): a saved job counts a waiting title among its results
+        # (apply_exclusions "open_results"), never a settled one.
+        "requested_waiting": {
+            key for item in requested_rows if item.get("status") in WAITING_REQUEST_STATUSES
+            for key in stored_keys(item)
+        },
+        "requested_settled": {
+            key for item in requested_rows if item.get("status") not in WAITING_REQUEST_STATUSES
+            for key in stored_keys(item)
+        },
+        # This job's own open list from earlier runs (not dismissed, not retired).
+        "listed_by_job": {
+            key for item in recommended_rows
+            if job_id and item.get("job_id") == job_id and not item.get("dismissed") and not item.get("retired")
+            for key in identity_keys(item)
+        },
         "blacklist": {key for item in blacklist_rows for key in identity_keys(item)},
         # Older feedback blacklist rows did not store media type. Match their
         # title/year without making all candidate deduplication type-blind.
@@ -139,6 +160,9 @@ def apply_exclusions(
         **(exclusions or {}),
     }
     keys = identity_keys(candidate)
+    # Candidates are shared between the pipeline runs of one job run (the
+    # widening steps run it again on the same rows), so the marks are redone here.
+    candidate.pop("open_result", None)
     legacy_blacklisted = _title_year(candidate) in context.get("blacklist_untyped_titles", set())
     if exclusions.get("blacklisted") and (keys & context["blacklist"] or legacy_blacklisted):
         return False, "rejected_blacklisted"
@@ -157,10 +181,25 @@ def apply_exclusions(
         # Shown in Up Coming, never queued: the library already has the series
         # (jobs.engine.apply_job_action_mode).
         candidate["continuation_in_library"] = True
-    if exclusions.get("already_requested") and keys & context["requested"]:
+    # A saved job's results are the titles that fit it: new ones, and those still
+    # open - waiting in Requests for the user's decision (queued by any job), or
+    # on this job's own list from an earlier run (Gilbert, 2026-09-29: "minst 100
+    # resultat", new + waiting). An open title is scored and selected like a new
+    # one and refreshed in Requests, never queued twice. A settled row (approved,
+    # rejected, archived) still keeps the title out: the decision wins.
+    settled = bool(keys & context.get("requested_settled", set()))
+    open_result = None
+    if exclusions.get("open_results") and not settled:
+        if keys & context.get("requested_waiting", set()):
+            open_result = "waiting"
+        elif keys & context.get("listed_by_job", set()):
+            open_result = "listed"
+    if open_result:
+        candidate["open_result"] = open_result
+    if exclusions.get("already_requested") and keys & context["requested"] and open_result != "waiting":
         if not continuation or keys & context.get("requested_rejected", set()):
             return False, "rejected_already_requested"
-    if exclusions.get("already_recommended") and keys & context["recommended"]:
+    if exclusions.get("already_recommended") and keys & context["recommended"] and not open_result:
         feedback_ok = exclusions.get("allow_if_feedback_changed") and keys & (context.get("feedback_changed") or set())
         if not feedback_ok:
             days = exclusions.get("recommend_again_after_days")

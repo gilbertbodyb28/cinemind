@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field
 from auth import get_current_user
 from database import db
 from jobs.engine import (
+    MAX_CANDIDATE_LIMIT,
+    MAX_FINAL_LIMIT,
     NOTICE_CODES,
     _parse_stamp,
     create_job,
@@ -19,7 +21,9 @@ from jobs.engine import (
     get_job,
     list_jobs,
     list_runs,
+    normalize_run,
     safe_provider_error,
+    summary_text,
     update_job,
 )
 from models import User
@@ -57,8 +61,9 @@ class JobBody(BaseModel):
     filters: Optional[Dict[str, Any]] = None
     exclusions: Optional[Dict[str, Any]] = None
     ai_enabled: Optional[bool] = False
-    candidate_limit: Optional[int] = 40
-    final_recommendation_limit: Optional[int] = 8
+    # New jobs gather up to 30,000 candidates and send at most 1,500 (jobs.engine).
+    candidate_limit: Optional[int] = MAX_CANDIDATE_LIMIT
+    final_recommendation_limit: Optional[int] = MAX_FINAL_LIMIT
     action_mode: Optional[str] = "require_approval"
     schedule: Optional[str] = "every_15m"
     schedule_offset_minutes: Optional[int] = None
@@ -183,7 +188,8 @@ async def operations_overview(user: User = Depends(get_current_user)):
         "recommendations": await db.recommendations.count_documents({"user_id": user.user_id, "dismissed": {"$ne": True}}),
         "active_jobs": sum(1 for job in jobs if job.get("enabled")),
         "next_job": next_jobs[0] if next_jobs else None,
-        "recent_runs": await db.job_runs.find({"user_id": user.user_id}, {"_id": 0, "user_id": 0}).sort("started_at", -1).to_list(5),
+        "recent_runs": [normalize_run(run) for run in await db.job_runs.find(
+            {"user_id": user.user_id}, {"_id": 0, "user_id": 0}).sort("started_at", -1).to_list(5)],
         "pending_approvals": await db.requests.count_documents({"user_id": user.user_id, "status": {"$in": ["pending", "pending_approval", "requested"]}}),
         "recent_feedback": await db.recommendation_feedback.find({"user_id": user.user_id}, {"_id": 0, "user_id": 0}).sort("updated_at", -1).to_list(5),
         "recent_requests": await db.requests.find({"user_id": user.user_id}, {"_id": 0, "user_id": 0}).sort("updated_at", -1).to_list(5),
@@ -269,6 +275,10 @@ async def runtime_logs(
 
     runs = await db.job_runs.find({"user_id": user.user_id}, {"_id": 0}).sort("started_at", -1).to_list(limit)
     for run in runs:
+        # queue_full / no_new_picks / a provider's stand-in list are how the run
+        # went, not rows of their own (jobs.engine.SUMMARY_CODES): they are the
+        # detail of its "run_completed" row, old runs included.
+        run = normalize_run(run)
         where = jobs.get(run.get("job_id"), run.get("job_id") or "job")
         stamp = run.get("finished_at") or run.get("started_at")
         base = {
@@ -297,13 +307,37 @@ async def runtime_logs(
                 "code": code,
                 "detail": warning.get("detail") or WARNING_HINTS.get(code, ""),
             })
+        if run.get("status") != "completed":
+            # A run with warnings or a failure is read from those rows; its summary
+            # lines still show, as "okey" rows of their own.
+            for line in run.get("summary") or []:
+                rows.append({
+                    **base,
+                    "level": "ok",
+                    "source": line.get("source") or "job",
+                    "code": line.get("code") or "summary",
+                    "detail": line.get("detail") or "",
+                })
         if run.get("status") == "completed":
-            detail = f"{run.get('accepted_count') or 0} picks from {run.get('candidate_count') or 0} candidates"
+            counts = run.get("result_counts") or {}
+            if counts:
+                # New and waiting titles that fit the job, at least 100 (Gilbert,
+                # 2026-09-29); the weaker fill-ups are in the summary line below.
+                detail = f"{counts.get('results') or 0} results from {run.get('candidate_count') or 0} candidates"
+            else:
+                detail = f"{run.get('accepted_count') or 0} picks from {run.get('candidate_count') or 0} candidates"
             outcome = run.get("requests") or {}
             if outcome.get("mode") == "require_approval":
                 detail += f"; {outcome.get('queued') or 0} new in Requests"
+                if outcome.get("refreshed"):
+                    detail += f", {outcome['refreshed']} already waiting"
+                if outcome.get("held_back"):
+                    detail += f", {outcome['held_back']} wait for room"
             elif outcome.get("mode") == "auto_request":
                 detail += f"; {outcome.get('sent') or 0} sent to MediaManager"
+            said = summary_text(run)
+            if said:
+                detail += ". " + said
             rows.append({
                 **base,
                 "level": "ok",

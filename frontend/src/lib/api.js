@@ -23,6 +23,13 @@ function resolveBaseUrl() {
 
 const BASE_URL = resolveBaseUrl();
 
+// A 401 from anything but the sign-in calls means the session behind this tab is
+// gone (signed out in another tab, expired, cookie cleared) while the page still
+// shows the signed-in app. AuthContext listens for this and sends the tab back to
+// sign-in; before, every page just came back empty and saved jobs looked deleted
+// (2026-09-26).
+export const SESSION_ENDED_EVENT = "cinemind:session-ended";
+
 export class ApiError extends Error {
   constructor(message, status, data) {
     super(message);
@@ -69,6 +76,9 @@ async function request(path, options = {}) {
     : await response.text();
 
   if (!response.ok) {
+    if (response.status === 401 && !path.startsWith("/auth/") && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(SESSION_ENDED_EVENT));
+    }
     const detail = data?.detail;
     const message =
       typeof detail === "string"

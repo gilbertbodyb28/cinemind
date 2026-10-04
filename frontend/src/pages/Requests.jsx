@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Check, Cpu, Filter, Inbox, Loader2, RefreshCw, Search, Star } from "lucide-react";
+import { Check, Cpu, Filter, Inbox, Library, Loader2, RefreshCw, Search, Star } from "lucide-react";
 import {
   APPROVE_ICON,
   ActionIconButton,
@@ -14,10 +14,12 @@ import {
   sendToMediaManager,
 } from "@/components/ApproveRejectOverlay";
 import ModelPicker from "@/components/ModelPicker";
+import AddToLibraryDialog from "@/components/AddToLibraryDialog";
 import TitleDetailModal from "@/components/TitleDetailModal";
-import ReleaseTypeFilters from "@/components/ReleaseTypeFilters";
+import ReleaseTypeFilters, { BIG_CHIP } from "@/components/ReleaseTypeFilters";
 import { DEFAULT_MODEL } from "@/lib/models";
 import { todayKey, toggleInSet } from "@/lib/mediaFilters";
+import { formatReleaseDate } from "@/lib/utils";
 
 const PENDING = new Set(["pending_approval", "pending", "requested"]);
 /** Approved titles move to their own tab, so the queue only shows what still needs a decision. */
@@ -66,6 +68,7 @@ export default function Requests() {
   const [busyId, setBusyId] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkLibraryOpen, setBulkLibraryOpen] = useState(false);
   const [query, setQuery] = useState("");
   // Tick boxes, so several kinds of media can be kept at once; empty means all.
   const [types, setTypes] = useState(() => new Set());
@@ -269,6 +272,7 @@ export default function Requests() {
   useEffect(() => { workingRef.current = Boolean(busyId) || bulkBusy; }, [busyId, bulkBusy]);
 
   const selectedIds = [...selected];
+  const selectedItems = items.filter((row) => selected.has(row.id));
 
   // Rows that left the queue (rejected or approved) leave the server's counts too.
   const dropCounts = (count) => {
@@ -478,14 +482,15 @@ export default function Requests() {
       </div>
 
       <div data-testid="request-filters" className="mt-6 glass-strong rounded-2xl px-4 py-4 lg:px-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        {/* The larger count sits under the heading on a phone, beside it from sm up as before. */}
+        <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-display text-lg font-bold flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#D8B26A]" /> Filter the queue
+            <h3 className="font-display text-2xl font-bold flex items-center gap-2.5">
+              <Filter className="w-6 h-6 text-[#D8B26A]" /> Filter the queue
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Tick what is out and what is still coming, keep only the media types you want, then search, narrow by genre and year, and choose the order.</p>
+            <p className="text-sm text-slate-500 mt-1">Tick what is out and what is still coming, keep only the media types you want, then search, narrow by genre and year, and choose the order.</p>
           </div>
-          <span data-testid="request-visible-count" className="chip shrink-0">{total} of {viewTotal}</span>
+          <span data-testid="request-visible-count" className={`chip ${BIG_CHIP} shrink-0`}>{total} of {viewTotal}</span>
         </div>
 
         <ReleaseTypeFilters
@@ -616,7 +621,7 @@ export default function Requests() {
             type="button"
             data-testid="request-clear-filters"
             onClick={resetFilters}
-            className="chip hover:chip-rose transition-colors mt-3"
+            className={`chip ${BIG_CHIP} hover:chip-rose transition-colors mt-3`}
           >
             Clear filters
           </button>
@@ -629,7 +634,7 @@ export default function Requests() {
             <h3 className="font-display text-lg font-bold">Bulk approve or reject</h3>
             <p className="text-xs text-slate-500 mt-0.5">Tick posters, then send them to MediaManager or remove them together.</p>
           </div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-6 gap-2">
             <button type="button" data-testid="bulk-select-all-button" onClick={selectAllPending} className={BULK_CTRL}>Select all</button>
             <button type="button" data-testid="bulk-clear-button" onClick={clearSelected} className={BULK_CTRL}>Clear</button>
             <span data-testid="bulk-selected-count" className={BULK_CTRL}>{selected.size} selected</span>
@@ -645,6 +650,16 @@ export default function Requests() {
             </button>
             <button
               type="button"
+              data-testid="bulk-send-to-library-button"
+              disabled={!selected.size || bulkBusy}
+              onClick={() => setBulkLibraryOpen(true)}
+              className={BULK_CTRL}
+            >
+              {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Library className="w-4 h-4 text-[#D8B26A]" />}
+              Send to MediaManager
+            </button>
+            <button
+              type="button"
               data-testid="bulk-reject-button"
               disabled={!selected.size || bulkBusy}
               onClick={bulkReject}
@@ -656,6 +671,17 @@ export default function Requests() {
           </div>
         </div>
       )}
+
+      <AddToLibraryDialog
+        open={bulkLibraryOpen}
+        items={selectedItems}
+        busy={bulkBusy}
+        onCancel={() => setBulkLibraryOpen(false)}
+        onConfirm={async (options) => {
+          setBulkLibraryOpen(false);
+          await bulkApprove(options);
+        }}
+      />
 
       <div className={`mt-10 ${POSTER_GRID}`}>
         {queued.map((item, index) => (
@@ -848,12 +874,21 @@ function RequestPoster({ item, index, busy, selected, onToggleSelect, onOpenDeta
       <div className="mt-3.5">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="font-display font-bold text-xl line-clamp-2 leading-snug">{item.title}</h3>
-          {item.year != null && <span className="font-mono text-xs text-slate-500 shrink-0">{item.year}</span>}
+          {item.year != null && <span className="font-display font-bold text-xl shrink-0">{item.year}</span>}
         </div>
+        {formatReleaseDate(item.release_date) && (
+          <div className="font-display font-bold text-xl">{formatReleaseDate(item.release_date)}</div>
+        )}
         {(item.provider || item.external_request_id) && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {item.provider && <span className="chip chip-cyan">{item.provider}</span>}
             {item.external_request_id && <span className="chip">ext · {item.external_request_id}</span>}
+          </div>
+        )}
+        {item.weak_match && (
+          // Suggested from below the taste floor to fill a job's results (2026-09-29).
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <span className="chip" title="Closest title below your taste floor: no strong link to what you liked yet">weaker match</span>
           </div>
         )}
       </div>

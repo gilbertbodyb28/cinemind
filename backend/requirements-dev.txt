@@ -1,0 +1,6 @@
+# Public development and test dependencies.
+# Runtime dependencies are intentionally kept in deploy/nas/requirements.txt.
+pytest==8.3.5
+pytest-xdist==3.6.1
+flake8==7.1.1
+black==24.10.0

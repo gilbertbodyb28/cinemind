@@ -21,10 +21,14 @@ See `AGENTS.md`.
 
 Rebuilt and measured 2026-09-22. Full root-cause report, before/after metrics
 and the Ollama benchmark live in `HANDOFF.md`. Read it before changing
-anything below. **Open work starts at `HANDOFF.md` omgång 12 (2026-09-26):**
-Upcoming is CineMind's first priority (Gilbert); omgång 10 and 12 are deployed
-on the NAS (06:15 UTC) and verified live, but not committed.
-Omgång 9 state:
+anything below. **Open work starts at `HANDOFF.md` omgång 14 (2026-09-29):**
+every job asks for Action, Adventure, Gay Romance, Sci-Fi, Fantasy, Animation and
+Kids with a minimum rating of 8.0 for released titles (none for coming ones), and
+the Requests / Approved filter chips are 20 px (Gilbert's unlock); deployed
+15:58 and 16:07 UTC, jobs changed 16:08 UTC. Omgång 13 before it: every saved job
+run must send at least 100 results to Requests (Gilbert's rule, see below).
+Upcoming is CineMind's first priority (Gilbert); nothing is committed.
+Omgång 9 state (superseded where omgång 13 says so):
 CineMind runs on the NAS (omgång 7, `scripts/deploy_nas.sh`); everything in the
 workspace is deployed there; all four sources were signed in again 15:58 UTC.
 Gilbert's three jobs keep at most 650 titles waiting each (his choice); the
@@ -90,7 +94,11 @@ Gilbert decides on titles; what to do with that surplus is his decision.
   The scheduler runs due jobs one after another, so a job that takes longer
   than 2 minutes pushes the next one back rather than overlapping it.
 - **A failed `GET /jobs` is not an empty list.** Jobs.jsx retries and says so;
-  it used to show "no jobs" whenever the backend was restarting.
+  it used to show "no jobs" whenever the backend was restarting. **A 401 is a
+  lost session, not an empty list either** (2026-09-26): `lib/api.js` raises
+  `SESSION_ENDED_EVENT`, `AuthContext` re-checks `/auth/me` once and sends the
+  tab to sign-in with a notice and back to the same page. A tab that kept the
+  signed-in layout after its session ended made all three jobs look deleted.
 
 - **The profile must see all of the history** (omgång 4, `HANDOFF.md` §22–28).
   The 2026-09-08 sync kept 10,000 of 13,490 Trakt plays and 97 of 176 ratings.
@@ -132,8 +140,10 @@ Gilbert decides on titles; what to do with that surplus is his decision.
   floor read `personal_score` and `specific_score` (a concrete link: shared
   distinctive themes, creator, cast, franchise, studio, or a recommendation from
   a liked title). Format, language, quality, popularity and job terms order the
-  list but never make a title a match. A job returns fewer picks rather than
-  titles below `pipeline.TASTE_FLOOR`.
+  list but never make a title a match. Below `pipeline.TASTE_FLOOR` a title is
+  never presented as a match: since 2026-09-29 a saved job fills its results
+  with the closest such titles (Gilbert's rule, omgång 13), marked `weak_match`
+  and shown as "weaker match"; Content to Watch and AI Search never take them.
 - **The floor moves with the personal weights.** `pipeline.TASTE_FLOOR` and
   `ranking_engine.MATCH_CENTER` are 2.5 since the 2026-09-25 weights
   (`liked_title_similarity` 5.0, `people_affinity` 1.6,
@@ -171,14 +181,13 @@ Added 2026-09-25, omgång 6 (`HANDOFF.md` §38–46):
   every title up with `request_providers.find_existing_request`: rejected or
   dismissed → not queued, not sent to MediaManager, recommendation hidden;
   approved → not sent again (cloud `bb8e0dc`, adapted).
-- **A job keeps at most its `final_recommendation_limit` titles waiting.** New
-  titles only take the room left; waiting ones are refreshed; nothing queued is
-  touched. 10,180 titles were waiting on 2026-09-25. A full share is a notice,
-  not a warning (`jobs.engine.NOTICE_CODES`, Gilbert 2026-09-25): the run
-  completes, the notice is kept in `run.notices`, and Runtime logs lists it as
-  "okey" — old runs' `queue_full` included. `run.requests` says what actually
-  reached Requests (queued / refreshed / held back / waiting); the toast used to
-  call held-back picks "sent to Requests".
+- **No cap holds a result back from Requests** (Gilbert, 2026-09-29, omgång 13;
+  it was "a job keeps at most its limit waiting" from 2026-09-25, which held
+  every new title of Tv and Upcoming US back). Waiting ones are refreshed,
+  nothing queued is touched, `held_back` is always 0; old runs' `queue_full`
+  still reads as an "okey" notice. `run.requests` says what actually reached
+  Requests (queued / refreshed / waiting); the toast used to call held-back
+  picks "sent to Requests".
 - **A run that finds nothing new is saturated, not broken.** `no_picks` is a
   warning only when nothing got past the job's own settings, and a filter's hint
   ("No candidate fell inside the year window") only when that filter removed
@@ -186,10 +195,10 @@ Added 2026-09-25, omgång 6 (`HANDOFF.md` §38–46):
   whole breakdown: already in Requests, watched, outside the settings, below the
   taste floor. Tv at 16:34 UTC blamed its year window while 436 candidates were
   already in Requests and 18 fell below the floor.
-- **The limit is not what caps a run's picks; the taste floor is.** Measured
-  2026-09-25 (`job_trace`): Tv 1,105 candidates → 70 past settings and
-  exclusions → 2 clear the floor; Upcoming US 6, Upcoming Tv Shows 9. With 650
-  instead of 250 / 200 / 12 each run picks exactly the same titles.
+- **The taste floor decides what is a match; the limit decides how many
+  results.** Measured 2026-09-25 (`job_trace`): Tv 1,105 candidates → 70 past
+  settings and exclusions → 2 clear the floor. Since omgång 13 a saved job's
+  results fill up to its limit (see the omgång 13 rules below).
 - **A dismissal is remembered.** A new run never deletes dismissed
   recommendation rows, and `exclusion_engine` rejects their titles
   (`rejected_dismissed`). Deleting them with the old list let a pick rejected on
@@ -267,6 +276,65 @@ Added 2026-09-25, omgång 10 (`HANDOFF.md` omgång 10) — Upcoming first:
 - **An unreleased title's metadata is fetched again after 7 days**
   (`tmdb_enrich.unreleased_when_fetched`); a released title's never expires.
 
+Added 2026-09-29, omgång 13 (`HANDOFF.md` omgång 13) — Gilbert's rule: **every
+saved job run sends at least 100 results to Requests, preferably well over 1,000**:
+
+- **A result is a title that fits the job, new or still open.** With
+  `open_results` (`jobs.engine.with_result_rules`, every saved job) a title
+  waiting in Requests (queued by any job) or on the job's own list is scored and
+  selected like a new one (`exclusion_engine` `open_result: waiting|listed`) and
+  refreshed, never queued twice. Approved / rejected / archived rows still keep a
+  title out, also when a copy waits. Content to Watch sets `open_results: False,
+  min_results: 0` and keeps its measured top eight.
+- **The head of the list is chosen exactly as before, then the rest follows**
+  (`pipeline._complete_results`): every other title over the floor in the job's
+  tier order, then the closest below the floor up to `result_target` (the job's
+  limit, max 1,500), marked `weak_match`. Off-intent lanes keep their 10 % and
+  pass it only to reach `MIN_RESULTS` (100). Never "fix" the fill-up as a
+  regression; never drop a run below 100 when the job's settings let 100 through.
+- **Every saved job widens before it fills** (`jobs.upcoming.search_more` /
+  `broaden`, stop rule `enough`: 100 matches over the floor, a full list, and 20
+  new picks for upcoming jobs). Stages: `taste_window` → `deeper_pages` →
+  `other_sources` (Trakt trending / popular / anticipated inside the job's
+  genres and years for ordinary jobs, `providers.trakt.fetch_list_titles`) →
+  `full_budget` (the job's lanes with 30,000 candidates). `run.search` records it.
+- **The run says what its results are**: `run.result_counts` (results, matches,
+  weak, new, waiting, listed), summary lines `results_filled` / `results_short`
+  (never warnings), Runtime logs "N results from M candidates; X new in Requests,
+  Y already waiting", Requests shows the chip "weaker match".
+- **A poster is looked up by the row's own TMDb id** (`tmdb._poster_by_id`,
+  cached, 8 at a time); the name search wrote another title's id over the row's.
+
+Added 2026-09-29, omgång 14 (`HANDOFF.md` omgång 14) — Gilbert: every job asks for
+**Action, Adventure, Gay Romance, Sci-Fi, Fantasy, Animation, Kids**, and a
+minimum rating of **8.0 for released titles, 0.0 for coming ones**:
+
+- **Gay romance is one genre: romance with an LGBTQ theme, never ordinary
+  romance** (his answer when asked). No provider has it; `filter_engine.
+  is_gay_romance` reads TMDb keywords and AniList tags: a same-sex romance
+  keyword (`gay romance`, `boys' love (bl)`, `girls' love (gl)`, AniList
+  `Boys' Love` / `Yuri` …) or romance plus **two** LGBTQ keywords. TMDb puts
+  `lgbt` / `gay theme` on straight romcoms with a gay friend, so one is not
+  enough. `candidate_genres` adds `gay romance`; its aliases live in
+  `THEME_GENRE_ALIASES`, never in `GENRE_ALIASES` (the taste profile reads that).
+  TMDb is asked by keyword (`tmdb.theme_lanes`, ids measured 2026-09-29): it has
+  no genre id, no Romance genre for series, and reads `A|B,C` as `A,C`.
+- **Kids takes family films** (`filter_engine.FILM_GENRE_EQUIVALENTS`,
+  `matched_genres`): TMDb has no Kids genre for films and `_genre_ids` already
+  asked for Family. Series keep Kids (TMDb 10762, Trakt `children`; Trakt films
+  `family`, `trakt_genre_filter(names, kind)`).
+- **The minimum rating is for titles that are out** (`filter_engine.
+  not_released_yet`, `candidate_rating`): a verified premiere after today, a
+  future date, a not-out status, a later year, or this year's title nobody has
+  rated is never held to it. AniList rows are held to AniList's own score
+  (`candidate_score`), which is not copied onto the row (the ranking reads rating
+  fields). TMDb discover asks a window reaching past today in two parts
+  (`tmdb.rating_windows`): released with `vote_average.gte`, coming without a
+  rating or vote floor. The form says "Minimum rating (released titles)".
+- **Animation in a job means every animated lane** — anime, donghua and Western
+  animation (`job_intent.animation_lane_languages`). Tv is no longer a
+  live-action-only job since it names Animation and Kids; that was his ask.
+
 Added 2026-09-26, omgång 12 (`HANDOFF.md` omgång 12):
 
 - **An announced month or year is a premiere** (Gilbert, 2026-09-26). AniList gave
@@ -343,5 +411,16 @@ upcoming premieres" chip) and `Requests.jsx` (cloud paging fix) — existing
 Omgång 10: Gilbert unlocked one layout change on 2026-09-25 — Up Coming before
 Content to Watch on Home (top right beside New Trailer, first on a phone, and
 shown when Content to Watch is empty). Only the order changed; `Requests.jsx`
-got the "Upcoming premieres first" sort option. Nothing else is unlocked.
+got the "Upcoming premieres first" sort option. Omgång 13 (2026-09-29) added
+text and existing `chip` / `chip-cyan` only: results counts in `Jobs.jsx` and a
+"weaker match" chip in `Jobs.jsx` and `Requests.jsx`; the lock passed. Omgång 14
+changed one label's text in `Jobs.jsx` ("Minimum rating (released titles)"), and
+**Gilbert unlocked one visual change on 2026-09-29**, with screenshots of the
+Requests filter card: "sedan ska dessa förstoras en hel del … det gäller
+filtrena", "gör det till 20px", "gör siffrorna till 20 px också". The filter chips
+of Requests and Approved (Release, Media type, No date, the "N of M" count, Clear
+filters) are 20 px text and numbers via `ReleaseTypeFilters.BIG_CHIP`
+(`!text-xl …`: `.chip` sits after the utilities in `index.css`, so size
+utilities need `!`), the card headings `text-2xl`; same `.chip` look, no new
+colour, `index.css` untouched; the lock passed. Nothing else is unlocked.
 Run `python3 scripts/check_vision_ui_lock.py` after any frontend change.

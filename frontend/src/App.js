@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { Clapperboard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Layout from "@/components/Layout";
@@ -36,8 +36,11 @@ function LoadingScreen() {
 
 function ProtectedRoutes() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/" replace />;
+  // Sign-in brings the tab back to the page it was on (a lost session used to
+  // strand it on an empty Jobs page).
+  if (!user) return <Navigate to="/" replace state={{ from: `${location.pathname}${location.search}` }} />;
   return (
     <Layout>
       <Outlet />

@@ -499,21 +499,81 @@ async def create_session(request: Request, response: Response):
     }
 
 
+# Google refuses to show its sign-in page inside a frame (403), and the callback
+# has to be loopback, so a CineMind framed by MediaManager (192.168.x:8001 in an
+# iframe) signs in through a popup that ends on localhost. The frame made a secret
+# `handoff` value and passed it to the popup; the callback files the signed-in user
+# under its hash, and the frame redeems it on its own origin for its own session.
+GOOGLE_HANDOFF_TTL = timedelta(minutes=5)
+_HANDOFF_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
+
+
+def _handoff_hash(handoff: Optional[str]) -> Optional[str]:
+    raw = (handoff or "").strip()
+    if not _HANDOFF_RE.match(raw):
+        return None
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+async def _file_google_handoff(stored: Optional[Dict[str, Any]], user_id: Optional[str] = None,
+                               error: Optional[str] = None) -> None:
+    handoff_hash = (stored or {}).get("handoff_hash")
+    if not handoff_hash:
+        return
+    now = datetime.now(timezone.utc)
+    await db.oauth_handoffs.delete_many({"expires_at": {"$lt": now.isoformat()}})
+    await db.oauth_handoffs.replace_one(
+        {"handoff_hash": handoff_hash},
+        {
+            "handoff_hash": handoff_hash,
+            "user_id": user_id,
+            "error": error,
+            "expires_at": (now + GOOGLE_HANDOFF_TTL).isoformat(),
+            "created_at": now.isoformat(),
+        },
+        upsert=True,
+    )
+
+
+def _google_popup_page(ok: bool, reason: Optional[str] = None) -> HTMLResponse:
+    """What the sign-in popup shows last; the frame that opened it does the rest."""
+    if ok:
+        heading, text, cls = "Signed in", "You are signed in to CineMind. This window closes by itself.", "ok"
+    else:
+        heading, text, cls = "Google sign-in", {
+            "google_denied": "Google sign-in was cancelled.",
+            "google_state": "Google sign-in expired. Try again.",
+        }.get(reason or "", "Google sign-in failed."), "err"
+    return HTMLResponse(
+        f"""<!doctype html><html><head><meta charset="utf-8"><title>CineMind</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem;background:#0b0f0c;color:#e7e5e4}}
+p{{line-height:1.5;color:#a8a29e}}.ok{{color:#6ee7b7}}.err{{color:#fb7185}}</style></head><body>
+<h1>{html.escape(heading)}</h1>
+<p class="{cls}">{html.escape(text)}</p>
+<script>setTimeout(function () {{ window.close(); }}, {1200 if ok else 4000});</script>
+</body></html>"""
+    )
+
+
 @api.get("/auth/google/start")
-async def google_start(request: Request, return_to: Optional[str] = None):
+async def google_start(request: Request, return_to: Optional[str] = None, handoff: Optional[str] = None):
     if not google_oauth_configured():
         return JSONResponse(
             {"detail": "Google sign-in is not configured on this server yet."},
             status_code=503,
         )
     state = secrets.token_urlsafe(24)
-    await db.oauth_states.insert_one({
+    state_doc = {
         "state": state,
         "provider": "google",
         "return_to": _safe_frontend_origin(return_to),
         "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat(),
-    })
+    }
+    handoff_hash = _handoff_hash(handoff)
+    if handoff_hash:
+        state_doc["handoff_hash"] = handoff_hash
+    await db.oauth_states.insert_one(state_doc)
     authorization_url = google_authorization_url(state)
     # Browser navigation (not fetch) should bounce straight to Google, never sit on :8001 JSON.
     accept = (request.headers.get("accept") or "").lower()
@@ -529,31 +589,68 @@ async def google_callback(
     error: Optional[str] = None,
 ):
     frontend_base = FRONTEND_URL
+    stored = None
+    if state:
+        stored = await db.oauth_states.find_one_and_delete({"state": state, "provider": "google"})
+        if stored:
+            frontend_base = _safe_frontend_origin(stored.get("return_to"))
+
+    async def fail(reason: str):
+        if stored and stored.get("handoff_hash"):
+            await _file_google_handoff(stored, error=reason)
+            return _google_popup_page(False, reason)
+        return _frontend_auth_redirect(reason, frontend_base)
+
     if error:
-        return _frontend_auth_redirect("google_denied", frontend_base)
-    if not code or not state:
-        return _frontend_auth_redirect("google_state", frontend_base)
-    stored = await db.oauth_states.find_one_and_delete({"state": state, "provider": "google"})
-    if stored:
-        frontend_base = _safe_frontend_origin(stored.get("return_to"))
-    if not stored:
-        return _frontend_auth_redirect("google_state", frontend_base)
+        return await fail("google_denied")
+    if not code or not stored:
+        return await fail("google_state")
     expires_at = stored.get("expires_at")
     if isinstance(expires_at, str):
         expires_at = datetime.fromisoformat(expires_at)
     if expires_at and expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     if expires_at and expires_at < datetime.now(timezone.utc):
-        return _frontend_auth_redirect("google_state", frontend_base)
+        return await fail("google_state")
     try:
         profile = await google_exchange_code(code)
         user_doc = await upsert_google_user(profile)
     except Exception:
         logging.warning("Google sign-in failed", exc_info=True)
-        return _frontend_auth_redirect("google_failed", frontend_base)
-    redirect = RedirectResponse(f"{frontend_base}/dashboard")
+        return await fail("google_failed")
+    if stored.get("handoff_hash"):
+        await _file_google_handoff(stored, user_id=user_doc["user_id"])
+        redirect = _google_popup_page(True)
+    else:
+        redirect = RedirectResponse(f"{frontend_base}/dashboard")
+    # The popup's own origin (localhost) is signed in too, like a direct sign-in.
     await issue_session(user_doc["user_id"], redirect)
     return redirect
+
+
+class GoogleHandoffBody(BaseModel):
+    handoff: str
+
+
+@api.post("/auth/google/handoff")
+async def google_handoff(body: GoogleHandoffBody, response: Response):
+    """Redeem a popup sign-in on the frame's own origin; single use, five minutes."""
+    handoff_hash = _handoff_hash(body.handoff)
+    if not handoff_hash:
+        raise HTTPException(status_code=400, detail="Invalid handoff")
+    now = datetime.now(timezone.utc).isoformat()
+    filed = await db.oauth_handoffs.find_one_and_delete(
+        {"handoff_hash": handoff_hash, "expires_at": {"$gte": now}}
+    )
+    if not filed:
+        return {"status": "pending"}
+    if filed.get("error") or not filed.get("user_id"):
+        return {"status": "error", "error": filed.get("error") or "google_failed"}
+    user_doc = await db.users.find_one({"user_id": filed["user_id"]}, {"_id": 0})
+    if not user_doc:
+        return {"status": "error", "error": "google_failed"}
+    await issue_session(user_doc["user_id"], response)
+    return {"status": "ok", "user": _auth_payload(user_doc)}
 
 
 @api.get("/auth/me", response_model=User)
@@ -1666,6 +1763,10 @@ async def generate_recs(payload: Optional[GenerateBody] = None, user: User = Dep
         # Same reason: the home feed has no job form behind it, so there is no
         # job intent to serve (recommendation.job_intent).
         "job_intent": False,
+        # Eight new picks, not a saved job's results: nothing waiting in
+        # Requests, no minimum (jobs.engine.with_result_rules).
+        "open_results": False,
+        "min_results": 0,
     })
     job["exclusions"] = {
         **job["exclusions"],
@@ -1750,7 +1851,7 @@ def upcoming_request_card(req: Dict[str, Any]) -> Dict[str, Any]:
     request itself (ApproveRejectOverlay reads request_id; an approved one is done)."""
     approved = req.get("status") in {"approved", "available", "completed"}
     card = {key: req.get(key) for key in (
-        "title", "year", "type", "media_type", "format", "poster", "backdrop", "genres", "match_score",
+        "title", "year", "release_date", "type", "media_type", "format", "poster", "backdrop", "genres", "match_score",
         "tmdb_id", "anilist_id", "canonical_media_id", "tmdb_rating", "original_language", "status",
         "premiere_date", "premiere_kind", "premiere_season", "premiere_source", "premiere_precision", "source_job_id",
     )}

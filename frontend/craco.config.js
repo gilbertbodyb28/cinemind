@@ -79,6 +79,12 @@ let webpackConfig = {
       },
     },
   },
+  jest: {
+    configure: {
+      // Same "@/..." alias as webpack below, so tests can import app modules.
+      moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+    },
+  },
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

@@ -1,10 +1,14 @@
 """Ollama generate and stream clients."""
 
 from typing import Any, AsyncGenerator, Dict, Optional
+import asyncio
 import json
 import logging
 
 import httpx
+
+#: Seconds to wait before each new attempt after a refused connection.
+CONNECT_RETRY_PAUSES = (2.0, 5.0)
 
 
 async def call_ollama(
@@ -44,19 +48,33 @@ async def call_ollama(
         # a schema does not have that failure mode and stops the model from
         # narrating its reasoning instead of answering.
         payload["format"] = response_schema
-    try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(f"{url.rstrip('/')}/api/generate", json=payload)
-            if response.status_code == 200:
-                body = response.json()
-                text = (body.get("response") or "").strip()
-                if not text and body.get("thinking"):
-                    # Rare: answer landed in thinking; still try to recover JSON.
-                    text = str(body.get("thinking") or "")
-                return text
-            logging.warning("Ollama responded %s for model %s", response.status_code, model)
-    except Exception as exc:
-        logging.warning("Ollama call failed: %s: %s", exc.__class__.__name__, exc)
+    # The NAS's Ollama refused the connection now and then (2026-09-27: 35 of 76
+    # "Upcoming Tv Shows" runs fell back to the deterministic order on "All
+    # connection attempts failed", while the same call a minute later answered in
+    # 0.1 s). A refused or dropped connection is tried again; a slow answer is not.
+    for attempt, pause in enumerate(CONNECT_RETRY_PAUSES + (None,), start=1):
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                response = await client.post(f"{url.rstrip('/')}/api/generate", json=payload)
+                if response.status_code == 200:
+                    body = response.json()
+                    text = (body.get("response") or "").strip()
+                    if not text and body.get("thinking"):
+                        # Rare: answer landed in thinking; still try to recover JSON.
+                        text = str(body.get("thinking") or "")
+                    return text
+                logging.warning("Ollama responded %s for model %s", response.status_code, model)
+                return None
+        except (httpx.ConnectError, httpx.RemoteProtocolError) as exc:
+            if pause is None:
+                logging.warning("Ollama call failed after %s attempts: %s: %s", attempt, exc.__class__.__name__, exc)
+                return None
+            logging.info("Ollama connection attempt %s failed (%s); trying again in %ss",
+                         attempt, exc.__class__.__name__, pause)
+            await asyncio.sleep(pause)
+        except Exception as exc:
+            logging.warning("Ollama call failed: %s: %s", exc.__class__.__name__, exc)
+            return None
     return None
 
 

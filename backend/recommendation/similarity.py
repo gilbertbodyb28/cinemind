@@ -237,10 +237,49 @@ def specific_link(candidate: Dict[str, Any], liked: Dict[str, Any], idf: Optiona
     return round(min(1.0, max(themes, people, franchise) + 0.5 * company), 4)
 
 
+class SpecificIndex:
+    """The liked titles by everything a concrete link can share (best_specific).
+
+    specific_link is 0 unless two titles share a distinctive theme, a creator,
+    a cast member, a franchise or a studio, so only the liked titles sharing at
+    least one of those need comparing. A 30,000-candidate job compared every
+    candidate with all 400 liked titles; the answer is exactly the same.
+    """
+
+    def __init__(self, titles: Sequence[Dict[str, Any]]):
+        self.titles = list(titles)
+        self.peak = max((abs(float(row.get("score") or 0)) for row in self.titles), default=1.0) or 1.0
+        self.identities = [_identity(row) if SKIP_SELF else None for row in self.titles]
+        self.by_key: Dict[tuple, List[int]] = {}
+        for position, liked in enumerate(self.titles):
+            for key in self._keys(_features(liked)):
+                self.by_key.setdefault(key, []).append(position)
+
+    @staticmethod
+    def _keys(features: Dict[str, Any]) -> Iterable[tuple]:
+        for name in _link_themes(features):
+            yield ("theme", name)
+        for name in features["creators"]:
+            yield ("creator", name)
+        for name in features["cast"]:
+            yield ("cast", name)
+        if features["collection"]:
+            yield ("collection", features["collection"])
+        for name in features["companies"]:
+            yield ("company", name)
+
+    def positions(self, candidate: Dict[str, Any]) -> List[int]:
+        found: set = set()
+        for key in self._keys(_features(candidate)):
+            found.update(self.by_key.get(key, ()))
+        return sorted(found)
+
+
 def best_specific(
     candidate: Dict[str, Any],
     titles: Sequence[Dict[str, Any]],
     idf: Optional[Dict[str, float]] = None,
+    index: Optional[SpecificIndex] = None,
 ) -> Dict[str, Any]:
     """The liked title this candidate is most concretely linked to, over every liked title.
 
@@ -248,12 +287,24 @@ def best_specific(
     compares with: a Supernatural spin-off is concretely linked to Supernatural
     even when 328 unrated episodes leave it outside the top 24. The link is
     discounted by how little evidence stands behind the liked title.
+
+    `index` (a SpecificIndex over the same `titles`) skips the liked titles
+    that share nothing with the candidate; the result is identical.
     """
-    peak = max((abs(float(row.get("score") or 0)) for row in titles), default=1.0) or 1.0
+    if index is not None:
+        peak = index.peak
+        order = index.positions(candidate)
+        identities = index.identities
+        titles = index.titles
+    else:
+        peak = max((abs(float(row.get("score") or 0)) for row in titles), default=1.0) or 1.0
+        order = range(len(titles))
+        identities = None
     itself = _identity(candidate) if SKIP_SELF else None
     best, best_title = 0.0, None
-    for liked in titles:
-        if itself and _identity(liked) == itself:
+    for position in order:
+        liked = titles[position]
+        if itself and (identities[position] if identities is not None else _identity(liked)) == itself:
             continue
         link = specific_link(candidate, liked, idf)
         if link <= best:

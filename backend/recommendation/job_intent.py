@@ -26,7 +26,7 @@ Search and the offline harness do not, so their measured behaviour is unchanged.
 
 from typing import Any, Dict, List, Optional
 
-from .filter_engine import ANIMATION_GENRES, candidate_genres, canonical_genres
+from .filter_engine import ANIMATION_GENRES, candidate_genres, canonical_genres, matched_genres
 from .media_identity import content_lane, normalize_media_type
 
 #: Served first when a job names no language of its own.
@@ -188,7 +188,7 @@ def job_genre_fit(row: Dict[str, Any], intent: Dict[str, Any]) -> float:
     wanted = set(intent.get("include_genres") or [])
     if not wanted:
         return 0.0
-    return round(min(1.0, len(candidate_genres(row) & wanted) / 2.0), 4)
+    return round(min(1.0, len(matched_genres(row, wanted)) / 2.0), 4)
 
 
 def describe_fit(row: Dict[str, Any], intent: Dict[str, Any]) -> str:

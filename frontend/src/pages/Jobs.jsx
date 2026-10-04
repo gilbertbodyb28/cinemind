@@ -23,6 +23,21 @@ const TYPE_PRESETS = {
 
 const SOURCE_OPTIONS = ["seed_expand", "tmdb_discover", "tmdb_similar", "tmdb_recommendations", "trakt", "simkl", "anilist"];
 
+// What one job may ask for (Gilbert, 2026-09-27); the backend saves a larger value as these.
+const MAX_CANDIDATES = 30000;
+const MAX_RESULTS = 1500;
+const limitOf = (value, fallback, ceiling) => Math.min(ceiling, Math.max(1, Number(value) || fallback));
+// A run's summary lines (nothing new, a full share of Requests, a provider's
+// last good list standing in) read as one sentence, never as a warning.
+const summaryText = (rows) => (rows || []).map((row) => row.detail).filter(Boolean).join(" ");
+// A run's results: new titles and ones still waiting in Requests, at least 100,
+// with the weaker fill-ups from below the taste floor counted apart (2026-09-29).
+const resultsText = (counts, picks) => {
+  if (!counts) return `${picks ?? 0} picks`;
+  const weak = counts.weak ? ` (${counts.weak} weaker matches)` : "";
+  return `${counts.results} results${weak}`;
+};
+
 const empty = () => ({
   name: "",
   description: "",
@@ -59,8 +74,8 @@ const empty = () => ({
   allow_if_feedback_changed: false,
   blacklisted: true,
   ai_enabled: false,
-  candidate_limit: 40,
-  final_recommendation_limit: 8,
+  candidate_limit: MAX_CANDIDATES,
+  final_recommendation_limit: MAX_RESULTS,
   action_mode: "require_approval",
   schedule: "every_15m",
 });
@@ -143,8 +158,11 @@ function toPayload(form) {
       blacklisted: form.blacklisted,
     },
     ai_enabled: Boolean(form.ai_enabled),
-    candidate_limit: Math.max(Number(form.candidate_limit) || 40, Number(form.final_recommendation_limit) || 8),
-    final_recommendation_limit: Number(form.final_recommendation_limit) || 8,
+    candidate_limit: Math.max(
+      limitOf(form.candidate_limit, MAX_CANDIDATES, MAX_CANDIDATES),
+      limitOf(form.final_recommendation_limit, MAX_RESULTS, MAX_RESULTS),
+    ),
+    final_recommendation_limit: limitOf(form.final_recommendation_limit, MAX_RESULTS, MAX_RESULTS),
     action_mode: form.action_mode,
     schedule: form.schedule,
     timezone: form.timezone || "UTC",
@@ -172,6 +190,9 @@ export default function Jobs() {
         await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
         return reload(attempt + 1);
       }
+      // Signed out, not missing: AuthContext takes the tab to sign-in, and the
+      // jobs are back as soon as the session is (2026-09-26).
+      if (error?.status === 401) return;
       toast.error(error?.message || "Could not load jobs", {
         description: "Your saved jobs are not deleted — the server did not answer. Reload the page to try again.",
       });
@@ -256,9 +277,10 @@ export default function Jobs() {
           // What actually reached Requests: picks held back by a full queue share
           // used to be counted as "sent".
           const outcome = r.data.requests || r.data.run?.requests;
+          const counts = r.data.result_counts || r.data.run?.result_counts;
           let where;
           if (mode === "require_approval" && outcome) {
-            where = `${outcome.queued || 0} new in Requests`;
+            where = `${resultsText(counts, picks)} · ${outcome.queued || 0} new in Requests`;
             if (outcome.refreshed) where += ` · ${outcome.refreshed} already waiting`;
             if (outcome.held_back) where += ` · ${outcome.held_back} wait for room (${outcome.waiting} waiting, limit ${outcome.limit})`;
           } else if (mode === "auto_request" && outcome) {
@@ -272,6 +294,7 @@ export default function Jobs() {
                 : `${picks} picks — this job is set to Recommendations only, so nothing lands in Requests`;
           }
           const notices = (r.data.notices || []).map((row) => `${row.source} · ${row.code}`).join(", ");
+          const said = summaryText(r.data.summary || r.data.run?.summary);
           if (r.data.status === "completed_with_warnings") {
             // Name the warnings in the toast; the full list lives in Runtime logs.
             const codes = (r.data.warnings || []).map((row) => `${row.source} · ${row.code}`).join(", ");
@@ -284,7 +307,8 @@ export default function Jobs() {
               description: `${notices} — details in Runtime logs`,
               action: { label: "Logs", onClick: () => navigate("/logs") },
             });
-          } else toast.success(`Job finished · ${where}`);
+          } else if (said) toast.success(`Job finished · ${where}`, { description: said });
+          else toast.success(`Job finished · ${where}`);
         }
         await reload();
       } else if (action === "clone") {
@@ -423,7 +447,7 @@ export default function Jobs() {
               <button type="button" data-testid="job-upcoming-only-toggle" onClick={() => set("upcoming_only", !form.upcoming_only)} className={`chip ${form.upcoming_only ? "chip-rose" : ""}`}>Only upcoming premieres</button>
               <span className="text-xs text-slate-500">A verified premiere after today inside the years above, including a new season of an older series.</span>
             </div>
-            <Field label="Minimum rating" value={form.min_rating} onChange={(v) => set("min_rating", v)} placeholder="7.0" />
+            <Field label="Minimum rating (released titles)" value={form.min_rating} onChange={(v) => set("min_rating", v)} placeholder="7.0" />
             <Field label="Minimum vote count" value={form.min_vote_count} onChange={(v) => set("min_vote_count", v)} />
             <Field label="Minimum runtime" value={form.min_runtime} onChange={(v) => set("min_runtime", v)} />
             <Field label="Maximum runtime" value={form.max_runtime} onChange={(v) => set("max_runtime", v)} />
@@ -469,8 +493,8 @@ export default function Jobs() {
               <input data-testid="job-ai-enabled-input" type="checkbox" checked={form.ai_enabled} onChange={(e) => set("ai_enabled", e.target.checked)} />
               <span className="text-sm text-slate-300">Rerank with Ollama Gemma 4 12B · konservativ</span>
             </label>
-            <Field label="Candidate limit" value={form.candidate_limit} onChange={(v) => set("candidate_limit", v)} />
-            <Field label="Final recommendation limit" value={form.final_recommendation_limit} onChange={(v) => set("final_recommendation_limit", v)} />
+            <Field label={`Candidate limit (max ${MAX_CANDIDATES})`} value={form.candidate_limit} onChange={(v) => set("candidate_limit", v)} />
+            <Field label={`Final recommendation limit (max ${MAX_RESULTS})`} value={form.final_recommendation_limit} onChange={(v) => set("final_recommendation_limit", v)} />
           </div>
 
           <div className="mt-8 flex items-center justify-end gap-3">
@@ -515,6 +539,9 @@ export default function Jobs() {
               ))}
             </div>
           )}
+          {!!summaryText(preview.summary || preview.run?.summary) && (
+            <p className="text-xs text-slate-400 mt-4">{summaryText(preview.summary || preview.run?.summary)}</p>
+          )}
           {!!preview.rejected?.length && (
             <>
               <div className="text-xs font-mono uppercase tracking-widest text-slate-500 mt-6 mb-3">Excluded</div>
@@ -540,13 +567,15 @@ export default function Jobs() {
                     <span className={`chip ${run.status === "failed" ? "chip-rose" : run.status?.includes("warning") ? "chip-amber" : "chip-emerald"}`}>{run.status}</span>
                     {run.ai_reranked && <span className="chip chip-rose">AI reranked</span>}
                   </div>
-                  <span className="text-slate-400">{run.accepted_count ?? 0} picks · {run.candidate_count ?? "—"} candidates</span>
+                  <span className="text-slate-400">{resultsText(run.result_counts, run.accepted_count)} · {run.candidate_count ?? "—"} candidates</span>
                   <span className="font-mono text-[11px] text-slate-500">{run.started_at}</span>
                 </div>
                 {!!run.results?.length && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {run.results.slice(0, 12).map((row) => (
-                      <span key={`${run.id}-${row.title || row.id}`} className="chip chip-cyan">{row.title || row.id}</span>
+                      <span key={`${run.id}-${row.title || row.id}`} className={row.weak_match ? "chip" : "chip chip-cyan"}>
+                        {row.title || row.id}{row.weak_match ? " · weaker match" : ""}
+                      </span>
                     ))}
                   </div>
                 )}
@@ -560,6 +589,7 @@ export default function Jobs() {
                     ))}
                   </div>
                 )}
+                {!!summaryText(run.summary) && <p className="text-xs text-slate-400 mt-2">{summaryText(run.summary)}</p>}
                 {run.error && <div className="text-xs text-rose-400 mt-2 font-mono">{run.error}</div>}
               </div>
             ))}

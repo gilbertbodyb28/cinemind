@@ -360,18 +360,24 @@ async def _relations(ids: List[int]) -> Dict[int, Dict[str, Any]]:
                 logging.warning("AniList relations answered %s", response.status_code)
                 break
             for media in (((response.json() or {}).get("data") or {}).get("Page") or {}).get("media") or []:
-                payload = {
-                    "id": media["id"],
-                    "titles": _titles(media),
-                    "edges": [
-                        {"relation": edge.get("relationType"), "node": edge.get("node") or {}}
-                        for edge in ((media.get("relations") or {}).get("edges") or [])
-                        if (edge.get("node") or {}).get("type") == "ANIME"
-                    ],
-                }
+                payload = relations_payload(media)
                 found[int(media["id"])] = payload
                 await _store("anilist-relations:%s" % media["id"], payload, RELATIONS_CACHE_HOURS)
     return found
+
+
+def relations_payload(media: Dict[str, Any]) -> Dict[str, Any]:
+    """What _relations caches for one AniList title (also filled from AniList's
+    announced list, which asks for the same relations: providers.anilist)."""
+    return {
+        "id": media["id"],
+        "titles": _titles(media),
+        "edges": [
+            {"relation": edge.get("relationType"), "node": edge.get("node") or {}}
+            for edge in ((media.get("relations") or {}).get("edges") or [])
+            if (edge.get("node") or {}).get("type") == "ANIME"
+        ],
+    }
 
 
 def _anilist_row(node: Dict[str, Any], premiere: Dict[str, Any], root: Dict[str, Any], relation: str,

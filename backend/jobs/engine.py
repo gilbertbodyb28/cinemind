@@ -17,6 +17,8 @@ from recommendation.ranking_engine import apply_rerank, relevance_cut
 HISTORY_PROVIDERS = {"plex", "trakt", "simkl", "anilist"}
 HISTORY_STALE_AFTER = timedelta(hours=24)
 HISTORY_CAP = 200000
+REQUESTS_CAP = 200000
+RECOMMENDED_CAP = 100000
 
 # Interval jobs share one 15-minute grid. Each job owns a 2-minute slot
 # (0, 2, 4, ... 12) so two jobs never start on top of each other and every
@@ -29,6 +31,39 @@ LEGACY_INTERVAL_SCHEDULES = frozenset({"every_30m"})
 JOB_INTERVAL_MINUTES = 15
 JOB_STAGGER_MINUTES = 2
 JOB_STAGGER_SLOTS = JOB_INTERVAL_MINUTES // JOB_STAGGER_MINUTES
+
+#: What one saved job may ask for (Gilbert, 2026-09-27: "30000 kandidater, max
+#: results den kan skicka 1500"): up to 30,000 candidates gathered per run and at
+#: most 1,500 results - picks per run, which is also how many of its titles a job
+#: keeps waiting in Requests (apply_job_action_mode). New jobs start at both. A
+#: larger value is saved as the maximum; Content to Watch and AI Search keep their
+#: own, much smaller, limits.
+MAX_CANDIDATE_LIMIT = 30000
+MAX_FINAL_LIMIT = 1500
+JOB_LIMIT_DEFAULTS = {"candidate_limit": MAX_CANDIDATE_LIMIT, "final_recommendation_limit": MAX_FINAL_LIMIT}
+#: From this many candidates on a job takes Trakt's whole recommendation feed (100 per kind).
+TRAKT_FULL_FEED_BUDGET = 2000
+#: A run of a large job takes minutes, not seconds; a second run of the same job
+#: (Run now while the scheduled one works) must not start before it is done.
+JOB_LOCK_SECONDS = 1800
+#: Excluded and scored rows a preview answers with (its results come in full).
+PREVIEW_ROWS = 200
+
+
+def clamp_limits(spec: Dict[str, Any]) -> Dict[str, Any]:
+    """The job with its limits inside what CineMind allows (1..MAX_*)."""
+    out = dict(spec)
+    for key, ceiling in (("candidate_limit", MAX_CANDIDATE_LIMIT), ("final_recommendation_limit", MAX_FINAL_LIMIT)):
+        value = out.get(key)
+        if value in (None, ""):
+            continue
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{key} must be a whole number")
+        out[key] = max(1, min(number, ceiling))
+    return out
+
 
 JOB_TYPES = {
     "personalized",
@@ -86,6 +121,19 @@ def with_job_intent(job: Dict[str, Any]) -> Dict[str, Any]:
     Content to Watch sets job_intent False and keeps its measured behaviour.
     """
     return {**job, "job_intent": job.get("job_intent", True)}
+
+
+def with_result_rules(job: Dict[str, Any]) -> Dict[str, Any]:
+    """Saved jobs return at least MIN_RESULTS results, the open ones included.
+
+    Gilbert, 2026-09-29: every run gives at least 100 results - titles that fit
+    the job, new or still waiting in Requests - topped up from below the taste
+    floor when fewer clear it (pipeline.MIN_RESULTS, jobs.upcoming.broaden).
+    Content to Watch sets both off and keeps its measured top eight.
+    """
+    from recommendation.pipeline import MIN_RESULTS
+
+    return {**job, "open_results": job.get("open_results", True), "min_results": job.get("min_results", MIN_RESULTS)}
 
 
 def _required_sources(spec: Dict[str, Any]) -> set:
@@ -287,7 +335,7 @@ def validate_job(spec: Dict[str, Any]) -> None:
 
 
 async def create_job(user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    spec = apply_job_type_defaults({**default_job(), **payload})
+    spec = clamp_limits(apply_job_type_defaults({**default_job(), **JOB_LIMIT_DEFAULTS, **payload}))
     validate_job(spec)
     schedule = normalize_schedule(spec.get("schedule"))
     offset = spec.get("schedule_offset_minutes")
@@ -334,8 +382,13 @@ async def update_job(user_id: str, job_id: str, payload: Dict[str, Any]) -> Opti
     data = {key: value for key, value in payload.items() if key not in {"id", "user_id", "created_at"}}
     if "schedule" in data:
         data["schedule"] = normalize_schedule(data.get("schedule"))
-    merged = apply_job_type_defaults({**current, **data})
+    merged = clamp_limits(apply_job_type_defaults({**current, **data}))
     validate_job(merged)
+    for key in ("candidate_limit", "final_recommendation_limit"):
+        # A value above the maximum is saved as the maximum, also on a job that
+        # held one from before the maximum existed.
+        if merged.get(key) != current.get(key) or key in data:
+            data[key] = merged.get(key)
     if "job_type" in data:
         data["candidate_sources"] = merged["candidate_sources"]
         data["media_types"] = merged["media_types"]
@@ -364,7 +417,7 @@ async def delete_job(user_id: str, job_id: str) -> bool:
     return result.deleted_count > 0
 
 
-async def acquire_job_lock(job_id: str, ttl_seconds: int = 180) -> Optional[str]:
+async def acquire_job_lock(job_id: str, ttl_seconds: int = JOB_LOCK_SECONDS) -> Optional[str]:
     now = _now()
     existing = await db.job_locks.find_one({"job_id": job_id})
     if existing and existing.get("expires_at"):
@@ -408,13 +461,17 @@ async def load_pipeline_inputs(user_id: str) -> Dict[str, List[Dict[str, Any]]]:
     if not history:
         history = await db.media_history.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(HISTORY_CAP)
     library = await db.media_library.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(50000)
-    recommended = await db.recommendations.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(20000)
+    # Every saved job now keeps up to 1,500 results a run on its list and sends
+    # them to Requests (Gilbert, 2026-09-29), so both collections grow faster
+    # than before; a row past the cap is a title the exclusions cannot see.
+    recommended = await db.recommendations.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(
+        RECOMMENDED_CAP)
     # A delivery that failed is not a decision, so it must not block the title
     # for ever. Pending, approved and rejected rows all stay excluded.
     requested = await db.requests.find(
         {"user_id": user_id, "status": {"$nin": ["request_failed", "failed"]}},
         {"_id": 0, "user_id": 0},
-    ).to_list(50000)
+    ).to_list(REQUESTS_CAP)
     # No cap: a blacklist or feedback row past a 500-row cap was simply not
     # applied, and the title it was about could come back.
     blacklist = await db.blacklist.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(None)
@@ -711,9 +768,15 @@ async def apply_job_action_mode(
     recommendations_only → stay on Home / AI Picks (PNG buttons still work there).
 
     `outcome`, when given, is filled with what actually happened in Requests:
-    new titles queued, waiting ones refreshed, new ones held back for room, and
-    the job's waiting count afterwards. The run toast said "2 sent to Requests"
-    for picks that the full queue had held back.
+    new titles queued, waiting ones refreshed, and the job's waiting count
+    afterwards. The run toast said "2 sent to Requests" for picks that the full
+    queue had held back.
+
+    Every result goes to Requests (Gilbert, 2026-09-29: each run sends at least
+    100 results to the Requests tab, preferably well over 1,000). Until then a
+    job kept at most its limit waiting and held every new title back beyond it:
+    Tv (2,078 waiting against 650) and Upcoming US (3,603) sent nothing new on
+    any run. `held_back` stays in the outcome, always 0, for older readers.
     """
     mode = job.get("action_mode") or "require_approval"
     if mode not in {"require_approval", "auto_request"}:
@@ -735,22 +798,12 @@ async def apply_job_action_mode(
     local = LocalRequestProvider()
     warnings: List[Dict[str, Any]] = []
     tmdb_key = resolve_tmdb_api_key(conn)
-    # Room in the queue: a job keeps at most one run's worth of titles waiting
-    # for a decision. Every job in require_approval queued up to its limit every
-    # 30 minutes with no ceiling, and 10,180 titles waited by 2026-09-25 (Tv
-    # 5,531 against a limit of 250). Titles already waiting are refreshed as
-    # before; only new rows wait for room. Nothing already queued is touched.
-    # A full share is a notice, not a warning (NOTICE_CODES).
     limit = int(job.get("final_recommendation_limit") or 8)
-    waiting = 0
-    room: Optional[int] = None
-    # auto_request queues for approval too when MediaManager cannot take a title
-    # (409 below), so the same ceiling holds there.
-    if mode in {"require_approval", "auto_request"}:
-        waiting = await db.requests.count_documents({
-            "user_id": user_id, "source_job_id": job.get("id"), "status": {"$in": sorted(PENDING_STATUSES)},
-        })
-        room = max(0, limit - waiting)
+    # The job's titles waiting for a decision, reported with the outcome. It no
+    # longer caps anything: every result reaches Requests (see above).
+    waiting = await db.requests.count_documents({
+        "user_id": user_id, "source_job_id": job.get("id"), "status": {"$in": sorted(PENDING_STATUSES)},
+    })
     held_back = added = refreshed = sent = 0
 
     for row in rows:
@@ -776,6 +829,8 @@ async def apply_job_action_mode(
             "media_type": row.get("media_type"),
             "format": row.get("format") or row.get("anime_format"),
             "anilist_id": row.get("anilist_id"),
+            # Below the taste floor, filling the run's results up (pipeline._complete_results).
+            "weak_match": bool(row.get("weak_match")),
         }
         # The user's decisions stand. A title the exclusions miss (a changed
         # media type or identity) is neither queued again nor sent to
@@ -791,14 +846,9 @@ async def apply_job_action_mode(
         if mode == "require_approval":
             status = existing.get("status")
             adds_to_queue = not existing or status not in PENDING_STATUSES | FINAL_STATUSES
-            if adds_to_queue and room is not None and room <= 0:
-                held_back += 1
-                continue
             stored = await local.submit(user_id, payload, "pending_approval")
             if adds_to_queue and stored.get("status") in PENDING_STATUSES:
                 added += 1
-                if room is not None:
-                    room -= 1
             elif status in PENDING_STATUSES:
                 refreshed += 1
             await db.recommendations.update_one(
@@ -840,16 +890,9 @@ async def apply_job_action_mode(
             queued = exc.status_code == 409
             status = "pending_approval" if queued else "request_failed"
             adds_to_queue = queued and (not existing or existing.get("status") not in PENDING_STATUSES | FINAL_STATUSES)
-            if adds_to_queue and room is not None and room <= 0:
-                # MediaManager is not taking titles and the job's share of the
-                # queue is full: the title stays a pick and is tried again next run.
-                held_back += 1
-                continue
             stored = await local.submit(user_id, payload, status)
             if adds_to_queue and stored.get("status") in PENDING_STATUSES:
                 added += 1
-                if room is not None:
-                    room -= 1
             elif queued and existing.get("status") in PENDING_STATUSES:
                 refreshed += 1
             await db.recommendations.update_one(
@@ -883,16 +926,6 @@ async def apply_job_action_mode(
     if outcome is not None:
         outcome.update({"mode": mode, "limit": limit, "waiting": waiting, "queued": added,
                         "refreshed": refreshed, "held_back": held_back, "sent": sent})
-    if held_back:
-        warnings.append({
-            "code": "queue_full",
-            "source": "requests",
-            "detail": (
-                f"{waiting} title(s) from this job are waiting in Requests and it keeps at most {limit} waiting, "
-                f"so {held_back} new title(s) wait for room; they stay in this run's picks. "
-                "Approve or reject titles in Requests to make room."
-            ),
-        })
     return warnings
 
 
@@ -963,7 +996,15 @@ OUTCOME_LABELS = {
 #: settled. They are kept on the run as notices; a run with only notices has
 #: completed, and Runtime logs lists them as "okey" rows. Gilbert, 2026-09-25:
 #: a full share is information, not a warning.
-NOTICE_CODES = frozenset({"queue_full", "no_new_picks"})
+NOTICE_CODES = frozenset({"queue_full", "no_new_picks", "source_cached", "results_filled", "results_short"})
+#: Notices that are simply how a run went, reported as the run's summary line
+#: rather than as a chip beside it. Gilbert, 2026-09-27: "den alltid ger varning
+#: vid varje job run" - 3 of his 4 jobs showed a queue_full or no_new_picks chip
+#: on every one of their runs for a day. The same words now sit in the run's
+#: summary (the run history's text, Runtime logs' run_completed row, the toast),
+#: so a run that went as designed looks like one. Old runs read the same way
+#: (normalize_run).
+SUMMARY_CODES = frozenset({"queue_full", "no_new_picks", "source_cached", "results_filled", "results_short"})
 
 
 def split_notices(messages: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -971,6 +1012,39 @@ def split_notices(messages: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]],
     warnings = [row for row in messages if row.get("code") not in NOTICE_CODES]
     notices = [row for row in messages if row.get("code") in NOTICE_CODES]
     return warnings, notices
+
+
+def split_summary(notices: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """(notices, summary): the lines that are the run's own summary, taken out of its notices."""
+    summary = [row for row in notices if row.get("code") in SUMMARY_CODES]
+    return [row for row in notices if row.get("code") not in SUMMARY_CODES], summary
+
+
+def normalize_run(run: Dict[str, Any]) -> Dict[str, Any]:
+    """A stored run as the pages read it: summary lines out of notices and warnings.
+
+    Runs before 2026-09-27 kept queue_full / no_new_picks among their notices (and
+    before 2026-09-25 among their warnings); read here, they show like a new run.
+    Nothing is written back.
+    """
+    moved = [row for row in list(run.get("warnings") or []) + list(run.get("notices") or [])
+             if row.get("code") in SUMMARY_CODES]
+    if not moved:
+        run.setdefault("summary", [])
+        return run
+    out = dict(run)
+    out["warnings"] = [row for row in run.get("warnings") or [] if row.get("code") not in SUMMARY_CODES]
+    out["notices"] = [row for row in run.get("notices") or [] if row.get("code") not in SUMMARY_CODES]
+    out["summary"] = list(run.get("summary") or []) + [row for row in moved if row not in (run.get("summary") or [])]
+    if out.get("status") == "completed_with_warnings" and not out["warnings"]:
+        out["status"] = "completed"
+    return out
+
+
+def summary_text(run: Dict[str, Any]) -> str:
+    """The run's summary lines as one sentence-by-sentence string."""
+    return " ".join(str(row.get("detail") or "").strip() for row in normalize_run(run).get("summary") or []
+                    if row.get("detail")).strip()
 
 
 def _outcome_breakdown(counts: Dict[str, int]) -> str:
@@ -1055,6 +1129,35 @@ def empty_result_warnings(
             "code": "no_candidates",
             "source": "job",
             "detail": "No candidate source returned anything for this job.",
+        })
+    return rows
+
+
+def result_summary(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """How a saved job's results were made up, as summary lines (SUMMARY_CODES).
+
+    `results_filled`: some results are the closest titles below the taste floor
+    (Gilbert, 2026-09-29: fill up rather than return fewer). `results_short`:
+    even after every widening step fewer titles passed the job's own settings
+    and exclusions than its minimum of results - only the settings can change that.
+    """
+    counts = result.get("results") or {}
+    rows: List[Dict[str, Any]] = []
+    if counts.get("weak"):
+        rows.append({
+            "code": "results_filled",
+            "source": "job",
+            "detail": (f"{counts['matches']} of the {counts['results']} results had a close enough link to what "
+                       f"you liked; the other {counts['weak']} are the closest titles below the taste floor "
+                       "(weaker matches)."),
+        })
+    if counts.get("minimum") and counts.get("results", 0) < counts["minimum"]:
+        rows.append({
+            "code": "results_short",
+            "source": "job",
+            "detail": (f"Only {counts.get('results', 0)} titles passed this job's settings and exclusions after "
+                       f"every widening step, fewer than its minimum of {counts['minimum']}. Widen the job's "
+                       "years, genres or rating for more."),
         })
     return rows
 
@@ -1224,7 +1327,7 @@ async def execute_job(
     owner = await acquire_job_lock(job["id"])
     if not owner:
         return {"status": "locked", "detail": "Job is already running"}
-    job = with_job_intent(job)
+    job = with_result_rules(with_job_intent(clamp_limits(job)))
     started = _now()
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     warnings: List[Dict[str, Any]] = []
@@ -1233,17 +1336,16 @@ async def execute_job(
         inputs, taste, extra = await gather_job_candidates(user_id, job, trigger, warnings, report=search)
         result = run_pipeline(job, catalog=catalog or [], extra_candidates=extra, taste=taste, **inputs)
         from providers.premieres import is_upcoming_job
+        from jobs.upcoming import search_more
 
-        if is_upcoming_job(job):
-            # Too few new picks is not the end of an upcoming run: it widens its
-            # search step by step (jobs.upcoming.broaden).
-            from jobs.upcoming import search_upcoming
-
-            extra, result = await search_upcoming(
-                user_id, job, taste, inputs, extra, result,
-                lambda rows: run_pipeline(job, catalog=catalog or [], extra_candidates=rows, taste=taste, **inputs),
-                report=search,
-            )
+        # Too few results is not the end of a run: an upcoming job, and every
+        # saved job short of its minimum or its limit, widens its search step by
+        # step (jobs.upcoming.broaden) before titles below the floor fill up.
+        extra, result = await search_more(
+            user_id, job, taste, inputs, extra, result,
+            lambda rows: run_pipeline(job, catalog=catalog or [], extra_candidates=rows, taste=taste, **inputs),
+            report=search,
+        )
         ranked = result.get("ranked") or result["accepted"]
         provider = "pipeline"
         model = "deterministic"
@@ -1268,10 +1370,12 @@ async def execute_job(
                 provider = "pipeline"
                 model = "deterministic"
         if ai_reranked:
-            from recommendation.pipeline import select_final
+            from recommendation.pipeline import result_counts, select_final
 
             result["accepted"] = select_final(ranked, result.get("job") or job)
+            result["results"] = result_counts(result["accepted"], result.get("job") or job)
         warnings.extend(empty_result_warnings(job, result, extra))
+        warnings.extend(result_summary(result))
         result["ai_reranked"] = ai_reranked
         requests_outcome: Dict[str, Any] = {}
         action_warnings = await persist_run_results(
@@ -1287,6 +1391,7 @@ async def execute_job(
         if action_warnings:
             warnings.extend(action_warnings)
         warnings, notices = split_notices(warnings)
+        notices, summary = split_summary(notices)
         finished = _now()
         status = "completed_with_warnings" if warnings else "completed"
         run = {
@@ -1306,14 +1411,27 @@ async def execute_job(
             "model": model,
             "warnings": warnings,
             "notices": notices,
+            # How the run went, in words: nothing new, a full share of Requests, a
+            # provider's last good list standing in (SUMMARY_CODES). Never a warning.
+            "summary": summary,
             # What reached Requests / MediaManager: new, refreshed, held back for room.
             "requests": requests_outcome or None,
             # An upcoming job's search: continuations found and what each widening step added.
-            "upcoming_search": search or None,
-            "results": result["accepted"] if trigger == "preview" else [
+            "upcoming_search": (search or None) if is_upcoming_job(job) else None,
+            # Every saved job's search: what each widening step added (jobs.upcoming.broaden).
+            "search": search or None,
+            # What the results are: matches over the taste floor, weaker fill-ups,
+            # new ones and ones still waiting in Requests (pipeline.result_counts).
+            "result_counts": result.get("results"),
+            # One line per result, previews too: a run of 1,500 full rows (scores,
+            # cast, keywords, reasons) was megabytes in one job_runs document.
+            # The preview's own answer below still carries the full rows.
+            "results": [
                 {"id": row.get("title"), "title": row.get("title"), "year": row.get("year"),
                  "type": row.get("type"), "media_type": row.get("media_type"),
-                 "format": row.get("format") or row.get("anime_format")}
+                 "format": row.get("format") or row.get("anime_format"),
+                 "match_score": row.get("match_score"), "weak_match": bool(row.get("weak_match")),
+                 "open_result": row.get("open_result")}
                 for row in result["accepted"]
             ],
             # What the job asked for when it ran. Every run overwrites the job's
@@ -1347,11 +1465,15 @@ async def execute_job(
             "accepted": result["accepted"],
             "warnings": warnings,
             "notices": notices,
+            "summary": summary,
             "requests": requests_outcome or None,
+            "result_counts": result.get("results"),
         }
         if trigger == "preview":
-            payload["rejected"] = result.get("rejected") or []
-            payload["ranked"] = result.get("ranked") or result["accepted"]
+            # The page shows the first excluded titles; a large job's whole pool
+            # (8,000+ scored rows) made the answer tens of megabytes.
+            payload["rejected"] = (result.get("rejected") or [])[:PREVIEW_ROWS]
+            payload["ranked"] = (result.get("ranked") or result["accepted"])[:PREVIEW_ROWS]
             payload["upcoming_search"] = search or None
         return payload
     except Exception as exc:
@@ -1359,6 +1481,7 @@ async def execute_job(
         logging.warning("Job %s failed: %s", job.get("id"), detail)
         finished = _now()
         warnings, notices = split_notices(warnings)
+        notices, summary = split_summary(notices)
         run = {
             "id": run_id,
             "job_id": job["id"],
@@ -1370,6 +1493,7 @@ async def execute_job(
             "error": detail,
             "warnings": warnings,
             "notices": notices,
+            "summary": summary,
         }
         await db.job_runs.insert_one(dict(run))
         if trigger != "preview":
@@ -1384,7 +1508,8 @@ async def list_runs(user_id: str, job_id: Optional[str] = None) -> List[Dict[str
     query: Dict[str, Any] = {"user_id": user_id}
     if job_id:
         query["job_id"] = job_id
-    return await db.job_runs.find(query, {"_id": 0}).sort("started_at", -1).to_list(100)
+    runs = await db.job_runs.find(query, {"_id": 0}).sort("started_at", -1).to_list(100)
+    return [normalize_run(run) for run in runs]
 
 
 async def due_jobs() -> List[Dict[str, Any]]:
@@ -1421,6 +1546,22 @@ async def fetch_linked_provider_candidates(
             raise ValueError(f"Required source {source} failed: {code}")
         logging.warning("optional source %s: %s %s", source, code, detail)
 
+    from providers.last_good import recall, remember, stand_in_note
+
+    async def _stand_in(source: str, key: str, feed: str, status: Any) -> bool:
+        """The feed's last good rows in place of a failed or empty answer (providers.last_good)."""
+        stored = await recall(key)
+        if not stored:
+            return False
+        rows, stored_at = stored
+        extra.extend(rows or [])
+        warnings.append(stand_in_note(source, feed, status, stored_at))
+        logging.warning("%s %s -> %s; using its rows from %s", source, feed, status, stored_at)
+        return True
+
+    simkl_key = "simkl:%s" % user_id
+    anilist_key = "anilist:%s:%s" % (user_id, (job or {}).get("id") or "job")
+
     if "trakt" in sources:
         if not conn.get("trakt_access_token"):
             await _required_or_warn("trakt", "trakt_not_connected")
@@ -1433,27 +1574,45 @@ async def fetch_linked_provider_candidates(
                 client_id = resolve_trakt_client_id(conn)
                 if token and client_id:
                     import httpx
+                    from providers.last_good import is_outage
+                    from providers.tmdb import candidate_budget
 
                     kinds = [kind for kind, wanted in (
                         ("movies", bool(media & {"movie", "movies"})),
                         ("shows", bool(media & {"tv", "show", "anime"})),
                     ) if wanted]
+                    # A job serving one lane needs a deeper feed: most of Trakt's
+                    # first 20 for this viewer are anime. A large job takes all
+                    # Trakt gives (100 per kind).
+                    limit = 50 if intent else 20
+                    if candidate_budget(job or {}) >= TRAKT_FULL_FEED_BUDGET:
+                        limit = 100
+
+                    def _parsed(items: Any, kind: str) -> List[Dict[str, Any]]:
+                        return [
+                            row for row in (parse_recommendation_entry(item, kind) for item in items or [])
+                            if row and row.get("title") and row["title"] != "Unknown"
+                        ]
+
                     async with httpx.AsyncClient(timeout=10) as client:
                         for kind in kinds:
-                            response = await client.get(
-                                f"{TRAKT_API}/recommendations/{kind}",
-                                headers=trakt_headers(client_id, token),
-                                # A job serving one lane needs a deeper feed: most of
-                                # Trakt's first 20 for this viewer are anime.
-                                params={"limit": 50 if intent else 20},
-                            )
-                            if response.status_code == 200:
-                                extra.extend(
-                                    row for row in (
-                                        parse_recommendation_entry(item, kind) for item in response.json() or []
-                                    ) if row and row.get("title") and row["title"] != "Unknown"
+                            feed = f"/recommendations/{kind}"
+                            stand_in_key = "trakt:%s:%s" % (conn.get("trakt_username") or user_id, kind)
+                            try:
+                                response = await client.get(
+                                    f"{TRAKT_API}{feed}",
+                                    headers=trakt_headers(client_id, token),
+                                    params={"limit": limit},
                                 )
-                            elif response.status_code == 401:
+                                status: Optional[int] = response.status_code
+                            except httpx.HTTPError as exc:
+                                response, status = None, None
+                                logging.warning("Trakt %s did not answer: %s", feed, exc.__class__.__name__)
+                            if response is not None and status == 200:
+                                items = response.json() or []
+                                extra.extend(_parsed(items, kind))
+                                await remember(stand_in_key, items)
+                            elif status == 401:
                                 # Trakt refused the stored sign-in itself: Sources must offer
                                 # Connect again rather than keep saying "Connected".
                                 from providers.auth_state import note_auth_failure
@@ -1463,8 +1622,30 @@ async def fetch_linked_provider_candidates(
                                     "trakt", "trakt_signin_rejected",
                                     "Trakt no longer accepts the saved sign-in: connect Trakt again under Sources",
                                 )
+                            elif is_outage(status):
+                                # Trakt itself is down (2026-09-27: 500 on every
+                                # account call). Its last good list stands in; with
+                                # none young enough the run goes on without Trakt -
+                                # an outage is no reason to fail the whole job.
+                                stored = await recall(stand_in_key)
+                                if stored:
+                                    items, stored_at = stored
+                                    extra.extend(_parsed(items, kind))
+                                    warnings.append(stand_in_note("trakt", feed, status, stored_at))
+                                    logging.warning("Trakt %s -> %s; using its list from %s", feed, status, stored_at)
+                                elif "trakt" in required:
+                                    answer = "did not answer" if status is None else f"answered {status}"
+                                    warnings.append({
+                                        "code": "trakt_unavailable",
+                                        "source": "trakt",
+                                        "detail": f"Trakt {answer} for {feed} (Trakt is down; the sign-in is fine). "
+                                                  "This run used the other sources.",
+                                    })
+                                    logging.warning("Trakt %s -> %s; no earlier list, running without it", feed, status)
+                                else:
+                                    logging.warning("optional source trakt: %s %s, no earlier list", feed, status)
                             else:
-                                await _required_or_warn("trakt", "trakt_http_error", str(response.status_code))
+                                await _required_or_warn("trakt", "trakt_http_error", str(status))
                 else:
                     await _required_or_warn("trakt", "trakt_not_connected")
             except ValueError:
@@ -1501,14 +1682,16 @@ async def fetch_linked_provider_candidates(
                 )
                 if rows:
                     extra.extend(rows)
-                else:
+                    await remember(simkl_key, rows)
+                elif not await _stand_in("simkl", simkl_key, "its recommendations", "no rows"):
                     await _required_or_warn("simkl", "simkl_empty_feed")
             except ValueError:
                 raise
             except Exception as exc:
                 detail = safe_provider_error(exc)
                 code = "simkl_http_error" if "failed" in str(detail).lower() or str(detail).isdigit() else "simkl_failed"
-                await _required_or_warn("simkl", code, detail)
+                if not await _stand_in("simkl", simkl_key, "its recommendations", detail):
+                    await _required_or_warn("simkl", code, detail)
     if "anilist" in sources and not wants_anime:
         # AniList lists only anime-style media. For a job that asks for no anime
         # or donghua every row it returns is outside the job, and it was 40 of
@@ -1526,12 +1709,13 @@ async def fetch_linked_provider_candidates(
                     {"user_id": user_id, "source": "anilist"},
                     {"_id": 0, "anilist_id": 1, "source": 1, "title": 1},
                 ).sort("watched_at", -1).to_list(40)
-                extra.extend(await fetch_recommendations(conn["anilist_access_token"], history))
+                anilist_rows: List[Dict[str, Any]] = []
+                anilist_rows.extend(await fetch_recommendations(conn["anilist_access_token"], history))
                 filters = (job or {}).get("filters") or {}
                 if "zh" in animation_lane_languages(filters.get("include_genres"), (job or {}).get("media_types")):
                     # The recommendation feeds follow the viewer's own, Japanese,
                     # list; donghua has to be asked for by origin.
-                    extra.extend(await fetch_by_origin(
+                    anilist_rows.extend(await fetch_by_origin(
                         "CN",
                         conn["anilist_access_token"],
                         min_year=filters.get("min_year"),
@@ -1542,15 +1726,27 @@ async def fetch_linked_provider_candidates(
                 if _window_is_upcoming(filters) or is_upcoming_job(job):
                     # Recommendations are built from titles that already aired, so a
                     # job asking for future years got nothing it could ever accept.
-                    extra.extend(await fetch_upcoming(
+                    from providers.anilist import upcoming_depth
+
+                    limit, pages = upcoming_depth(job or {})
+                    anilist_rows.extend(await fetch_upcoming(
                         conn["anilist_access_token"],
                         min_year=filters.get("min_year"),
                         max_year=filters.get("max_year"),
+                        limit=limit,
+                        max_pages=pages,
                     ))
+                if anilist_rows:
+                    extra.extend(anilist_rows)
+                    await remember(anilist_key, anilist_rows)
+                else:
+                    # AniList answers nothing at all when it is rate-limited or down.
+                    await _stand_in("anilist", anilist_key, "its lists", "no rows")
             except ValueError:
                 raise
             except Exception as exc:
-                await _required_or_warn("anilist", "anilist_failed", safe_provider_error(exc))
+                if not await _stand_in("anilist", anilist_key, "its lists", safe_provider_error(exc)):
+                    await _required_or_warn("anilist", "anilist_failed", safe_provider_error(exc))
     return extra, warnings
 
 
@@ -1596,10 +1792,31 @@ async def migrate_jobs_to_interval() -> None:
     await restagger_jobs()
 
 
+async def release_stale_locks() -> int:
+    """Free the locks of runs that died with the previous process.
+
+    A run holds its job's lock for up to JOB_LOCK_SECONDS (30 minutes since a
+    large run takes minutes). A deploy or restart in the middle of a run left
+    that lock behind, and the job skipped every tick until it ran out. One
+    CineMind process runs the jobs, so at startup every held lock is such a
+    leftover.
+    """
+    result = await db.job_locks.update_many(
+        {"lock_owner": {"$ne": None}}, {"$set": {"lock_owner": None, "expires_at": None}},
+    )
+    return int(getattr(result, "modified_count", 0) or 0)
+
+
 async def scheduler_loop() -> None:
     from api_extra import SEED_CATALOG
 
     await asyncio.sleep(3)
+    try:
+        freed = await release_stale_locks()
+        if freed:
+            logging.warning("Released %s job lock(s) left by runs of the previous process", freed)
+    except Exception:
+        logging.exception("Could not release stale job locks")
     while True:
         try:
             for job in await due_jobs():

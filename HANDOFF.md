@@ -2025,3 +2025,361 @@ hela backend, även i containern) efter driftsättningen 06:15; `scripts/deploy_
   you rated 10/10"), 3 månads- och 6 årsdatum. `/requests/page?sort=upcoming_first`: kommande
   premiärer först (27/9 The Simpsons … 3/10 Black Clover S2).
 - Fortfarande inte committat (omgång 9, 10, 12).
+
+## Google-inloggning i MediaManager-fliken (2026-09-26 10:53 UTC)
+
+"403. That's an error" på Continue with Google, bara i MediaManagers CineMind-flik: fliken är en
+iframe (`192.168.50.94:8001`) och Google vägrar visa sin inloggning i en ram. `Landing.jsx`
+känner igen ramen och öppnar Google i ett popup-fönster (`localhost:8001`, samma callback som
+förut) med en hemlig engångsnyckel; callbacken lägger användaren under nyckelns hash i
+`oauth_handoffs` (5 min) och popupen stänger sig själv. Ramen löser in nyckeln med
+`POST /api/auth/google/handoff` på sin egen origin och får sin egen session. Utan ram är flödet
+oförändrat. Tester: `backend/tests/test_google_popup_handoff.py` (6). Deployad och verifierad på
+NAS:en (iframe-klick → popup-väg, Google utan 403); själva Google-kontovalet är inte testat
+av Claude. Kräver fortfarande `nas_forward` på Macen, som tidigare.
+**Bekräftat av Gilbert 2026-09-26 ~11:00 UTC:** Google-inloggningen i MediaManager-fliken fungerar
+hela vägen efter en hård omladdning (Cmd+Shift+R). Ändringarna är fortfarande inte committade.
+
+## "Vart tog mina jobb vägen?" (2026-09-26 15:05–15:40 UTC)
+
+Gilbert: "kolkla vart alla min job jag hade innan försvunnit och fixa tillbaka dem tre jobben".
+
+- **Jobben var aldrig borta.** NAS-databasen: Tv (`job_241ad9f124fb`), Upcoming US + Anime/Donghua
+  2026–2029 (`job_87f31614e5a8`) och Upcoming Tv Shows (`job_a4a19dd90ca0`), alla `user_c30bd548254a`,
+  påslagna, `every_15m`, gränsen 650, senast körda 15:00–15:04. `jobs.engine.list_jobs` i containern
+  gav alla tre (4 680 byte JSON). Inget nytt konto (5 användare), ingen session raderad.
+- **Fliken hade tappat sin inloggning.** Varje anrop från Macen (192.168.50.223) fick 401 sedan minst
+  14:25 (`/api/requests/version`), `GET /api/jobs` 401 kl. 15:03:58 och 15:11:38. Sidan höll kvar den
+  inloggade vyn i minnet och `Jobs.jsx` visade `[]` med en toast som försvinner — det såg ut som att
+  jobben var raderade. Varför kakan slutade gälla går inte att se: containern återskapades 14:05
+  (en annan session skrev om `cinemind.env`, `OLLAMA_MODEL` gemma4 → qwen-suggestarr) och loggarna från
+  före dess är borta. Sessionerna från 11:28 finns kvar och gäller till 3/10.
+- **Gilbert loggade in igen** 15:21:30 (Cmd+Shift+R på /jobs → `/auth/me` 401 → Google) →
+  `GET /api/jobs` 200 kl. 15:21:53. Han körde alla tre för hand 15:22: Tv `queue_full`, Upcoming US
+  `no_new_picks`, Upcoming Tv Shows utan notis.
+- **Rättat (frontend):** `lib/api.js` skickar `SESSION_ENDED_EVENT` vid 401 från allt utom `/auth/*`;
+  `AuthContext` frågar `/auth/me` en gång (hur många anrop som än föll samtidigt) och loggar ut fliken
+  bara om den också svarar 401 (`sessionEnded`); `ProtectedRoutes` skickar med sidan i `state.from`;
+  `Landing` visar "You were signed out — … your jobs, requests and lists are still saved", öppnar
+  inloggningen och går tillbaka till sidan efteråt; `Jobs.jsx` visar inte längre "the server did not
+  answer" vid 401. `craco.config.js` fick jest-mappningen för `@/`. Befintliga toast- och glass-
+  komponenter, CSS-bundlen oförändrad (`main.23cb58ef.css`), låset OK.
+- **Tester:** `frontend/src/context/AuthContext.test.jsx` 6 gröna (4 faller utan rättelsen);
+  `npm run build` utan varningar. Säkerhetskopia före driftsättning:
+  `.runtime/backups/2026-09-26-jobs-session/jobs.json` (4 jobb, md5 `9942dd41…`).
+- **Driftsatt 15:24 UTC** (`scripts/deploy_nas.sh`, utan `--env`; bundle `main.2c46e488.js`). Gilberts
+  flik laddade om sig själv 15:24:17 och är fortfarande inloggad (`/auth/me` 200). Kontroll i den
+  inbyggda webbläsaren mot den driftsatta bundlen, med en lokal fetch-ersättare (inget nådde servern,
+  ingen `/api/auth/login` i loggen): 3 anrop med 401 → 1 `/auth/me` → inloggningen med beskedet,
+  `state.from` = `/jobs`.
+- **Schemalagt efter driftsättningen:** Upcoming Tv Shows 15:30:15 klar utan notis, Upcoming US
+  15:32:37 klar (`no_new_picks`), Tv 15:34:56 klar (`queue_full`); containern healthy, inga 401 från
+  Gilberts flik efter 15:24 (den enda 401:an var den inbyggda webbläsarens oinloggade start 15:24:53).
+- Sidofynd, inte åtgärdat: `backend/.env` har `OLLAMA_MODEL="qwen-suggestarr:latest"` (ändrad ~14:05 och
+  driftsatt med `--env`; enligt CLAUDE.md är standarden Gemma, Gilberts konto kör qwen ändå); Ollama
+  `ReadTimeout` → rerank-fallback 5 gånger senaste timmen. Inget committat.
+
+# OMGÅNG 13 — minst 100 resultat till Requests per jobbkörning (2026-09-29 12:40–13:30 UTC)
+
+Gilbert (skärmbilder från Jobs och Runtime logs 12:39–12:40 UTC): "kolla varför 0 results när det
+ska vara minst 100 st varje gång körning job permanent fixa det", och mitt i arbetet, som viktig
+regel: "varje job run skicka minst 100 helst betydligt mer än 1000 men regel minst 100 ... till
+requests fliken". **Hans val** (frågat i sessionen): (1) resultat = nya titler + titlar som redan
+väntar i Requests och fortfarande passar jobbet; (2) räcker träffarna över smakgolvet inte fylls
+listan med de närmaste titlarna under golvet, märkta som svagare träff; efter den skärpta regeln
+fylls den mot jobbets gräns (högst 1 500, hans maximum från 2026-09-27), aldrig under 100.
+
+## Varför det blev 0 (läst ur NAS-databasen och med samma kod som körningen, inget skrivet)
+
+- **NAS:en körde koden från 2026-09-26 15:24 UTC.** Sessionen "Cinemind kandidater och upcoming
+  titlar" (2026-09-27, Gilbert: "30000 kandidater, max results den kan skicka 1500") skrev större
+  kandidatbudgetar, personbanan, AniList-djup, Trakt/AniList-reservlistor (`providers/last_good.py`)
+  och sammanfattningsrader i körningarna, men driftsatte aldrig och skrev ingen HANDOFF. NAS-koden
+  läste högst 10 sidor per bana: Discover (gräns 10 000) fick 1 753 kandidater.
+- **Discover 12:39:57:** 781 låg redan i Requests, 652 utanför årsfönstret, 63 utanför genrerna och
+  de 211 som klarade allt låg under smakgolvet → 0. Med 09-27-koden: 12 438 kandidater, 273 över
+  golvet, 175 val — urvalets relativa gräns (`relevance_cut`, 75 % av bästa) kastade 98 av 109
+  anderspråkiga träffar över golvet. **430 titlar över golvet väntade redan i Requests** från andra jobb.
+- **Tv och Upcoming US** höll tillbaka allt nytt: kötaket "högst gränsen väntande per jobb" (650)
+  mot 2 078 resp. 3 603 väntande. Tv hade dessutom bara 52 kandidater förbi sina egna inställningar;
+  202 av dess träffar över golvet väntade redan i Requests.
+- **Up** 0 av 1 746 (samma mönster som Discover), **Upcoming Tv Shows** 15 val men 0 nya.
+
+## Ändrat (kod)
+
+- **`recommendation/exclusion_engine.py`**: `requested_waiting` / `requested_settled` /
+  `listed_by_job` i kontexten; med `open_results` passerar en titel som väntar i Requests (från vilket
+  jobb som helst) eller står på jobbets egen lista (inte avfärdad/retired) — markerad
+  `open_result: waiting|listed`, även förbi `already_recommended`. En avgjord rad (approved, rejected,
+  archived) håller fortfarande titeln ute, också när en kopia väntar; sedd/bibliotek/avfärdad/svartlistad
+  som förut. Märkningen görs om vid varje pipelinekörning på samma rader.
+- **`recommendation/pipeline.py`**: `MIN_RESULTS = 100`, `min_results`, `result_target` (sparat jobb:
+  hela gränsen), `result_counts` (results/matches/weak/new/waiting/listed). `select_final` väljer huvudet
+  exakt som förut och `_complete_results` lägger till varje övrig titel över golvet i jobbets nivåordning,
+  sedan de närmaste under golvet upp till målet, märkta `weak_match`; spår jobbet aldrig bad om behåller
+  taket 10 % och går förbi det bara för att nå 100. Content to Watch (`open_results: False,
+  min_results: 0` i `server.generate_recs`) och AI Search är oförändrade.
+- **`jobs/upcoming.py`**: breddningen gäller varje sparat jobb (`search_wanted`, `search_more`;
+  `search_upcoming` finns kvar som alias). `enough`: minst 100 över golvet, full lista (gränsen), och för
+  upcoming-jobb minst 20 nya. Steg: `taste_window` → `deeper_pages` → `other_sources` (upcoming som förut;
+  andra jobb: Trakts trending/popular/anticipated inom jobbets genrer och år, `providers.trakt.fetch_list_titles`,
+  plus personbanan för jobb under `LARGE_BUDGET`) → **`full_budget`** (jobbets egna banor med 30 000 i
+  budget). Premiärkontroll bara för upcoming-jobb. Rapporten sparas i `run.search` (och `upcoming_search`).
+- **`jobs/engine.py`**: `with_result_rules` (sparade jobb: `open_results`, `min_results` 100);
+  **kötaket borttaget** — varje resultat går till Requests (nya köas, väntande förnyas; `held_back` alltid
+  0). `result_summary`: sammanfattningsraderna `results_filled` ("N av M resultat hade tillräcklig
+  koppling …, de andra K är de närmaste under smakgolvet") och `results_short` (färre än 100 klarar
+  jobbets egna inställningar). `run.result_counts`, `run.results` bär `weak_match` / `open_result`,
+  även förhandsvisningens (smal rad i stället för hela rader i `job_runs`); förhandsvisningens svar har
+  högst 200 `ranked`/`rejected`. `weak_match` följer med till köraden. `REQUESTS_CAP` 200 000,
+  `RECOMMENDED_CAP` 100 000.
+- **`providers/tmdb.py`**: affischer för resultat utan affisch hämtas med radens eget TMDb-id
+  (cachat 14 d), 8 åt gången; namnsökningen skrev förut en annan titels id över radens.
+- **`request_providers.py`**: `weak_match` på nya köer och i `SUGGESTION_FIELDS`; `request_queue.LIGHT_FIELDS`.
+- **`api_extra.py`** (Runtime logs): "N results from M candidates; X new in Requests, Y already waiting".
+- **Frontend** (`Jobs.jsx`, `Requests.jsx`, befintliga `chip`/`chip-cyan`, låset OK): toasten
+  "N results (K weaker matches) · X new in Requests · Y already waiting", körhistoriken "N results …",
+  resultatchips "· weaker match", Requests-kortet chip "weaker match".
+- **`evaluation/job_trace.py`** följer samma regler (`with_result_rules`, `search_more`).
+
+## Mätning (NAS-databasen, arbetsytans kod, förhandsvisning — inget skrivet utom cache, 13:16–13:23 UTC)
+
+| jobb | gräns | resultat | över golvet | svagare | nya | väntande | breddning |
+|---|---|---|---|---|---|---|---|
+| Discover | 1 500 (10 000 sparat) | **1 500** | 648 | 852 | 800 | 700 | behövdes inte |
+| Up | 1 500 (4 000 sparat) | **1 500** | 364 | 1 136 | 724 | 776 | behövdes inte |
+| Tv | 650 | **650** | 389 | 261 | 112 | 535 | Trakt-listor + personer: 225 → 389 över golvet |
+| Upcoming US + Anime/Donghua | 650 | **650** | 172 | 478 | 587 | 10 (+53 på listan) | alla fyra; `full_budget` 5 662 nya kandidater (~300 s första gången) |
+| Upcoming Tv Shows | 650 | **178** | 74 | 104 | 175 | 3 | alla fyra; bara 178 klarar jobbets inställningar |
+
+Nya träffar i Tv efter breddningen: Daybreak, Pokémon Detective Pikachu, Behind Her Eyes, Tales from
+the Loop, Years and Years, Industry, Bumblebee, Baby Reindeer. Svagare (under golvet): Debris, Jury
+Duty, Chad Powers, North of North m.fl.
+
+## Tester
+
+`recommendation_tests` + `evaluation_tests` **238 gröna** (nya: `test_job_results.py`, 21; fyra
+kötakstester i `test_queue_room.py`/`test_run_notices.py` skrivna om efter regeln);
+`tests/test_job_action_mode.py`, `test_empty_job_results.py`, `test_requests_queue_order.py`,
+`test_job_stagger.py`, `test_runtime_logs.py`, `test_google_popup_handoff.py`,
+`test_mediamanager_approve.py` **60 gröna** med `--noconftest`. Frontend bygger utan varningar,
+`check_vision_ui_lock.py` OK.
+
+## Data på NAS:en
+
+- Säkerhetskopia `.runtime/backups/2026-09-29-omgang13/` (jobs 6, requests 10 641, recommendations
+  144 för Gilbert; md5 i `manifest.json`).
+- Tv, Upcoming US och Upcoming Tv Shows via `jobs.engine.update_job`: `candidate_limit` 650 → 30 000,
+  `final_recommendation_limit` 650 → 1 500 (Gilbert: "helst betydligt mer än 1000"; 650 gjorde det
+  omöjligt). Up (4 000) och Discover (10 000) är orörda; körningen klämmer dem till 1 500.
+
+## Driftsättning och kontroll live
+
+- `bash scripts/deploy_nas.sh` nekades av sessionens behörighetskontroll; **Gilbert körde det själv
+  13:29 UTC**. md5 för alla ändrade backendfiler i containern = arbetsytan, `/api/` 200, inga fel i loggen.
+- **Upcoming Tv Shows 13:30:58 (schemalagd):** 249 resultat på 94 s (87 över golvet, 162 svagare),
+  **212 nya i Requests**, 10 förnyade, 0 tillbakahållna, inga varningar, sammanfattning `results_filled`.
+- **Upcoming US 13:32:** köade titlar medan körningen pågick (301 nya efter 5 min: 106 träffar, 195
+  svagare) men fastnade i affischsteget: `enrich_with_tmdb` slog upp TVDb-affischer **en titel i taget,
+  utan cache** (471 uppslag på 4 min för titlar som TMDb saknar affisch för). Före regeln var det några
+  dussin titlar; med 1 500 resultat blev det minuter och de andra jobben fick vänta.
+- Rättat efter driftsättningen (i arbetsytan, testat): TVDb-reserven 8 åt gången och cachad
+  (`tmdb._tvdb_poster_cached`, träff 30 d, "ingen affisch än" 3 d); **låsen från en körning som dog
+  med processen frigörs när CineMind startar** (`jobs.engine.release_stale_locks`) — med
+  `JOB_LOCK_SECONDS` 1 800 (09-27) blev ett jobb annars stående i 30 minuter efter en omstart mitt i en
+  körning. Tester: 241 + 60 gröna.
+
+- **Gilbert körde driftsättningen igen 13:39 UTC** (affisch- och låsrättelsen); md5 = arbetsytan,
+  `/api/` 200. Tv-körningen som avbröts av omstarten startade om 13:39:31 i stället för att vänta 30 min.
+
+## Verifierat live (schemalagda körningar, läst ur NAS-databasen)
+
+| körning (UTC) | tid | resultat | över golvet | svagare | nya i Requests | förnyade | tillbakahållna |
+|---|---|---|---|---|---|---|---|
+| Upcoming Tv Shows 13:30:58 | 94 s | 249 | 87 | 162 | 212 | 10 | 0 |
+| Upcoming US + Anime/Donghua 13:33:36 | 306 s | **1 500** | 175 | 1 325 | 1 286 | 203 | 0 |
+| Tv 13:39:31 | 257 s | **1 500** | 955 | 545 | 487 | 1 013 | 0 |
+| Up 13:43:47 | 154 s | **1 500** | 360 | 1 140 | 547 | 949 | 0 |
+| Discover 13:46:21 | 153 s | **1 500** | 624 | 876 | 428 | 1 068 | 0 |
+| Upcoming Tv Shows 13:49:55 (andra varvet) | 43 s | 244 | 85 | 159 | 0 | 222 | 0 |
+
+Inga varningar i någon körning; varje körning har sammanfattningsraden `results_filled`. Runtime logs
+(`api_extra.runtime_logs` i containern, läsande): "1500 results from 7682 candidates; 1286 new in
+Requests, 203 already waiting. 175 of the 1500 results had a close enough link …". Före ändringen:
+"0 picks from 1753 candidates; 0 new in Requests". Väntande i Requests: 5 726 → ~8 700. Den driftsatta
+bundlen `main.df23ad0b.js` innehåller "weaker match" och de nya texterna; Gilberts inloggade vy av
+Requests och Jobs är inte sedd av sessionen.
+
+## Kvar / fynd
+
+1. Anime-filmer i Requests utan `format` (t.ex. tmdb 1765609, 1473553) berikas som TV → 404 hos TMDb,
+   ocachat, dussintals gånger per körning (fanns före; föreslaget som egen uppgift).
+2. En körning med 1 500 resultat tar 2–5 minuter (köning och affischer); omgången med fem jobb blir
+   ungefär 15 minuter lång, så schemat förskjuts något men ingenting överlappar (körningarna går i tur och ordning).
+3. Inget committat.
+
+## Att tänka på
+
+- Första körningen efter driftsättningen köar på en gång ~800 (Discover), ~700 (Up), ~1 000+ (Upcoming US)
+  och några hundra (Tv) nya titler; många är svagare träffar (märkta). Det är Gilberts regel.
+- Ett jobb vars egna inställningar släpper igenom färre än 100 titler (Upcoming Tv Shows: 178 i dag) kan
+  inte nå mer än så utan bredare inställningar; körningen säger det (`results_short`).
+
+# OMGÅNG 14 — alla jobb: sju genrer med Gay romance, och betyg 8,0 för släppta titlar (2026-09-29 15:23–16:30 UTC)
+
+Gilbert: "fixa så att alla jobs bara söker gengre action adventure gay romance sci-fi fantasy
+animations kids", och mitt i arbetet: "sedan sätt nuvarande släppta serier anime filmer som redan
+har släppt ska ha ratings på 8.0 medans kommande ska ha 0.0 på alla jobs". **Hans val** (frågat i
+sessionen): "Gay romance" är **en** genre — romantik med HBTQ-tema, aldrig vanlig romantik — och
+"Gay" betyder allt HBTQ (gay, lesbiskt, bi, trans, queer, boys' love, yuri). Sedan, med skärmbilder
+av Requests filterkort: "sedan ska dessa förstoras en hel del så man ser det tydligt och stor synligt
+kolla bilderna det gäller filtrena", "gör det till 20px" och "gör siffrorna till 20 px också" — en
+uttrycklig upplåsning av just den visuella ändringen.
+
+## Före (läst ur NAS-databasen, inget skrivet)
+
+- Gilberts fem jobb (Tv, Up, Discover, Upcoming US + Anime/Donghua, Upcoming Tv Shows) och
+  testkontots "Evening sci-fi" (`phase0-…@example.com`, orört).
+- Bara Upcoming Tv Shows hade genrer (sci-fi, fantasy, action, adventure, animation, anime); de fyra
+  andra tog alla genrer utom horror. Bara Tv hade en betygsgräns (7).
+- Ingen källa har en HBTQ-genre (TMDb, Trakt, Simkl, AniList). `filters.keywords` fanns i koden men
+  inte i Jobs-formuläret, så en sparning från formuläret tappar det — därför är Gay romance en genre i
+  `include_genres`, som formuläret visar och sparar.
+- En kommande titel slapp betygsgränsen bara om ingen alls hade röstat, och TMDb frågades med
+  `vote_average.gte` för hela fönstret, som ingen osläppt titel (vote_average 0,0) klarar.
+
+## Ändrat (kod)
+
+- **`recommendation/filter_engine.py`**
+  - `GAY_ROMANCE` ("gay romance"; alias lgbt/lgbtq/lgbtq+/queer/hbtq romance i `THEME_GENRE_ALIASES`,
+    inte i `GENRE_ALIASES` som smakprofilen läser). `is_gay_romance`: ett samkönat romansnyckelord
+    (`gay romance`, `boys' love (bl)`, `girls' love (gl)`, `lesbian romance` …, AniList-taggarna
+    `Boys' Love` / `Yuri`), eller romantik (genren Romance, ett nyckelord med romance/romantic/love/
+    lovers, `gay/lesbian relationship`) plus **minst två** HBTQ-nyckelord. `candidate_genres` lägger till
+    genren. Mätt på TMDb:s egna nyckelord för 22 filmer och 14 serier: alla 12 HBTQ-romansfilmer in,
+    8 av 10 raka romcoms med en gay bifigur ute (She's the Man, Clueless, Set It Up … bär bara
+    `gay theme` eller `lgbt`).
+  - Kids tar familjefilmer (`FILM_GENRE_EQUIVALENTS`, `matched_genres`): TMDb har ingen Kids-genre för
+    filmer och `_genre_ids` bad redan /discover/movie om Family för Kids — filtret kastade dem sedan.
+    Serier har egen Kids-genre (TMDb 10762, Trakt `children`).
+  - `not_released_yet` + `candidate_rating`: **minsta betyg gäller bara titlar som är ute**. Kommande =
+    verifierad premiär efter i dag (en ny säsong av en äldre serie räknas), framtida datum, status
+    `NOT_YET_RELEASED`/`Planned`/…, ett senare år, eller en titel med bara årets år som ingen har
+    betygsatt (Trakts anticipated-listor). AniList-rader hålls mot AniLists eget betyg
+    (`candidate_score` = averageScore/10), som inte kopieras till raden (rankningen läser betygsfälten).
+    `min_vote_count` är orörd.
+- **`recommendation/job_intent.py`**: `job_genre_fit` räknar med `matched_genres`.
+- **`providers/tmdb.py`**
+  - `theme_lanes`: Gay romance frågas med nyckelord (`LGBTQ_KEYWORD_IDS`, `SAME_SEX_ROMANCE_KEYWORD_IDS`,
+    uppslagna 2026-09-29 med antal titlar i kommentaren). Filmer: HBTQ-nyckelord + genren Romance, och
+    de samkönade romansnyckelorden; serier (TMDb har ingen Romance-genre för tv): alla. Egen reserverad
+    kvot som jobbets nyckelord. Mätt: TMDb läser `A|B,C` som `A,C` (159 = 159), så "något HBTQ-ord och
+    romantik" går inte i en fråga.
+  - `rating_windows`: ett fönster som når förbi i dag frågas i två delar — det som är ute med
+    `vote_average.gte` och t.o.m. i dag (halva banan), det som kommer från i morgon utan betygs- och
+    röstgolv (resten). Upcoming-jobbens bana för kommande avsnitt har ingen gräns. Utan gräns, eller
+    med ett fönster helt i det förflutna eller helt i framtiden, frågas som förut.
+- **`providers/trakt.py`**: `trakt_genre_filter(names, kind)` — Kids = `family` för filmer,
+  `children,family` för serier (Trakts egna slugs, lästa från /genres).
+- **`frontend/src/pages/Jobs.jsx`**: etiketten "Minimum rating (released titles)" — bara text.
+- **Filterkorten i Requests och Approved** (Gilberts upplåsning ovan): `ReleaseTypeFilters.BIG_CHIP`
+  (`!text-xl !px-4 !py-2.5 !gap-2.5`) på knapparna Upcoming/Released titles, Movies/TV series/Anime,
+  "No date", räknaren "N of M" och "Clear filters": **20 px text och siffror** (förut 10 px), 50 px höga,
+  bock och ruta 24 px, rubrikerna Release/Media type 14 px, kortets rubrik `text-2xl`, hjälptexterna
+  `text-sm`. Samma `.chip`-utseende, inga nya färger; `!` behövs eftersom `.chip` ligger efter
+  utilities i den låsta `index.css`. På en telefon hamnar räknaren under rubriken (`flex-col` →
+  `sm:flex-row`, som förut från 640 px), och "Upcoming titles"/"Released titles" bryts på två rader
+  (vänsterställt) eftersom 20 px inte ryms i ~311 px. Kontrollerat med den byggda CSS:en i en
+  före/efter-sida: 20 px på alla etiketter och siffror, ingen sidbredd över 375 px.
+  `check_vision_ui_lock.py` OK.
+- **`evaluation/job_trace.py`**: `--filters '{"min_rating": 8}'` slås in i jobbets filter.
+
+## Mätning (job_trace, NAS-databasen, arbetsytans kod, förhandsvisning — inget skrivet utom cache)
+
+| jobb | live 15:15–15:39 | bara genrerna | genrer + 8,0 | över golvet | svagare | Gay romance | släppta / kommande |
+|---|---|---|---|---|---|---|---|
+| Tv (film + tv, 2018–2029) | 1 500 | 1 500 | **1 252** | 464 | 788 | 55 | 524 (alla ≥ 8,0) / 728 |
+| Up (2026–2030) | 1 500 | 1 500 | **1 456** | 236 | 1 220 | 94 | 721 (alla ≥ 8,0) / 735 |
+| Discover (2026–2040) | 1 500 | 1 500 | **1 450** | 231 | 1 219 | 94 | ej uppdelat |
+| Upcoming US + Anime/Donghua | 1 500 | 732 | **727** | 73 | 654 | 15 | 0 / 727 |
+| Upcoming Tv Shows | 57 (15:30) | 71 | **71** | 27 | 44 | 7 | 0 / 71 |
+
+- Gay romance i Tv (bara genrerna, 103 titlar) läst titel för titel: Heartstopper, Fellow Travelers,
+  Young Royals, Interview with the Vampire, Love Simon, My Policeman, KinnPorsche, TharnType, Theory of
+  Love, Bloom Into You, Given, Heaven Official's Blessing, The Half of It, Spoiler Alert, Summer of 85 …
+  75 av dem kom in bara genom Gay romance.
+- Betyg: 0 släppta titlar under 8,0 i Up och Tv; alla kommande har betyg 0/inget. Avvisade på betyg
+  t.ex. The Witcher 7,9, Titans 7,8, The Wheel of Time 7,6, Spider-Man: Brand New Day (ute 2026-07) 7,9.
+- Upcoming Tv Shows låg på 57 redan före ändringen (15:30 UTC; 203 kl. 15:15) — Gilberts beslut i
+  Requests mellan 15:15 och 15:30 (153 avfärdade, 166 avgjorda); dess egna inställningar (bara tv,
+  kommande premiärer 2026–2029) släpper igenom färre än 100 (`results_short`). Genrerna gav +14.
+- Tv är inte längre ett rent live-action-jobb: Animation och Kids är två av dess genrer (anime 185,
+  animation 293, donghua 79 av 1 252; Kids 255).
+
+## Tester
+
+`recommendation_tests` + `evaluation_tests` **260 gröna** (nya: `test_gay_romance_genre.py` 11,
+`test_released_rating_floor.py` 8); `tests/test_job_action_mode.py`, `test_empty_job_results.py`,
+`test_requests_queue_order.py`, `test_job_stagger.py`, `test_runtime_logs.py`,
+`test_google_popup_handoff.py`, `test_mediamanager_approve.py` **60 gröna** med `--noconftest`.
+Frontend: "Compiled successfully", `check_vision_ui_lock.py` OK.
+
+## Data på NAS:en
+
+- Säkerhetskopia `.runtime/backups/2026-09-29-genres/` (jobs 5 för Gilbert, md5 `61d78d6e…` i
+  `manifest.json`, plus skriptet `set_job_genres.py`).
+- 16:08:10 UTC, direkt `$set` (inga andra fält): `filters.include_genres` = Action, Adventure, Gay
+  Romance, Sci-Fi, Fantasy, Animation, Kids och `filters.min_rating` = 8.0 på alla fem jobben
+  (förut: Tv [] / 7, Up, Discover, Upcoming US [] / –, Upcoming Tv Shows sci-fi, fantasy, action,
+  adventure, animation, anime / –). Exclude-genrerna (horror; talk show, reality) är kvar.
+  Ångra: `cd backend && MONGO_URL=mongodb://192.168.50.94:27018 PYTHONPATH=../.runtime/python:. python3
+  ../.runtime/backups/2026-09-29-genres/set_job_genres.py --revert`.
+- Testkontots "Evening sci-fi" (`user_a913693249d8`) är orört.
+
+## Driftsättning och kontroll live
+
+- `bash scripts/deploy_nas.sh` körd av sessionen **15:58 UTC** (backend + etiketten) och **16:07 UTC**
+  (filterknapparna): md5 för `filter_engine.py`, `job_intent.py`, `tmdb.py`, `trakt.py`,
+  `job_trace.py` i containern = arbetsytan, bundlen `main.907eb736.js` innehåller `!text-xl !px-4 …` och
+  "Minimum rating (released titles)", `/api/` 200, inga fel i loggen.
+- Körningarna 16:01 (Upcoming Tv Shows 57) och 16:03 (Upcoming US 1 500) gick på den nya koden med de
+  gamla inställningarna och gav samma som förut: koden ändrar inget för ett jobb utan de nya värdena.
+- **Jobb som läses innan de sparas kör en gång till med det gamla:** Tv 16:07:43 och Up 16:10:12 hade
+  läst jobben före 16:08:10 (schemaläggaren läser de förfallna jobben i ett svep). Tv-körningen köade
+  "True Mothers" (7,4, Drama), "Minnal Murali" (7,2) och "Cats Cradle" 16:09 — därför, inte filtret.
+
+## Verifierat live (schemalagda körningar med de nya inställningarna, `run.settings`, läst ur NAS-databasen)
+
+| körning (UTC) | tid | resultat | över golvet | svagare | nya i Requests | förnyade | tillbakahållna |
+|---|---|---|---|---|---|---|---|
+| Discover 16:13:53 | 210 s | **1 450** | 231 | 1 219 | 889 | 559 | 0 |
+| Upcoming Tv Shows 16:18:25 | 21 s | 71 | 27 | 44 | 0 | 46 | 0 |
+| Upcoming US + Anime/Donghua 16:18:53 | 91 s | **732** | 77 | 655 | 0 | 726 | 0 |
+| Tv 16:21:29 | 147 s | **1 252** | 464 | 788 | 105 | 1 147 | 0 |
+| Up 16:23:57 | 159 s | **1 456** | 236 | 1 220 | 6 | 1 448 | 0 |
+
+Inga varningar; sammanfattningen `results_filled` överallt, och `results_short` för Upcoming Tv Shows.
+Samma siffror som mätningen. Av de 1 003 titlar som köats 16:08–16:27 är 580 släppta och 423
+kommande; de enda släppta under 8,0 är de två från Tv:s körning med de gamla inställningarna.
+Gilberts inloggade vy av Requests har inte setts av sessionen; filterkortet är kontrollerat med
+den byggda CSS:en i en före/efter-sida (desktop och 375 px).
+
+## Kvar / fynd
+
+1. **Requests har kvar det som inte längre passar.** Läsande uppskattning 16:10 UTC (kopior av de
+   8 809 orörda väntande raderna, TMDb-nyckelord ur berikningscachen, premiärer verifierade utan att
+   sparas): 6 027 faller på genrerna, 1 113 på betyg under 8,0 (släppta), 894 är inte längre kommande
+   (Upcoming US; fanns före), 775 passar (55 av dem Gay romance). Inget är arkiverat — Gilberts beslut.
+   Arkivering bara via `evaluation/queue_cleanup.py plan → apply → revert`, men **dess plan läser inga
+   nyckelord** (en köplats har inga): fyll `tmdb_keywords` ur cachen först (`providers.tmdb_enrich.
+   enrich_rows` på kopiorna, som uppskattningen gör: `.runtime/backups/2026-09-29-genres/queue_fit.py`),
+   annars föreslås Gay romance-titlar felaktigt.
+2. Upcoming Tv Shows: 71 resultat — dess egna inställningar (bara tv, kommande 2026–2029) släpper inte
+   igenom 100 (`results_short`); 57 före ändringen.
+3. 8,0 utan röstgolv släpper in fan-filmer med 1–2 röster på 10,0 i Up/Discovers släppta del (t.ex.
+   "DRAGON BALL Z: BUU, GOD OF DESTRUCTION", "Godzilla vs. Gamera vs. Tyrant"); de hamnar under smakgolvet
+   som svagare. Ett minsta antal röster skulle stoppa dem men träffar i dag också kommande titlar med
+   tidiga röster (`min_vote_count` skonar bara titlar utan en enda röst).
+4. Tv tar nu anime, animation och Kids (Animation och Kids är två av dess genrer) — Gilberts val för alla jobb.
+5. Filterkortets valfält (år, betyg, sortering, sök) är kvar på 14 px; bara knapparna och räknaren är 20 px.
+6. Testkontots jobb orört. Inget committat.

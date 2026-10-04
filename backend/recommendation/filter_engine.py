@@ -121,6 +121,49 @@ TMDB_COMBINED_GENRE_IDS = {
 
 ANIMATION_GENRES = {"animation", "anime", "donghua"}
 
+# "Gay romance" (Gilbert, 2026-09-29): romance with an LGBTQ theme - gay,
+# lesbian, bi, trans, queer, boys' love, yuri - and not ordinary romance. No
+# provider has the genre, so it is read from TMDb keywords and AniList tags.
+# TMDb puts "lgbt" or "gay theme" on straight romcoms with a gay friend too
+# (She's the Man, Clueless, Set It Up), so one such keyword is not enough: a
+# title needs a same-sex romance keyword ("gay romance", "boys' love (bl)",
+# AniList's "Yuri"), or romance plus two LGBTQ keywords. Measured on TMDb's own
+# keywords for 22 films and 14 series: all 12 LGBTQ romance films in, 8 of the
+# 10 straight romances with an LGBTQ side character out.
+GAY_ROMANCE = "gay romance"
+#: Other names for it. Kept apart from GENRE_ALIASES, which the taste profile reads.
+THEME_GENRE_ALIASES = {
+    "lgbt romance": GAY_ROMANCE,
+    "lgbtq romance": GAY_ROMANCE,
+    "lgbtq+ romance": GAY_ROMANCE,
+    "queer romance": GAY_ROMANCE,
+    "hbtq romance": GAY_ROMANCE,
+}
+#: TMDb keywords and AniList tags that name an LGBTQ theme.
+LGBTQ_KEYWORDS = frozenset({
+    "lgbt", "lgbt+", "lgbtq", "lgbtq+", "lgbtqia+", "lgbtq+ themes", "gay", "gay theme", "gay interest",
+    "lesbian", "queer", "bisexual", "bisexuality", "transgender", "homosexuality", "male homosexuality",
+    "female homosexuality", "sapphic", "coming out", "gay relationship", "lesbian relationship",
+    "same sex relationship", "gay couple", "lesbian couple", "yuri",
+})
+#: Keywords that are a same-sex romance on their own.
+SAME_SEX_ROMANCE_KEYWORDS = frozenset({
+    "gay romance", "lgbt romance", "lesbian romance", "transgender romance", "boys' love (bl)", "boys' love",
+    "boy's love", "girls' love (gl)", "girls' love", "gay love", "gay love story", "lesbian love", "yaoi",
+    "shounen ai", "shoujo ai",
+})
+#: AniList's same-sex romance tags (its category Theme-Romance). TMDb also puts
+#: "yuri" on magical-girl subtext, so there it is only an LGBTQ keyword.
+ANILIST_SAME_SEX_ROMANCE_TAGS = frozenset({"boys' love", "yuri"})
+ROMANCE_WORDS = frozenset({"romance", "romantic", "love", "lovers"})
+ROMANTIC_RELATIONSHIPS = frozenset({"gay relationship", "lesbian relationship", "same sex relationship"})
+
+#: An include genre a film also meets with these labels. TMDb has no Kids genre
+#: for films - _genre_ids already asks /discover/movie for Family (10751) when a
+#: job says Kids - so the filter used to throw those family films away again.
+#: Series keep their own Kids genre (TMDb 10762, Trakt "children").
+FILM_GENRE_EQUIVALENTS = {"kids": frozenset({"family"})}
+
 
 def canonical_genres(values: Any) -> Set[str]:
     """Casefolded, alias-resolved genre names, with "A & B" split into both."""
@@ -129,8 +172,22 @@ def canonical_genres(values: Any) -> Set[str]:
         for part in re.split(r"\s*[&/]\s*", str(value).strip().casefold()):
             part = part.strip()
             if part:
-                found.add(GENRE_ALIASES.get(part, part))
+                found.add(GENRE_ALIASES.get(part) or THEME_GENRE_ALIASES.get(part, part))
     return found
+
+
+def is_gay_romance(candidate: Dict[str, Any], genres: Optional[Set[str]] = None) -> bool:
+    """Is this a romance with an LGBTQ theme (GAY_ROMANCE), by its TMDb keywords and AniList tags?"""
+    keywords = {str(item).strip().casefold() for item in candidate.get("tmdb_keywords") or [] if item}
+    tags = {str(item).strip().casefold() for item in candidate.get("tags") or [] if item}
+    names = keywords | tags
+    if names & SAME_SEX_ROMANCE_KEYWORDS or tags & ANILIST_SAME_SEX_ROMANCE_TAGS:
+        return True
+    if len(names & LGBTQ_KEYWORDS) < 2:
+        return False
+    if "romance" in (genres if genres is not None else canonical_genres(candidate.get("genres") or [])):
+        return True
+    return bool(names & ROMANTIC_RELATIONSHIPS) or any(ROMANCE_WORDS & set(name.split()) for name in names)
 
 
 def candidate_genres(candidate: Dict[str, Any]) -> Set[str]:
@@ -152,7 +209,18 @@ def candidate_genres(candidate: Dict[str, Any]) -> Set[str]:
         genres.add("animation")
     if lane in {"anime", "donghua"}:
         genres.add(lane)
+    if is_gay_romance(candidate, genres):
+        genres.add(GAY_ROMANCE)
     return genres
+
+
+def matched_genres(candidate: Dict[str, Any], wanted: Set[str]) -> Set[str]:
+    """Which of the job's canonical include genres this candidate meets."""
+    genres = candidate_genres(candidate)
+    matched = genres & wanted
+    if identity_scope(candidate) == "movie":
+        matched |= {name for name in wanted if genres & FILM_GENRE_EQUIVALENTS.get(name, frozenset())}
+    return matched
 
 
 def genre_matches(candidate: Dict[str, Any], include: Set[str], keywords: Optional[Set[str]] = None) -> bool:
@@ -160,7 +228,7 @@ def genre_matches(candidate: Dict[str, Any], include: Set[str], keywords: Option
     wanted = canonical_genres(list(include or []))
     if not wanted:
         return True
-    if candidate_genres(candidate) & wanted:
+    if matched_genres(candidate, wanted):
         return True
     tags = {str(item).casefold() for item in (candidate.get("tags") or [])}
     return bool(keywords and (tags & keywords))
@@ -208,6 +276,52 @@ def _never_rated_yet(candidate: Dict[str, Any], rating: Any, votes: Any) -> bool
         return year is not None and int(year) > today.year
     except (TypeError, ValueError):
         return False
+
+
+#: Provider statuses of a title that has not come out (AniList, TMDb).
+NOT_OUT_STATUSES = frozenset({"NOT_YET_RELEASED", "PLANNED", "IN PRODUCTION", "POST PRODUCTION", "RUMORED"})
+
+
+def candidate_rating(candidate: Dict[str, Any]) -> Any:
+    """The community rating the filter holds a title to (0-10).
+
+    AniList rows carry theirs only as candidate_score (averageScore / 10); the
+    ranking reads rating fields, so it is not copied onto the row.
+    """
+    rating = candidate.get("tmdb_rating") if candidate.get("tmdb_rating") is not None else candidate.get("rating")
+    if rating in (None, 0, 0.0) and candidate.get("source") == "anilist" and candidate.get("candidate_score"):
+        return float(candidate["candidate_score"])
+    return rating
+
+
+def not_released_yet(candidate: Dict[str, Any]) -> bool:
+    """Is this title - or, in an upcoming job, the premiere it stands for - still to come?
+
+    A verified premiere decides first (a coming season of an older series is
+    upcoming), then a release or first-air date, a provider status, and the
+    year. A title dated only by this year that nobody has rated yet (Trakt's
+    anticipated lists, AniList's coming season) is still to come as well.
+    """
+    from datetime import datetime, timezone
+
+    today = datetime.now(timezone.utc)
+    premiere = str(candidate.get("premiere_date") or "")[:10]
+    if len(premiere) == 10:
+        return premiere > today.date().isoformat()
+    for key in ("release_date", "first_air_date", "aired_at"):
+        value = candidate.get(key)
+        if value and len(str(value)) >= 10:
+            return str(value)[:10] > today.date().isoformat()
+    status = str(candidate.get("status") or candidate.get("anime_status") or "").strip().upper()
+    if status in NOT_OUT_STATUSES:
+        return True
+    try:
+        year = int(candidate.get("year"))
+    except (TypeError, ValueError):
+        return False
+    if year != today.year:
+        return year > today.year
+    return candidate_rating(candidate) in (None, 0, 0.0) and candidate.get("vote_count") in (None, 0)
 
 
 def _animation_exempt_from_origin(job_filters: Dict[str, Any], candidate: Dict[str, Any]) -> bool:
@@ -291,10 +405,14 @@ def apply_filters(candidate: Dict[str, Any], filters: Optional[Dict[str, Any]]) 
 
     rating = candidate.get("tmdb_rating") if candidate.get("tmdb_rating") is not None else candidate.get("rating")
     votes = candidate.get("vote_count")
+    # The minimum rating is for titles that are out (Gilbert, 2026-09-29: released
+    # 8.0, upcoming 0.0). A title still to come has at most a handful of early
+    # votes, so it is never held to it; it used to be only when nobody had voted.
+    shown_rating = candidate_rating(candidate)
     if (
         filters.get("min_rating") is not None
-        and not _never_rated_yet(candidate, rating, votes)
-        and (rating is None or float(rating) < float(filters["min_rating"]))
+        and not not_released_yet(candidate)
+        and (shown_rating is None or float(shown_rating) < float(filters["min_rating"]))
     ):
         return False, "rejected_rating"
     # A floor of 0 is no requirement at all, but the old "is not None" check turned

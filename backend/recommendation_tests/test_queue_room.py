@@ -1,9 +1,12 @@
-"""The queue stops growing, a rejection on Home stays a rejection, a refused sign-in is not "Connected".
+"""Every result reaches Requests, a rejection on Home stays a rejection, a refused sign-in is not "Connected".
 
 Measured 2026-09-25: 10,180 titles waited for a decision (Tv 5,531 against its
-limit of 250); a pick rejected on Home was deleted with the rest of the old list
-and could come straight back; Sources said "Connected" over a revoked Trakt
-session while every Tv run failed.
+limit of 250), so each job kept at most its limit waiting. On 2026-09-29 that
+cap held every new title of Tv (2,078 waiting) and Upcoming US (3,603) back on
+every run, and Gilbert's rule became: every run sends at least 100 results to
+Requests, preferably well over 1,000 - the cap is gone. A pick rejected on Home
+was deleted with the rest of the old list and could come straight back; Sources
+said "Connected" over a revoked Trakt session while every Tv run failed.
 """
 
 import asyncio
@@ -59,19 +62,19 @@ def _rows(*titles):
     return [{"id": "rec_" + title, "title": title, "year": 2026, "type": "show"} for title in titles]
 
 
-def test_a_full_queue_takes_no_new_titles_but_refreshes_waiting_ones(monkeypatch):
+def test_a_job_with_its_limit_waiting_still_sends_new_titles_and_refreshes_waiting_ones(monkeypatch):
     waiting = {"id": "req_old", "title": "Old", "year": 2026, "status": "pending_approval"}
     submitted, _send, warnings = _run(monkeypatch, rows=_rows("Old", "New"), stored=[waiting], waiting=3, limit=3)
 
-    assert submitted == ["Old"]
-    assert warnings and warnings[0]["code"] == "queue_full"
+    assert submitted == ["Old", "New"]
+    assert warnings == []
 
 
-def test_room_is_what_is_left_under_the_limit(monkeypatch):
-    submitted, _send, warnings = _run(monkeypatch, rows=_rows("A", "B", "C"), waiting=1, limit=3)
+def test_every_result_goes_to_requests_whatever_is_already_waiting(monkeypatch):
+    submitted, _send, warnings = _run(monkeypatch, rows=_rows("A", "B", "C"), waiting=2078, limit=650)
 
-    assert submitted == ["A", "B"]
-    assert warnings[0]["code"] == "queue_full"
+    assert submitted == ["A", "B", "C"]
+    assert [row["code"] for row in warnings] == []
 
 
 def test_an_approved_title_is_not_sent_to_mediamanager_again(monkeypatch):
@@ -100,7 +103,7 @@ def test_a_refused_sign_in_is_not_reported_as_connected():
     assert shown.simkl_connected is True and shown.plex_connected is True
 
 
-def test_auto_request_falling_back_to_the_queue_respects_the_same_ceiling(monkeypatch):
+def test_auto_request_falling_back_to_the_queue_queues_every_title(monkeypatch):
     from fastapi import HTTPException
 
     requests = _Requests([], waiting=3)
@@ -119,5 +122,5 @@ def test_auto_request_falling_back_to_the_queue_respects_the_same_ceiling(monkey
     job = {"id": "job_1", "action_mode": "auto_request", "final_recommendation_limit": 3}
     warnings = asyncio.run(jobs_engine.apply_job_action_mode("u1", job, _rows("A", "B"), {}))
 
-    assert submitted == []
-    assert [w["code"] for w in warnings][-1] == "queue_full"
+    assert submitted == [("A", "pending_approval"), ("B", "pending_approval")]
+    assert "queue_full" not in [w["code"] for w in warnings]

@@ -207,15 +207,26 @@ TRAKT_CALENDAR_DAYS = 33
 TRAKT_UPCOMING_CACHE_HOURS = 6
 
 
-def trakt_genre_filter(names: Optional[List[str]]) -> Optional[str]:
-    """The job's genres as Trakt's `genres` filter (comma = any of them), or None."""
+#: Kids is two slugs on Trakt: "family" for films and series, "children" for series only.
+TRAKT_KIDS_SLUGS = {"movies": ("family",), "shows": ("children", "family")}
+
+
+def trakt_genre_filter(names: Optional[List[str]], kind: Optional[str] = None) -> Optional[str]:
+    """The job's genres as Trakt's `genres` filter (comma = any of them), or None.
+
+    `kind` is "movies" or "shows"; without it Kids asks only for what both have.
+    """
     from recommendation.filter_engine import canonical_genres
 
     slugs = []
     for name in sorted(canonical_genres(names or [])):
-        slug = TRAKT_GENRE_SLUGS.get(str(name).casefold())
-        if slug and slug not in slugs:
-            slugs.append(slug)
+        if name == "kids":
+            found = TRAKT_KIDS_SLUGS.get(kind or "movies", TRAKT_KIDS_SLUGS["movies"])
+        else:
+            found = (TRAKT_GENRE_SLUGS.get(str(name).casefold()),)
+        for slug in found:
+            if slug and slug not in slugs:
+                slugs.append(slug)
     return ",".join(slugs) or None
 
 
@@ -245,6 +256,55 @@ async def _cached_list(client: httpx.AsyncClient, path: str, params: Dict[str, A
     return payload
 
 
+#: Trakt's public lists a saved job widens into when it comes up short
+#: (jobs.upcoming "other_sources"): what people watch now, over time, and wait for.
+TRAKT_LIST_PATHS = ("trending", "popular", "anticipated")
+
+
+async def fetch_list_titles(
+    client_id: Optional[str],
+    media_types: Optional[List[str]] = None,
+    genres: Optional[List[str]] = None,
+    min_year: Optional[int] = None,
+    max_year: Optional[int] = None,
+    pages: int = 3,
+) -> List[Dict[str, Any]]:
+    """Trakt's trending, popular and anticipated films and series inside a job's genres and years.
+
+    Public endpoints (the app's client id, no sign-in), cached like the upcoming
+    lists. Every row still goes through the job's filters, exclusions and taste
+    floor; this only widens where a job that has too few results looks.
+    """
+    if not client_id:
+        return []
+    wanted = {str(item or "").casefold() for item in (media_types or ["movie", "tv"])}
+    kinds = [kind for kind, ok in (("movies", bool(wanted & {"movie", "movies", "film", "anime"})),
+                                   ("shows", bool(wanted & {"tv", "show", "series", "anime"}))) if ok]
+    base: Dict[str, Any] = {"extended": "full"}
+    if min_year or max_year:
+        low = int(min_year or max_year)
+        high = int(max_year or datetime.now(timezone.utc).year + 5)
+        base["years"] = str(low) if low == high else "%d-%d" % (min(low, high), max(low, high))
+    rows: List[Dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=15) as client:
+        for kind in kinds:
+            genre_filter = trakt_genre_filter(genres, kind)
+            params = {**base, "genres": genre_filter} if genre_filter else dict(base)
+            for name in TRAKT_LIST_PATHS:
+                for page in range(1, max(1, pages) + 1):
+                    entries = await _cached_list(client, f"/{kind}/{name}", {**params, "page": page, "limit": 100},
+                                                 client_id)
+                    for entry in entries:
+                        row = parse_recommendation_entry(entry, kind)
+                        if row.get("title") and row["title"] != "Unknown":
+                            row["source"] = "trakt_%s" % name
+                            row["why"] = ""
+                            rows.append(row)
+                    if len(entries) < 100:
+                        break
+    return rows
+
+
 async def fetch_upcoming_titles(
     client_id: Optional[str],
     media_types: Optional[List[str]] = None,
@@ -267,8 +327,10 @@ async def fetch_upcoming_titles(
     wanted = {str(item or "").casefold() for item in (media_types or ["movie", "tv", "anime"])}
     movies = bool(wanted & {"movie", "movies", "film", "anime"})
     shows = bool(wanted & {"tv", "show", "series", "anime"})
-    genre_filter = trakt_genre_filter(genres)
-    base = {"genres": genre_filter} if genre_filter else {}
+    bases: Dict[str, Dict[str, Any]] = {}
+    for kind in ("movies", "shows"):
+        genre_filter = trakt_genre_filter(genres, kind)
+        bases[kind] = {"genres": genre_filter} if genre_filter else {}
     first = date.fromisoformat((start or (datetime.now(timezone.utc).date() + timedelta(days=1)).isoformat())[:10])
     rows: List[Dict[str, Any]] = []
     async with httpx.AsyncClient(timeout=15) as client:
@@ -276,7 +338,7 @@ async def fetch_upcoming_titles(
             if not wanted_kind:
                 continue
             for page in range(1, max(1, pages) + 1):
-                for entry in await _cached_list(client, path, {**base, "page": page, "limit": 100}, client_id):
+                for entry in await _cached_list(client, path, {**bases[kind], "page": page, "limit": 100}, client_id):
                     row = parse_recommendation_entry(entry, kind)
                     if row.get("title") and row["title"] != "Unknown":
                         row["source"] = "trakt_upcoming"
@@ -287,7 +349,8 @@ async def fetch_upcoming_titles(
             while offset < days:
                 span = min(TRAKT_CALENDAR_DAYS, days - offset)
                 day = (first + timedelta(days=offset)).isoformat()
-                for entry in await _cached_list(client, f"/calendars/all/shows/premieres/{day}/{span}", dict(base), client_id):
+                for entry in await _cached_list(client, f"/calendars/all/shows/premieres/{day}/{span}", dict(bases["shows"]),
+                                                client_id):
                     row = parse_recommendation_entry(entry)
                     episode = entry.get("episode") or {}
                     if not row.get("title") or row["title"] == "Unknown":

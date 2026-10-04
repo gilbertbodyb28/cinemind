@@ -68,11 +68,11 @@ def test_a_run_reports_what_actually_reached_requests(monkeypatch):
     messages = asyncio.run(jobs_engine.apply_job_action_mode(
         "u1", job, _rows("Old", "New", "Later"), {}, outcome=outcome))
 
-    assert outcome == {"mode": "require_approval", "limit": 650, "waiting": 650, "queued": 1,
-                       "refreshed": 1, "held_back": 1, "sent": 0}
-    assert [row["code"] for row in messages] == ["queue_full"]
-    assert "650 title(s) from this job are waiting" in messages[0]["detail"]
-    assert "keeps at most 650" in messages[0]["detail"]
+    # No cap holds a result back any more (Gilbert, 2026-09-29): both new titles
+    # are queued and the waiting one is refreshed.
+    assert outcome == {"mode": "require_approval", "limit": 650, "waiting": 651, "queued": 2,
+                       "refreshed": 1, "held_back": 0, "sent": 0}
+    assert messages == []
 
 
 def test_a_run_with_room_queues_every_new_pick_and_says_nothing(monkeypatch):

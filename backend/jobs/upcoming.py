@@ -22,6 +22,14 @@ A run of a job with "Only upcoming premieres" now:
 
 Nothing here lowers a bar: the job's filters, the exclusions, the taste floor
 and the queue rules are applied to every step's titles exactly as before.
+
+Since 2026-09-29 every saved job searches this way, not only upcoming ones:
+Gilbert's rule is at least 100 results sent to Requests per run, preferably
+well over 1,000 (pipeline.MIN_RESULTS). A run widens while it has fewer than
+100 titles over the taste floor or fewer results than its limit, and the last
+step reads the job's own lanes with the largest candidate budget a job may have
+(full_budget). Only after the last step do titles below the floor fill the
+list (pipeline._complete_results).
 """
 
 from __future__ import annotations
@@ -36,8 +44,10 @@ from database import db
 #: keeps the open picks of earlier runs (carry_over), so each run only has to
 #: find what is new; 20 fills Home's four Up Coming filters several times over.
 UPCOMING_TARGET = 20
-#: The widening steps, in order (see the module docstring).
-UPCOMING_STAGES = ("taste_window", "deeper_pages", "other_sources")
+#: The widening steps, in order (see the module docstring). full_budget reads
+#: the job's own lanes as a job gathering MAX_CANDIDATE_BUDGET candidates would.
+SEARCH_STAGES = ("taste_window", "deeper_pages", "other_sources", "full_budget")
+UPCOMING_STAGES = SEARCH_STAGES
 #: How many queue rows one run checks for a premiere date (refresh_request_premieres).
 REQUEST_PREMIERE_BATCH = 300
 #: A queue row's premiere is checked again after this long.
@@ -98,38 +108,80 @@ def _job_list_keys(job: Dict[str, Any], inputs: Dict[str, List[Dict[str, Any]]])
 
 
 def new_picks(result: Dict[str, Any], listed: set) -> int:
-    """Picks that are not already on the job's list from an earlier run."""
+    """Picks over the taste floor that are new: not on the job's list from an
+    earlier run and not already waiting in Requests."""
     from recommendation.exclusion_engine import identity_keys
 
-    return sum(1 for row in result.get("accepted") or [] if not identity_keys(row) & listed)
+    return sum(1 for row in result.get("accepted") or []
+               if not row.get("open_result") and not row.get("weak_match") and not identity_keys(row) & listed)
+
+
+def search_wanted(job: Dict[str, Any]) -> bool:
+    """Does a run of this job widen its search when it comes up short?
+
+    Upcoming jobs always have (UPCOMING_TARGET new picks); every saved job does
+    since 2026-09-29, when a run must reach its minimum of results
+    (jobs.engine.with_result_rules).
+    """
+    from providers.premieres import is_upcoming_job
+
+    return is_upcoming_job(job) or bool(job.get("min_results")) or bool(job.get("open_results"))
+
+
+def enough(job: Dict[str, Any], result: Dict[str, Any], listed: set) -> bool:
+    """Has this run found what it looks for, so the search can stop?
+
+    At least the minimum over the taste floor (pipeline.min_results), a full
+    list (pipeline.result_target: the job's limit), and for an upcoming job at
+    least UPCOMING_TARGET new picks. Titles below the floor that fill the list
+    in the meantime do not count as matches.
+    """
+    from providers.premieres import is_upcoming_job
+    from recommendation.pipeline import min_results, result_counts, result_target
+
+    spec = {**job, **(result.get("job") or {})}
+    counts = result_counts(result.get("accepted") or [], spec)
+    if counts["matches"] < min_results(spec) or counts["results"] < result_target(spec):
+        return False
+    return not is_upcoming_job(job) or new_picks(result, listed) >= upcoming_target(job)
 
 
 async def _stage_rows(stage: str, job: Dict[str, Any], taste: Dict[str, Any],
                       inputs: Dict[str, List[Dict[str, Any]]], tmdb_key: Optional[str],
                       conn: Dict[str, Any]) -> List[Dict[str, Any]]:
-    from providers.premieres import premiere_window
+    from providers.premieres import is_upcoming_job, premiere_window
     from providers.tmdb import (
-        TMDB_CURSOR_PAGES, discover_page_span, fetch_job_candidates, taste_keyword_discover,
-        taste_seeded_discover, upcoming_movies,
+        LARGE_BUDGET, MAX_CANDIDATE_BUDGET, TMDB_CURSOR_PAGES, candidate_budget, discover_page_span,
+        fetch_job_candidates, taste_keyword_discover, taste_seeded_discover, upcoming_movies,
     )
 
     filters = job.get("filters") or {}
-    window = premiere_window(filters)
+    upcoming = is_upcoming_job(job)
+    window = premiere_window(filters) if upcoming else None
     media = {str(item or "").casefold() for item in job.get("media_types") or []}
+    tmdb_lanes = set(job.get("candidate_sources") or []) & {"tmdb_discover", "tmdb_similar", "tmdb_recommendations"}
     rows: List[Dict[str, Any]] = []
     if stage == "taste_window" and tmdb_key:
         # "Neighbouring genres" and "related titles" from the viewer's own
         # favourites: the genre pairs they keep returning to and the themes
-        # their liked titles share, asked for inside the premiere window.
+        # their liked titles share - inside the premiere window for an upcoming
+        # job, and deeper than the job's own lanes read them for any other.
         spec = {**job, "candidate_limit": max(40, int(job.get("candidate_limit") or 40))}
-        rows.extend(await taste_seeded_discover(spec, taste, api_key=tmdb_key, per_lane=20,
-                                                window=window, pairs_limit=8))
-        rows.extend(await taste_keyword_discover(spec, taste, api_key=tmdb_key, per_lane=20, window=window))
+        if upcoming:
+            rows.extend(await taste_seeded_discover(spec, taste, api_key=tmdb_key, per_lane=20,
+                                                    window=window, pairs_limit=8))
+            rows.extend(await taste_keyword_discover(spec, taste, api_key=tmdb_key, per_lane=20, window=window))
+        else:
+            rows.extend(await taste_seeded_discover(spec, taste, api_key=tmdb_key, pairs_limit=12, pages=5))
+            rows.extend(await taste_keyword_discover(spec, taste, api_key=tmdb_key, pages=10))
     elif stage == "deeper_pages" and tmdb_key and (job.get("candidate_sources") or []):
         # The job's own lanes one page span further on. A preview does not move
         # the stored cursor, and neither does this: the next run starts where
         # the cursor says, as before.
         span = discover_page_span(job)
+        if span >= TMDB_CURSOR_PAGES:
+            # A large job's lanes already read every page they reach (providers.tmdb).
+            return rows
         start = max(1, int(job.get("tmdb_page_cursor") or 1)) + span
         if start > TMDB_CURSOR_PAGES:
             start = ((start - 1) % TMDB_CURSOR_PAGES) + 1
@@ -137,22 +189,48 @@ async def _stage_rows(stage: str, job: Dict[str, Any], taste: Dict[str, Any],
         rows.extend(await fetch_job_candidates(deeper, inputs.get("history") or [], api_key=tmdb_key,
                                                start_page=start, taste=taste))
     elif stage == "other_sources":
-        from providers.anilist import fetch_upcoming
-        from providers.trakt import fetch_upcoming_titles, resolve_trakt_client_id
+        from providers.trakt import fetch_list_titles, fetch_upcoming_titles, resolve_trakt_client_id
 
-        rows.extend(await fetch_upcoming_titles(
-            resolve_trakt_client_id(conn), job.get("media_types"), start=window["from"],
-            genres=filters.get("include_genres"),
-        ))
-        if media & {"anime", "tv", "movie"}:
-            rows.extend(await fetch_upcoming(
-                conn.get("anilist_access_token"), min_year=filters.get("min_year"),
-                # Further down AniList's announced list than the job's own lane (5 pages);
-                # 8 pages stays inside AniList's per-minute budget next to the other calls.
-                max_year=filters.get("max_year"), limit=300, max_pages=8,
+        large = candidate_budget(job) >= LARGE_BUDGET
+        if upcoming:
+            from providers.anilist import fetch_upcoming, upcoming_depth
+
+            rows.extend(await fetch_upcoming_titles(
+                resolve_trakt_client_id(conn), job.get("media_types"), start=window["from"],
+                genres=filters.get("include_genres"),
+                # A large job reads Trakt's anticipated lists ten pages down and a year of premieres.
+                pages=10 if large else 2, days=365 if large else 99,
             ))
-        if tmdb_key and media & {"movie", "movies", "anime"}:
-            rows.extend(await upcoming_movies(tmdb_key, pages=3))
+            if media & {"anime", "tv", "movie"}:
+                # Further down AniList's announced list than the job's own lane; the
+                # pages are cached, so this costs AniList's budget once per 12 hours.
+                depth, pages = upcoming_depth(job)
+                rows.extend(await fetch_upcoming(
+                    conn.get("anilist_access_token"), min_year=filters.get("min_year"),
+                    max_year=filters.get("max_year"), limit=max(300, depth), max_pages=max(8, pages),
+                ))
+            if tmdb_key and media & {"movie", "movies", "anime"}:
+                rows.extend(await upcoming_movies(tmdb_key, pages=20 if large else 3))
+        else:
+            # What Trakt's viewers watch and wait for, inside the job's genres and years.
+            rows.extend(await fetch_list_titles(
+                resolve_trakt_client_id(conn), job.get("media_types"), genres=filters.get("include_genres"),
+                min_year=filters.get("min_year"), max_year=filters.get("max_year"), pages=10 if large else 3,
+            ))
+        if tmdb_key and taste and not large:
+            # The creators and cast of liked titles; a large job's own lanes already ask them.
+            from providers.people import people_candidates
+
+            rows.extend(await people_candidates({**job, "candidate_limit": LARGE_BUDGET}, taste, tmdb_key,
+                                                window=window))
+    elif stage == "full_budget" and tmdb_key and tmdb_lanes and candidate_budget(job) < MAX_CANDIDATE_BUDGET:
+        # The job's own lanes as the largest job reads them: every page a lane
+        # reaches, twelve genre pairs, every liked title as a "more like this"
+        # seed and the viewer's own people (providers.tmdb LARGE_BUDGET).
+        widest = {**job, "candidate_limit": MAX_CANDIDATE_BUDGET}
+        rows.extend(await fetch_job_candidates(widest, inputs.get("history") or [], api_key=tmdb_key,
+                                               start_page=max(1, int(job.get("tmdb_page_cursor") or 1)),
+                                               taste=taste))
     return rows
 
 
@@ -166,41 +244,50 @@ async def broaden(
     tmdb_key: Optional[str],
     conn: Dict[str, Any],
     report: Optional[Dict[str, Any]] = None,
-    stages: Tuple[str, ...] = UPCOMING_STAGES,
+    stages: Tuple[str, ...] = SEARCH_STAGES,
     fetch: Optional[Callable[..., Awaitable[List[Dict[str, Any]]]]] = None,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    """Widen an upcoming job's search step by step until it has enough new picks.
+    """Widen a job's search step by step until it has found enough (see enough()).
 
     `run(extra)` is the pipeline on a candidate list (execute_job and the trace
     pass the same one). Returns the final candidates and pipeline result.
     """
-    from providers.premieres import verify_premieres
+    from providers.premieres import is_upcoming_job, verify_premieres
     from providers.tmdb_enrich import enrich_rows
     from recommendation.exclusion_engine import identity_keys
     from recommendation.filter_engine import media_type_allowed
+    from recommendation.pipeline import min_results, result_counts, result_target
 
     fetch = fetch or _stage_rows
-    target = upcoming_target(job)
+    upcoming = is_upcoming_job(job)
     listed = _job_list_keys(job, inputs)
+
+    def _counts(current: Dict[str, Any]) -> Dict[str, int]:
+        return result_counts(current.get("accepted") or [], {**job, **(current.get("job") or {})})
+
     steps: List[Dict[str, Any]] = []
     first = new_picks(result, listed)
-    steps.append({
+    counts = _counts(result)
+    step = {
         "stage": "job_lanes",
         "candidates": len(extra),
-        "verified": sum(1 for row in extra if row.get("premiere_date")),
-        "continuations": sum(1 for row in extra if row.get("continuation_of")),
         "picks": len(result.get("accepted") or []),
         "new_picks": first,
-    })
+        "matches": counts["matches"],
+    }
+    if upcoming:
+        step["verified"] = sum(1 for row in extra if row.get("premiere_date"))
+        step["continuations"] = sum(1 for row in extra if row.get("continuation_of"))
+    steps.append(step)
     seen = {key for row in extra for key in identity_keys(row)}
     found = first
     for stage in stages:
-        if found >= target:
+        if enough(job, result, listed):
             break
         try:
             rows = await fetch(stage, job, taste, inputs, tmdb_key, conn)
         except Exception as exc:  # one source failing must not end the search
-            logging.warning("upcoming stage %s failed for %s: %s", stage, job.get("id"), exc.__class__.__name__)
+            logging.warning("search stage %s failed for %s: %s", stage, job.get("id"), exc.__class__.__name__)
             steps.append({"stage": stage, "error": exc.__class__.__name__})
             continue
         fresh = []
@@ -214,23 +301,33 @@ async def broaden(
         if fresh:
             if tmdb_key:
                 await enrich_rows(fresh, tmdb_key)
-            wanted = [row for row in fresh if media_type_allowed(row, job.get("media_types"))]
-            verified = await verify_premieres(wanted, tmdb_key)
-            await link_verified(taste, fresh, report)
-            # One row per coming season across the whole pool, not only this step's.
-            from providers.continuations import drop_duplicate_seasons
+            if upcoming:
+                wanted = [row for row in fresh if media_type_allowed(row, job.get("media_types"))]
+                verified = await verify_premieres(wanted, tmdb_key)
+                await link_verified(taste, fresh, report)
+                # One row per coming season across the whole pool, not only this step's.
+                from providers.continuations import drop_duplicate_seasons
 
-            extra = drop_duplicate_seasons(list(extra) + fresh)
+                extra = drop_duplicate_seasons(list(extra) + fresh)
+            else:
+                extra = list(extra) + fresh
             result = run(extra)
         found = new_picks(result, listed)
-        steps.append({"stage": stage, "found": len(rows), "new": len(fresh), "verified": verified,
-                      "picks": len(result.get("accepted") or []), "new_picks": found})
-        logging.info("job %s upcoming stage %s: %s new candidates, %s verified, %s new picks",
-                     job.get("id"), stage, len(fresh), verified, found)
+        counts = _counts(result)
+        step = {"stage": stage, "found": len(rows), "new": len(fresh),
+                "picks": len(result.get("accepted") or []), "new_picks": found, "matches": counts["matches"]}
+        if upcoming:
+            step["verified"] = verified
+        steps.append(step)
+        logging.info("job %s search stage %s: %s new candidates, %s matches, %s results, %s new picks",
+                     job.get("id"), stage, len(fresh), counts["matches"], counts["results"], found)
     if report is not None:
-        report["target"] = target
+        spec = {**job, **(result.get("job") or {})}
+        report["target"] = upcoming_target(job) if upcoming else result_target(spec)
+        report["minimum"] = min_results(spec)
         report["stages"] = steps
         report["new_picks"] = found
+        report["results"] = _counts(result)
     return extra, result
 
 
@@ -315,7 +412,7 @@ async def refresh_request_premieres(user_id: str, tmdb_key: Optional[str], datab
     return written
 
 
-async def search_upcoming(
+async def search_more(
     user_id: str,
     job: Dict[str, Any],
     taste: Dict[str, Any],
@@ -325,11 +422,21 @@ async def search_upcoming(
     run: Callable[[List[Dict[str, Any]]], Dict[str, Any]],
     report: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    """broaden() with the user's own connection: what execute_job and job_trace call."""
+    """broaden() with the user's own connection: what execute_job and job_trace call.
+
+    A job that neither is upcoming nor has a minimum of results (search_wanted)
+    keeps its first pass as it was.
+    """
+    if not search_wanted(job):
+        return extra, result
     from providers.keys import resolve_tmdb_api_key
 
     conn = await db.connections.find_one({"user_id": user_id}, {"_id": 0}) or {}
     return await broaden(job, taste, inputs, extra, result, run, resolve_tmdb_api_key(conn), conn, report=report)
+
+
+#: The name execute_job and job_trace used before every saved job searched this way.
+search_upcoming = search_more
 
 
 async def _backfill(user_id: str, batch: int) -> None:

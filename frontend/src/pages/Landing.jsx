@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Film, Sparkles, Server, Zap, LogIn, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -13,8 +13,14 @@ const GOOGLE_ERRORS = {
 };
 
 export default function Landing() {
-  const { user, loading, login, refresh } = useAuth();
+  const { user, loading, sessionEnded, login, refresh } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // The page a lost session was on; sign-in goes back there instead of Home.
+  const cameFrom = location.state?.from;
+  const returnTo = typeof cameFrom === "string" && cameFrom.startsWith("/") && !cameFrom.startsWith("//") && cameFrom !== "/"
+    ? cameFrom
+    : "/dashboard";
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
@@ -38,7 +44,16 @@ export default function Landing() {
     if (googleFocusRef.current) window.removeEventListener("focus", googleFocusRef.current);
   }, []);
 
-  if (!loading && user) return <Navigate to="/dashboard" replace />;
+  // A signed-in tab whose session ended lands here: say so, and open sign-in.
+  useEffect(() => {
+    if (!sessionEnded) return;
+    toast.warning("You were signed out", {
+      description: "Sign in again. Your jobs, requests and lists are still saved.",
+    });
+    setAuthOpen(true);
+  }, [sessionEnded]);
+
+  if (!loading && user) return <Navigate to={returnTo} replace />;
 
   const stopGooglePoll = () => {
     if (googlePollRef.current) {
@@ -51,18 +66,48 @@ export default function Landing() {
     }
   };
 
-  const startGooglePoll = () => {
+  // Google answers 403 when its sign-in page is loaded inside a frame, which is
+  // how MediaManager shows CineMind. Framed, the sign-in runs in a popup and this
+  // page redeems the result on its own origin with a secret only it knows.
+  const inFrame = () => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  };
+
+  const newHandoff = () => {
+    const bytes = new Uint8Array(32);
+    window.crypto.getRandomValues(bytes);
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  };
+
+  const startGooglePoll = (handoff) => {
     stopGooglePoll();
     const deadline = Date.now() + 5 * 60 * 1000;
+    let inFlight = false;
     const tick = async () => {
+      if (inFlight) return;
       if (Date.now() > deadline) {
         stopGooglePoll();
         return;
       }
-      const current = await refresh();
-      if (current) {
-        stopGooglePoll();
-        navigate("/dashboard");
+      inFlight = true;
+      try {
+        const result = await api("/auth/google/handoff", { method: "POST", body: { handoff } });
+        if (result?.status === "ok") {
+          stopGooglePoll();
+          await refresh();
+          navigate(returnTo);
+        } else if (result?.status === "error") {
+          stopGooglePoll();
+          toast.error(GOOGLE_ERRORS[result.error] || "Could not sign in");
+        }
+      } catch {
+        /* backend restarting; the next tick tries again */
+      } finally {
+        inFlight = false;
       }
     };
     googleFocusRef.current = tick;
@@ -73,7 +118,22 @@ export default function Landing() {
   const startGoogle = () => {
     const port = window.location.port || "3005";
     const returnTo = encodeURIComponent(`http://localhost:${port}`);
-    window.location.assign(`http://localhost:8001/api/auth/google/start?return_to=${returnTo}`);
+    const startUrl = `http://localhost:8001/api/auth/google/start?return_to=${returnTo}`;
+    if (!inFrame()) {
+      window.location.assign(startUrl);
+      return;
+    }
+    const handoff = newHandoff();
+    const popup = window.open(
+      `${startUrl}&handoff=${encodeURIComponent(handoff)}`,
+      "cinemind-google-signin",
+      "popup,width=520,height=680",
+    );
+    if (!popup) {
+      toast.error("Allow pop-ups for CineMind to sign in with Google here, or open CineMind in its own window.");
+      return;
+    }
+    startGooglePoll(handoff);
   };
 
   const submit = async (event) => {
@@ -85,7 +145,7 @@ export default function Landing() {
     setBusy(true);
     try {
       await login(form.email, form.password);
-      navigate("/dashboard");
+      navigate(returnTo);
     } catch (error) {
       toast.error(error.message || "Could not sign in");
     } finally {

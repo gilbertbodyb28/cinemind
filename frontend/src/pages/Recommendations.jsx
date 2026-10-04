@@ -8,6 +8,7 @@ import WatchlistButton from "@/components/WatchlistButton";
 import FeedbackChips from "@/components/FeedbackChips";
 import { RecPosterActions, POSTER_GRID, MatchStat, RatingStat } from "@/components/ApproveRejectOverlay";
 import { DEFAULT_MODEL, providerLabel, notifyUsage } from "@/lib/models";
+import { formatReleaseDate } from "@/lib/utils";
 
 export default function Recommendations() {
   const [items, setItems] = useState([]);
@@ -131,8 +132,11 @@ function RecCard({ rec, onSave, onDismiss, onRejected, onWatchlist, onApproved, 
       <div className="mt-3">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="font-display font-bold text-xl line-clamp-1">{rec.title}</h3>
-          <span className="font-mono text-xs text-slate-500 shrink-0">{rec.year}</span>
+          <span className="font-display font-bold text-xl shrink-0">{rec.year}</span>
         </div>
+        {formatReleaseDate(rec.release_date) && (
+          <div className="font-display font-bold text-xl">{formatReleaseDate(rec.release_date)}</div>
+        )}
         <div className="flex flex-wrap gap-1 mt-1.5">
           {rec.genres?.slice(0, 2).map((g, i) => <span key={i} className="text-[10px] font-mono uppercase tracking-wider text-slate-500">{g}{i < Math.min(rec.genres.length,2)-1 ? " ·" : ""}</span>)}
         </div>

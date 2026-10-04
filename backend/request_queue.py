@@ -26,6 +26,8 @@ LIGHT_FIELDS = (
     "match_score", "recommendation_id", "updated_at", "created_at", "delivery_status",
     # A verified coming premiere (jobs.upcoming.refresh_request_premieres).
     "premiere_date", "premiere_kind", "premiere_season", "premiere_precision",
+    # Suggested from below the taste floor to fill a job's results.
+    "weak_match",
 )
 
 

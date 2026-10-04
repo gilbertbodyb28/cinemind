@@ -9,8 +9,9 @@ import {
   mediaManagerLibraryLabel,
 } from "@/components/ApproveRejectOverlay";
 import TitleDetailModal from "@/components/TitleDetailModal";
-import ReleaseTypeFilters from "@/components/ReleaseTypeFilters";
+import ReleaseTypeFilters, { BIG_CHIP } from "@/components/ReleaseTypeFilters";
 import { todayKey, toggleInSet } from "@/lib/mediaFilters";
+import { formatReleaseDate } from "@/lib/utils";
 
 /** The queue's footprint, so both tabs show the same card. */
 const POSTER_SLOT = "w-11 h-11 sm:w-12 sm:h-12 shrink-0";
@@ -145,14 +146,15 @@ export default function Approved() {
       </div>
 
       <div data-testid="approved-filters" className="mt-6 glass-strong rounded-2xl px-4 py-4 lg:px-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        {/* The larger count sits under the heading on a phone, beside it from sm up as before. */}
+        <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-display text-lg font-bold flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#D8B26A]" /> Filter approved titles
+            <h3 className="font-display text-2xl font-bold flex items-center gap-2.5">
+              <Filter className="w-6 h-6 text-[#D8B26A]" /> Filter approved titles
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Tick what is out and what is still coming, and keep only the media types you want.</p>
+            <p className="text-sm text-slate-500 mt-1">Tick what is out and what is still coming, and keep only the media types you want.</p>
           </div>
-          <span data-testid="approved-visible-count" className="chip shrink-0">{total} of {viewTotal}</span>
+          <span data-testid="approved-visible-count" className={`chip ${BIG_CHIP} shrink-0`}>{total} of {viewTotal}</span>
         </div>
 
         <ReleaseTypeFilters
@@ -170,7 +172,7 @@ export default function Approved() {
             type="button"
             data-testid="approved-clear-filters"
             onClick={resetFilters}
-            className="chip hover:chip-rose transition-colors mt-3"
+            className={`chip ${BIG_CHIP} hover:chip-rose transition-colors mt-3`}
           >
             Clear filters
           </button>
@@ -308,8 +310,11 @@ function ApprovedPoster({ item, index, onDelivered, onOpenDetails }) {
       <div className="mt-3.5">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="font-display font-bold text-xl line-clamp-2 leading-snug">{item.title}</h3>
-          {item.year != null && <span className="font-mono text-xs text-slate-500 shrink-0">{item.year}</span>}
+          {item.year != null && <span className="font-display font-bold text-xl shrink-0">{item.year}</span>}
         </div>
+        {formatReleaseDate(item.release_date) && (
+          <div className="font-display font-bold text-xl">{formatReleaseDate(item.release_date)}</div>
+        )}
         <div className="flex flex-wrap gap-1.5 mt-2">
           {item.provider && <span className="chip chip-cyan">{item.provider}</span>}
           {item.approved_at && (

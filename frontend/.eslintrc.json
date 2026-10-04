@@ -1,0 +1,6 @@
+{
+  "extends": ["react-app", "react-app/jest"],
+  "env": {
+    "es2021": true
+  }
+}

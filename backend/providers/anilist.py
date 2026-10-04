@@ -180,6 +180,17 @@ def parse_recommendation_media(media: Dict[str, Any]) -> Optional[Dict[str, Any]
     if origin:
         row["country"] = origin
         row["origin_countries"] = [origin]
+    # Themes and studio, in the form the AniList list gives them for the titles
+    # the viewer watched (parse_media_list_entry), so an announced anime can be
+    # tied to a liked one by what it is about and who makes it. Queries that do
+    # not ask for them leave the row as it was.
+    tags = [tag.get("name") for tag in (media.get("tags") or [])
+            if tag.get("name") and not tag.get("isMediaSpoiler") and not tag.get("isGeneralSpoiler")]
+    if tags:
+        row["tags"] = tags
+    studios = [node.get("name") for node in ((media.get("studios") or {}).get("nodes") or []) if node.get("name")]
+    if studios:
+        row["studios"] = studios
     return row
 
 
@@ -353,17 +364,131 @@ query ($page: Int) {
     pageInfo { hasNextPage }
     media(type: ANIME, status: NOT_YET_RELEASED, sort: POPULARITY_DESC) {
       id
+      status
       seasonYear
       startDate { year month day }
+      nextAiringEpisode { airingAt episode }
       genres
       averageScore
       format
       countryOfOrigin
       title { english romaji }
+      tags { name isGeneralSpoiler isMediaSpoiler }
+      studios { nodes { name } }
+      relations {
+        edges {
+          relationType(version: 2)
+          node {
+            id type format status countryOfOrigin seasonYear genres averageScore popularity
+            startDate { year month day }
+            nextAiringEpisode { airingAt episode }
+            title { english romaji }
+          }
+        }
+      }
     }
   }
 }
 """
+#: AniList's list of announced anime changes slowly; one page is read at most
+#: this often, so the deep list a large job reads costs AniList's per-minute
+#: budget (30 requests while degraded) once, not on every run.
+UPCOMING_CACHE_HOURS = 12
+#: The longest AniList's Retry-After is waited out before giving up on a page.
+RATE_LIMIT_WAIT = 65.0
+
+
+def upcoming_depth(job: Dict[str, Any]) -> Tuple[int, int]:
+    """(titles, pages) of AniList's announced anime a job reads, from its candidate budget.
+
+    80 titles on 5 pages before 2026-09-27; a job gathering 30,000 candidates
+    reads 1,500 on 30 pages - announced anime reach down to titles only a few
+    hundred people follow, and the taste floor, not the list, decides.
+    """
+    from providers.tmdb import LARGE_BUDGET, candidate_budget
+
+    budget = candidate_budget(job)
+    if budget < LARGE_BUDGET:
+        return 80, 5
+    limit = min(1500, max(300, budget // 20))
+    return limit, -(-limit // 50)
+
+
+async def _upcoming_page(client: httpx.AsyncClient, page: int, headers: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    """One page of AniList's announced anime (cached), or None when AniList did not give it."""
+    from datetime import timedelta
+    from database import db
+
+    key = "anilist-upcoming:v2:%d" % page
+    now = datetime.now(timezone.utc)
+    cached = await db.provider_cache.find_one({"key": key, "expires_at": {"$gt": now.isoformat()}})
+    if cached and isinstance(cached.get("payload"), dict):
+        return cached["payload"]
+    for attempt in range(2):
+        response = await client.post(
+            ANILIST_GRAPHQL,
+            json={"query": UPCOMING_QUERY, "variables": {"page": page}},
+            headers=headers,
+        )
+        if response.status_code == 429 and attempt == 0:
+            # AniList's per-minute budget: wait it out once rather than stop the list here.
+            try:
+                wait = float(response.headers.get("Retry-After") or 60)
+            except ValueError:
+                wait = 60.0
+            import asyncio
+
+            await asyncio.sleep(min(RATE_LIMIT_WAIT, max(1.0, wait)))
+            continue
+        if response.status_code != 200:
+            logging.warning("AniList upcoming page %s -> %s", page, response.status_code)
+            return None
+        payload = ((response.json().get("data") or {}).get("Page")) or {}
+        await _seed_title_caches(payload.get("media") or [], now)
+        # The page itself is kept without the relations: they now sit in their own cache.
+        slim = {**payload, "media": [{k: v for k, v in media.items() if k != "relations"}
+                                     for media in payload.get("media") or []]}
+        await db.provider_cache.update_one(
+            {"key": key},
+            {"$set": {"key": key, "payload": slim, "updated_at": now.isoformat(),
+                      "expires_at": (now + timedelta(hours=UPCOMING_CACHE_HOURS)).isoformat()}},
+            upsert=True,
+        )
+        return slim
+    return None
+
+
+async def _seed_title_caches(media_rows: List[Dict[str, Any]], now: datetime) -> None:
+    """File each announced title's premiere and relations where the premiere check
+    (providers.premieres) and the sequel linking (providers.continuations) look first.
+
+    The page already holds what those two would ask AniList again, 50 titles per
+    call, against a budget of 30 calls a minute: a list 1,500 titles deep would
+    otherwise spend minutes of AniList's budget on questions it has answered.
+    """
+    from datetime import timedelta
+    from database import db
+    from providers.continuations import RELATIONS_CACHE_HOURS, relations_payload
+
+    stamp = now.isoformat()
+    for media in media_rows:
+        if not media.get("id"):
+            continue
+        premiere = {name: media.get(name) for name in ("id", "status", "format", "startDate", "nextAiringEpisode")}
+        await db.provider_cache.update_one(
+            {"key": "premiere-anilist:%s" % media["id"]},
+            {"$set": {"key": "premiere-anilist:%s" % media["id"], "payload": premiere, "updated_at": stamp,
+                      "expires_at": (now + timedelta(hours=UPCOMING_CACHE_HOURS + 1)).isoformat()}},
+            upsert=True,
+        )
+        if "relations" in media:
+            await db.provider_cache.update_one(
+                {"key": "anilist-relations:%s" % media["id"]},
+                {"$set": {"key": "anilist-relations:%s" % media["id"], "payload": relations_payload(media),
+                          "updated_at": stamp,
+                          "expires_at": (now + timedelta(hours=RELATIONS_CACHE_HOURS)).isoformat()}},
+                upsert=True,
+            )
 
 
 async def fetch_upcoming(
@@ -381,18 +506,16 @@ async def fetch_upcoming(
     is where titles like a third Frieren season actually live.
     """
     rows: List[Dict[str, Any]] = []
-    headers = {"Authorization": f"Bearer {access_token}"} if access_token else {}
+    # Public data: the same pages for every viewer, so they are asked without a
+    # sign-in and cached once for everyone (_upcoming_page).
+    del access_token
+    headers = {"Accept": "application/json"}
     try:
         async with httpx.AsyncClient(timeout=25) as client:
             for page in range(1, max_pages + 1):
-                response = await client.post(
-                    ANILIST_GRAPHQL,
-                    json={"query": UPCOMING_QUERY, "variables": {"page": page}},
-                    headers=headers,
-                )
-                if response.status_code != 200:
+                payload = await _upcoming_page(client, page, headers)
+                if payload is None:
                     break
-                payload = ((response.json().get("data") or {}).get("Page")) or {}
                 for media in payload.get("media") or []:
                     parsed = parse_recommendation_media(media)
                     if not parsed:

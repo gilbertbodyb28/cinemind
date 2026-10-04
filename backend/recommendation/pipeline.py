@@ -118,6 +118,48 @@ SPECIFIC_FLOOR = 0.3
 UNSEEN_ERA_SPECIFIC_FLOOR = 0.6
 
 
+#: The fewest results a saved job's run sends to Requests (Gilbert, 2026-09-29:
+#: "minst 100 helst betydligt mer än 1000 men regel minst 100 ... till requests
+#: fliken"). A result is a title that fits the job: new, or still open - waiting
+#: in Requests or on the job's list (exclusion_engine "open_results"). Runs had
+#: ended at "0 picks" while hundreds of matches were waiting in Requests, and the
+#: titles clearing the taste floor are finite, so after every widening step
+#: (jobs.upcoming.broaden) the closest titles below the floor fill the list up to
+#: the job's limit (result_target), marked `weak_match` - his choice over
+#: returning fewer.
+MIN_RESULTS = 100
+
+
+def min_results(spec: Dict[str, Any]) -> int:
+    """How many results this run returns at least: the job's minimum, never above its limit (0: none)."""
+    wanted = spec.get("min_results")
+    if not wanted:
+        return 0
+    limit = int(spec.get("final_recommendation_limit") or 8)
+    return max(0, min(int(wanted), limit))
+
+
+def result_target(spec: Dict[str, Any]) -> int:
+    """How many results a run fills up to: a saved job's whole limit (up to 1,500), at least its minimum."""
+    if not spec.get("open_results"):
+        return min_results(spec)
+    return max(min_results(spec), int(spec.get("final_recommendation_limit") or 8))
+
+
+def result_counts(selected: List[Dict[str, Any]], spec: Dict[str, Any]) -> Dict[str, int]:
+    """What a run's results are made of: matches over the floor, weaker fill-ups, new and open ones."""
+    return {
+        "results": len(selected),
+        "matches": sum(1 for row in selected if not row.get("weak_match")),
+        "weak": sum(1 for row in selected if row.get("weak_match")),
+        "new": sum(1 for row in selected if not row.get("open_result")),
+        "waiting": sum(1 for row in selected if row.get("open_result") == "waiting"),
+        "listed": sum(1 for row in selected if row.get("open_result") == "listed"),
+        "minimum": min_results(spec),
+        "limit": int(spec.get("final_recommendation_limit") or 8),
+    }
+
+
 def clears_taste_floor(row: Dict[str, Any], floor: float) -> bool:
     personal = row.get("personal_score")
     # An unscored list (a caller's own ordering) is not held to a score it never had.
@@ -147,13 +189,80 @@ def select_final(ranked: List[Dict[str, Any]], spec: Dict[str, Any]) -> List[Dic
     to hand anime, donghua and animation a guaranteed share of an English TV job
     because they happened to be in the pool.
 
-    Nothing below the job's taste floor is selected at all (see taste_floor):
-    a job asking for 250 titles used to take whatever survived the filters.
+    Nothing below the job's taste floor is selected here (see taste_floor): a
+    job asking for 250 titles used to take whatever survived the filters. A
+    saved job then completes its results (_complete_results): every other title
+    over the floor, and - only to reach its minimum - the closest below it.
     """
     limit = int(spec.get("final_recommendation_limit") or 8)
     floor = taste_floor(spec)
-    if floor is not None:
-        ranked = [row for row in ranked if clears_taste_floor(row, floor)]
+    above = ranked if floor is None else [row for row in ranked if clears_taste_floor(row, floor)]
+    chosen = _select_matches(above, spec, limit)
+    if spec.get("open_results") or min_results(spec):
+        chosen = _complete_results(chosen, ranked, above, spec, limit, floor)
+    return chosen
+
+
+def _tier_order(rows: List[Dict[str, Any]], intent: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """What the job asked for first, then the rest; the list's own order inside a tier."""
+    if not intent:
+        return list(rows)
+    return [row for _, _, row in sorted(
+        (intent_tier(row, intent), index, row) for index, row in enumerate(rows))]
+
+
+def _complete_results(chosen: List[Dict[str, Any]], ranked: List[Dict[str, Any]], above: List[Dict[str, Any]],
+                      spec: Dict[str, Any], limit: int, floor: Optional[float]) -> List[Dict[str, Any]]:
+    """A saved job's results after the head of its list is chosen.
+
+    The selection above spreads a short list over lanes and franchises and
+    stops at the strongest pool (relevance_cut, 75 % of the best); for a list of
+    hundreds that dropped titles that clear the taste floor - 98 of Discover's
+    109 other-language matches on 2026-09-29. Every title over the floor fits
+    the job, so they follow the head in the job's tier order; then the closest
+    titles below the floor fill up to the job's target (result_target), marked
+    `weak_match`. Lanes the job never asked for keep their capped share
+    (OFF_INTENT_SHARE) and go past it only to reach the minimum of 100
+    (min_results). The head keeps exactly the order it had.
+    """
+    intent = job_intent(spec)
+    out = list(chosen)
+    picked = {id(row) for row in out}
+
+    def _off(row: Dict[str, Any]) -> bool:
+        return bool(intent) and intent_tier(row, intent) == OFF_INTENT
+
+    off_room = int(limit * OFF_INTENT_SHARE) - sum(1 for row in out if _off(row))
+    over = {id(row) for row in above}
+    # Matches first, then the rest by closeness: the list's own tier and score order.
+    order = _tier_order(above, intent) + [row for row in _tier_order(ranked, intent) if id(row) not in over]
+    target = min(limit, result_target(spec))
+    skipped: List[Dict[str, Any]] = []
+    for row in order:
+        if len(out) >= target:
+            break
+        if id(row) in picked:
+            continue
+        if _off(row):
+            if off_room <= 0:
+                skipped.append(row)
+                continue
+            off_room -= 1
+        out.append(row)
+        picked.add(id(row))
+    minimum = min_results(spec)
+    for row in skipped:
+        if len(out) >= minimum:
+            break
+        out.append(row)
+        picked.add(id(row))
+    for row in out:
+        row["weak_match"] = floor is not None and not clears_taste_floor(row, floor)
+    return out
+
+
+def _select_matches(ranked: List[Dict[str, Any]], spec: Dict[str, Any], limit: int) -> List[Dict[str, Any]]:
+    """The head of the list from the titles over the floor (select_final)."""
     if not spec.get("diversity", True):
         return ranked[:limit]
     intent = job_intent(spec)
@@ -213,8 +322,14 @@ def run_pipeline(
     # Legion is 10/10 on Trakt with no play, and came back as a recommendation.
     rated = [row for row in personal_history or [] if row.get("rating") is not None]
     context = build_exclusion_context(
-        list(history) + rated, library or [], recommended or [], requested or [], blacklist or [], feedback=feedback
+        list(history) + rated, library or [], recommended or [], requested or [], blacklist or [], feedback=feedback,
+        job_id=spec.get("id"),
     )
+    exclusions = dict(spec.get("exclusions") or {})
+    if spec.get("open_results"):
+        # A saved job counts the titles still open - waiting in Requests or on its
+        # own list - among its results (exclusion_engine.apply_exclusions).
+        exclusions["open_results"] = True
     accepted: List[Dict[str, Any]] = []
     rejected: List[Dict[str, Any]] = []
     for candidate in merge_candidate_sources(*generated):
@@ -223,7 +338,7 @@ def run_pipeline(
         if not ok:
             rejected.append({**candidate, "filter_outcome": reason})
             continue
-        ok, reason = apply_exclusions(candidate, context, spec.get("exclusions"))
+        ok, reason = apply_exclusions(candidate, context, exclusions)
         if not ok:
             rejected.append({**candidate, "filter_outcome": reason})
             continue
@@ -249,5 +364,6 @@ def run_pipeline(
         "candidate_count": len(accepted) + len(rejected),
         "taste_floor": floor,
         "below_taste_floor": 0 if floor is None else sum(1 for row in ranked if not clears_taste_floor(row, floor)),
+        "results": result_counts(selected, spec),
         "job": spec,
     }
